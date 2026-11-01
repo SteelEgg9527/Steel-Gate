@@ -103,6 +103,7 @@
     this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2000;
     this.radarScanNext = { blue: 30, red: 30, green: 30 };
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
+    this.radarScanWas = { blue: false, red: false, green: false };
     this.aiShipUsed = { red: false, green: false };
     this.aiShipRespawn = { red: false, green: false };
     this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2000, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2000 };
@@ -296,7 +297,11 @@
     var scanSides = ['blue', 'red', 'green'];
     for (var rs = 0; rs < scanSides.length; rs++) {
       var rside = scanSides[rs];
-      if (!this.navalHasRadar(rside)) { this.radarScanNext[rside] = 30; this.radarScanUntil[rside] = 0; continue; }
+      if (!this.navalHasRadar(rside)) { this.radarScanNext[rside] = 30; this.radarScanUntil[rside] = 0; this.radarScanWas[rside] = false; continue; }
+      if (!this.radarScanWas[rside]) {
+        this.radarScanWas[rside] = true;
+        this.radarScanNext[rside] = 0.5;
+      }
       this.radarScanNext[rside] -= dt;
       if (this.radarScanNext[rside] <= 0) {
         this.radarScanNext[rside] = SL.NAVAL.radarScanInterval || 30;

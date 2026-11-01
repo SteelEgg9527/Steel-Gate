@@ -309,6 +309,7 @@
       if (SL.Naval.drawSupport) SL.Naval.drawSupport(ctx, game, cam.zoom);
       ctx.restore();
       if (SL.Naval.drawShipBadges) SL.Naval.drawShipBadges(ctx, game, proj, cam.zoom);
+      if (SL.Naval.drawRadarScan) SL.Naval.drawRadarScan(ctx, game, proj, cam.zoom);
       if (SL.Naval.drawFortificationRings) SL.Naval.drawFortificationRings(ctx, game, proj, cam.zoom);
     });
     stage('fortMarkers', function () {

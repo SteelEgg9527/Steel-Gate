@@ -1718,6 +1718,38 @@
     }
   };
 
+  NAVAL.drawRadarScan = function (ctx, game, proj, zoom) {
+    var radar = game && game.radar;
+    if (!radar || !radar.owner || radar.destroyed || !game.radarScanActive(radar.owner)) return;
+    var x = proj.x(radar.x), y = proj.y(radar.y);
+    if (x < -500 || x > proj.w + 500 || y < -500 || y > proj.h + 500) return;
+    var left = Math.max(0, (game.radarScanUntil[radar.owner] || 0) - game.time);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(113,220,224,0.58)';
+    ctx.lineWidth = 1.4;
+    for (var k = 0; k < 3; k++) {
+      var rr = (80 + ((game.time * 135 + k * 145) % 430)) * zoom;
+      ctx.globalAlpha = Math.max(0.08, 0.55 - rr / (900 * zoom));
+      ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.8;
+    var a = game.time * 1.8;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(a) * 460 * zoom, y + Math.sin(a) * 460 * zoom);
+    ctx.strokeStyle = 'rgba(143,236,230,0.75)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.font = '800 11px ' + SL.FONT_MONO;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(16,24,22,0.8)';
+    ctx.strokeText('雷达扫描中 · ' + left.toFixed(1) + 's', x, y - 18);
+    ctx.fillStyle = '#9fe8e2';
+    ctx.fillText('雷达扫描中 · ' + left.toFixed(1) + 's', x, y - 18);
+    ctx.restore();
+  };
+
   NAVAL.drawFortificationRings = function (ctx, game, proj, zoom) {
     if (!SL.Terrain || !SL.Terrain.naval) return;
     for (var i = 0; i < SL.Terrain.zones.length; i++) {
