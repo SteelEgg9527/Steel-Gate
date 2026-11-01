@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.12.0">
+<link rel="stylesheet" href="css/style.css?v=0.12.2">
 </head>
 <body>
 <div id="app">
@@ -261,6 +261,40 @@
 
   <div id="toasts"></div>
   <footer id="hint">左键选择 · 右键移动 · 双击右键急行军 · 空格暂停 · H 帮助</footer>
+
+  <!-- 主菜单 -->
+  <div id="main-menu" class="overlay main-menu">
+    <div class="main-menu-grid">
+      <div class="main-menu-nav">
+        <div class="main-menu-eyebrow">STEEL LINE · 1944</div>
+        <h1 class="main-menu-heading">钢线 1944</h1>
+        <p class="main-menu-sub">海陆战场指挥 · 三军混战</p>
+        <div class="main-menu-buttons">
+          <button id="mm-start" type="button" class="mm-btn primary">开始游戏 <span>›</span></button>
+          <button id="mm-continue" type="button" class="mm-btn">继续游戏 <span>›</span></button>
+          <button id="mm-settings" type="button" class="mm-btn">游戏设置 <span>›</span></button>
+          <button id="mm-leaderboard" type="button" class="mm-btn muted" disabled>排行榜 <small>制作中</small></button>
+        </div>
+        <p class="main-menu-version">v0.12.2 · 钢线 1944</p>
+      </div>
+      <div class="main-menu-emblem" aria-hidden="true">
+        <div class="emblem-ring">
+          <div class="emblem-cross"></div>
+          <div class="emblem-scan"></div>
+          <div class="emblem-core"><b>SL</b><span>1944</span></div>
+        </div>
+        <div class="emblem-plaque">
+          <span>STEEL LINE</span>
+          <b>钢线 1944</b>
+        </div>
+      </div>
+    </div>
+    <footer class="main-menu-footer">
+      <a href="https://github.com/SteelEgg9527/Steel-Line-1944" target="_blank" rel="noopener">GitHub 链接</a>
+      <a href="https://github.com/SteelEgg9527/Steel-Line-1944/issues" target="_blank" rel="noopener">意见反馈</a>
+      <span>作者：钢蛋</span>
+    </footer>
+  </div>
 
   <!-- 作战简报 -->
   <div id="briefing" class="overlay">
@@ -553,15 +587,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.12.0"></script>
-<script src="js/config.js?v=0.12.0"></script>
-<script src="js/audio.js?v=0.12.0"></script>
-<script src="js/maps.js?v=0.12.0"></script>
-<script src="js/terrain.js?v=0.12.0"></script>
-<script src="js/naval.js?v=0.12.0"></script>
-<script src="js/game.js?v=0.12.0"></script>
-<script src="js/render.js?v=0.12.0"></script>
-<script src="js/ui.js?v=0.12.0"></script>
-<script src="js/main.js?v=0.12.0"></script>
+<script src="js/util.js?v=0.12.2"></script>
+<script src="js/config.js?v=0.12.2"></script>
+<script src="js/audio.js?v=0.12.2"></script>
+<script src="js/maps.js?v=0.12.2"></script>
+<script src="js/terrain.js?v=0.12.2"></script>
+<script src="js/naval.js?v=0.12.2"></script>
+<script src="js/game.js?v=0.12.2"></script>
+<script src="js/render.js?v=0.12.2"></script>
+<script src="js/ui.js?v=0.12.2"></script>
+<script src="js/main.js?v=0.12.2"></script>
 </body>
 </html>

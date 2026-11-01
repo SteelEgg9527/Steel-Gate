@@ -60,6 +60,8 @@
         }
       });
       newGame(params.get('autostart') === '1');
+      bindMainMenu();
+      if (!started) showMainMenu(); else hideMainMenu();
       UI.setMapButtons(SL.Terrain.map.id, gameMode);
       renderModeButtons();
       updateObjective();
@@ -323,10 +325,75 @@
     R.clampCamStrict();
   }
 
+  function showMainMenu() {
+    var mm = document.getElementById('main-menu');
+    if (!mm) return;
+    UI.showBriefing(false);
+    UI.hideResult();
+    mm.classList.remove('hidden');
+    var cont = document.getElementById('mm-continue');
+    if (cont) {
+      var hasSave = false;
+      try { hasSave = !!localStorage.getItem('steel1944_endless_save'); } catch (e) {}
+      cont.disabled = !hasSave;
+      cont.title = hasSave ? '读取最近的无尽模式存档' : '暂无存档';
+    }
+  }
+
+  function hideMainMenu() {
+    var mm = document.getElementById('main-menu');
+    if (mm) mm.classList.add('hidden');
+  }
+
+  function continueSavedGame() {
+    var data = null;
+    try {
+      var raw = localStorage.getItem('steel1944_endless_save');
+      if (raw) data = JSON.parse(raw);
+    } catch (e) {}
+    if (!data) { UI.pushToast('没有可读取的存档', 'loss'); return; }
+    gameMode = data.mode === 'naval' ? 'naval' : (data.mode === 'lastStand' ? 'lastStand' : 'melee');
+    difficulty = 'endless';
+    if (!SL.Terrain.map || SL.Terrain.map.id !== data.map) {
+      SL.Terrain.setMap(data.map);
+      SL.Terrain.build();
+    }
+    newGame(false);
+    if (UI.loadGame()) {
+      started = true;
+      paused = false;
+      UI.setPaused(false);
+      UI.showBriefing(false);
+      UI.hideResult();
+      hideMainMenu();
+      UI.update(game, 0.016);
+      R.draw(game, 0);
+    } else {
+      showMainMenu();
+    }
+  }
+
+  function bindMainMenu() {
+    var start = document.getElementById('mm-start');
+    var cont = document.getElementById('mm-continue');
+    var settings = document.getElementById('mm-settings');
+    if (start) start.addEventListener('click', function () {
+      hideMainMenu();
+      if (!game || game.ended) newGame(false);
+      started = false;
+      paused = false;
+      UI.setPaused(false);
+      UI.showBriefing(true);
+    });
+    if (cont) cont.addEventListener('click', continueSavedGame);
+    if (settings) settings.addEventListener('click', function () { UI.openSettings(); });
+  }
+
   function begin() {
     if (started) return;
     started = true;
     paused = false;
+    hideMainMenu();
     UI.setPaused(false);
     UI.showBriefing(false);
     fastForward();
@@ -340,6 +407,7 @@
   }
 
   function restart() {
+    hideMainMenu();
     newGame(true);
     UI.hideResult();
   }
@@ -348,6 +416,7 @@
     UI.hideGameMenu();
     UI.toggleHelp(false);
     newGame(false);
+    showMainMenu();
   }
 
   function openGameMenu() {
