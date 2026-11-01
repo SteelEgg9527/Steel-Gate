@@ -49,6 +49,51 @@
       ]
     },
     {
+      id: 'n4', name: '奥马哈断崖', subtitle: '竖向海陆 · 断崖与河谷',
+      seed: 19441018, naval: true, size: 5000, sceneSize: 5000,
+      shore: shore([[2600, 0], [2650, 500], [2400, 900], [2200, 1300], [2380, 1700], [2500, 2200], [2450, 2700], [2250, 3100], [2400, 3500], [2550, 4000], [2500, 4500], [2600, 5000]]),
+      spawns: { blue: { x: 650, y: 3800 }, red: { x: 600, y: 1000 }, green: { x: 850, y: 2500 } },
+      forts: [
+        { name: '断崖主堡', x: 1500, y: 1000, r: 68 },
+        { name: '滩头暗堡', x: 1700, y: 2600, r: 64 },
+        { name: '河谷炮位', x: 900, y: 3300, r: 60 },
+        { name: '南岸哨所', x: 1300, y: 4200, r: 58 }
+      ],
+      villageNames: ['圣洛村', '奥马哈村', '贝桑港', '卡昂村', '巴约村', '瑟堡镇', '库唐斯'],
+      streamName: '欧尔河',
+      townNames: ['北崖镇', '中滩镇', '南谷镇']
+    },
+    {
+      id: 'n5', name: '科唐坦半岛', subtitle: '斜向海陆 · 半岛与湿地',
+      seed: 19441105, naval: true, size: 5000, sceneSize: 5000,
+      shore: shore([[3400, 0], [3200, 500], [2900, 1000], [2500, 1500], [2100, 2000], [1800, 2500], [1600, 3000], [1500, 3500], [1350, 4000], [1100, 4500], [900, 5000]]),
+      spawns: { blue: { x: 600, y: 4300 }, red: { x: 700, y: 800 }, green: { x: 600, y: 2600 } },
+      forts: [
+        { name: '半岛炮台', x: 1300, y: 1500, r: 66 },
+        { name: '湿地工事', x: 900, y: 2600, r: 62 },
+        { name: '西岸哨所', x: 600, y: 3500, r: 58 },
+        { name: '南端阵地', x: 800, y: 4700, r: 60 }
+      ],
+      villageNames: ['库唐斯', '卡朗唐', '圣梅尔', '巴约村', '维尔农', '贝桑港', '瑟堡镇'],
+      streamName: '杜沃河',
+      townNames: ['北岬镇', '中湿镇', '南岬镇']
+    },
+    {
+      id: 'n6', name: '卡昂运河口', subtitle: '纵向海陆 · 运河与港区',
+      seed: 19441212, naval: true, size: 5000, sceneSize: 5000,
+      shore: shore([[2500, 0], [2450, 600], [2350, 1200], [2100, 1600], [1700, 1900], [1500, 2200], [1700, 2500], [2050, 2800], [2300, 3200], [2400, 3800], [2450, 4400], [2500, 5000]]),
+      spawns: { blue: { x: 500, y: 3800 }, red: { x: 500, y: 800 }, green: { x: 700, y: 2600 } },
+      forts: [
+        { name: '运河口炮台', x: 1100, y: 2000, r: 68 },
+        { name: '港区工事', x: 800, y: 2800, r: 64 },
+        { name: '北岸哨所', x: 900, y: 900, r: 58 },
+        { name: '南岸阵地', x: 1200, y: 4300, r: 60 }
+      ],
+      villageNames: ['卡昂村', '乌伊斯特勒', '贝桑港', '圣洛村', '巴约村', '瑟堡镇', '库唐斯'],
+      streamName: '奥恩河',
+      townNames: ['北港镇', '中湾镇', '南运河镇']
+    },
+    {
       id: 'naval_range', name: '海岸训练场', subtitle: '带海域 · 舰炮与两栖测试',
       seed: 19440901, test: true, naval: true, size: 5000, sceneSize: 5000,
       shore: shore([[2550, 0], [2500, 1000], [2480, 2000], [2520, 3000], [2500, 4000], [2550, 5000]]),
@@ -317,7 +362,7 @@
     });
 
     // 村庄：每张地图 7 个左右，沿内陆分布，避开彼此和出生点
-    var names = ['圣洛村', '贝桑港', '卡昂村', '维尔农', '奥马哈村', '瑟堡镇', '巴约村', '库唐斯'];
+    var names = m.villageNames || ['圣洛村', '贝桑港', '卡昂村', '维尔农', '奥马哈村', '瑟堡镇', '巴约村', '库唐斯'];
     var spawnList = [];
     for (var sk in m.spawns) spawnList.push(m.spawns[sk]);
     for (var vi = 0; vi < 8 && T.villages.length < 7; vi++) {
@@ -367,7 +412,7 @@
     }
     T.streams = [stream];
     T.stream = stream;
-    T.streamName = '河流';
+    T.streamName = m.streamName || '河流';
 
     // 道路：以雷达为中心连接村庄、堡垒和出生点，形成陆上道路网
     var nodes = [];
@@ -551,7 +596,7 @@
 
     var chosenVillages = [];
     var chosen = [];
-    var townNames = ['北镇', '中镇', '南镇'];
+    var townNames = (T.navalMap && T.navalMap.townNames) || ['北镇', '中镇', '南镇'];
     for (var gi4 = 0; gi4 < groups.length; gi4++) {
       for (var gj2 = 0; gj2 < groups[gi4].length; gj2++) {
         var vv3 = groups[gi4][gj2];
