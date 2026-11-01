@@ -353,6 +353,12 @@
     if (el.setAudioArtillery) el.setAudioArtillery.addEventListener('input', audioSettingsChanged);
     if (el.setAudioExplosion) el.setAudioExplosion.addEventListener('input', audioSettingsChanged);
     if (el.setAudioUi) el.setAudioUi.addEventListener('input', audioSettingsChanged);
+    // 主界面和局内共用同一份设置；其他标签页修改时也同步
+    window.addEventListener('storage', function (ev) {
+      if (ev.key !== SETTINGS_KEY) return;
+      loadSettings();
+      syncSettingsUI();
+    });
     if (el.gmClose) el.gmClose.addEventListener('click', function () { if (callbacks.onCloseMenu) callbacks.onCloseMenu(); });
     if (el.gmResume) el.gmResume.addEventListener('click', function () { if (callbacks.onCloseMenu) callbacks.onCloseMenu(); });
     if (el.gmRestart) el.gmRestart.addEventListener('click', function () { if (callbacks.onRestart) callbacks.onRestart(); });

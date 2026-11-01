@@ -865,6 +865,12 @@ html, body {
   color: #e8d7a8; font: 600 12px var(--font-ui); letter-spacing: 0.16em;
 }
 .settings-head button { background: none; border: 0; color: #9d947c; font-size: 20px; cursor: pointer; }
+.settings-sync-note {
+  margin: -4px 14px 8px;
+  color: #758474;
+  font: 500 9px var(--font-ui);
+  letter-spacing: 0.04em;
+}
 .settings-section { margin: 12px 14px 4px; color: #b9a778; font: 600 10px var(--font-ui); letter-spacing: 0.16em; }
 .settings-row {
   display: flex; align-items: center; justify-content: space-between;
