@@ -348,7 +348,7 @@
         this.aiShipTimer[s.side] = interval;
         var target = null;
         var playerShip = this.shipOf('blue');
-        if (playerShip && (playerShip.nearShore || (playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.radarScanActive(s.side) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
+        if (playerShip && ((playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.radarScanActive(s.side) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
         if (!target) target = this.nearestSpottedEnemy(s, 3000);
         // 水上飞机发现目标后，进行 2~3 轮连续压制
         if (s.aiStrikeRounds > 0 && s.aiStrikeTarget) {
@@ -3607,6 +3607,13 @@
 
   // 侦察机是否照亮了某点
   Game.prototype.reconSees = function (side, x, y) {
+    // 指挥车自身持续观察圈：无需进入隐蔽，也不依赖临时侦察区
+    var cr = SL.COMMAND_RECON.radius || 150;
+    for (var cu = 0; cu < this.units.length; cu++) {
+      var cmd = this.units[cu];
+      if (!cmd || !cmd.alive || cmd.side !== side || cmd.type !== 'command') continue;
+      if (U.dist2(cmd.x, cmd.y, x, y) <= cr * cr) return true;
+    }
     for (var i = 0; i < this.recons.length; i++) {
       var r = this.recons[i];
       if (r.side !== side || this.time >= r.until) continue;
@@ -5740,7 +5747,7 @@
       var count = this.meleeAirGroupSize();
       if (this.aliveCount(side) === 0 || this.planes.length + count > 30) continue;
       var gx, gy, tx, ty, radius;
-      var airShip = this.naval ? (this.navalPlayerShipExposed() || this.navalPlayerShipNearShore()) : null;
+      var airShip = this.naval ? this.navalPlayerShipExposed() : null;
       if (airShip) {
         tx = airShip.x; ty = airShip.y; radius = 300;
         var acang = Math.random() * Math.PI * 2;
@@ -5800,7 +5807,7 @@
       u.order.target && u.order.target.alive) return;
     // 舰炮轰鸣：岸防火炮优先压制近岸支援中的战舰
     if (this.naval && (u.type === 'artillery' || u.type === 'heavy_arty')) {
-      var enemyShip = this.navalPlayerShipExposed() || this.navalPlayerShipNearShore();
+      var enemyShip = this.navalPlayerShipExposed();
       if (enemyShip && this.unitVisibleTo(u.side, enemyShip)) {
         this.commandSuppress([u], enemyShip.x, enemyShip.y);
         return;

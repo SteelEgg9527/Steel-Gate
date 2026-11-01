@@ -1376,12 +1376,15 @@
     t.ammo = Math.max(0, t.ammo - 1);
     t.cd = c.interval * (1 - 0.08 * towers);
     if (ship.suppress) ship.suppress.shots = (ship.suppress.shots || 0) + 1;
-    if (ship.nearShore && Math.random() < (SL.NAVAL.hull.nearShoreExposeChance || 0.22)) {
-      var wasExposed = ship.exposedUntil > game.time;
-      ship.exposedUntil = game.time + (SL.NAVAL.hull.exposeDuration || 8);
-      if (!wasExposed) {
-        game.fxText(ship.x, ship.y - 20, '近岸开火暴露！', '#ffb08a');
-        if (game.log) game.log(ship.name + ' 近岸开火暴露了位置', 'loss');
+    if (ship.nearShore && game.time >= (ship.nextExposeRoll || 0)) {
+      ship.nextExposeRoll = game.time + 1;
+      if (Math.random() < (SL.NAVAL.hull.nearShoreExposeChance || 0.08)) {
+        var wasExposed = ship.exposedUntil > game.time;
+        ship.exposedUntil = game.time + (SL.NAVAL.hull.exposeDuration || 5);
+        if (!wasExposed) {
+          game.fxText(ship.x, ship.y - 20, '近岸开火暴露！', '#ffb08a');
+          if (game.log) game.log(ship.name + ' 近岸开火暴露了位置', 'loss');
+        }
       }
     }
   }
