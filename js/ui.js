@@ -1468,7 +1468,9 @@
     uiCache.draftOpen = false;
     hideDraftAlert();
     if (g.winner) {
-      if (g.mode === 'lastStand') {
+      if (g.mode === 'naval' && g.navalSettled) {
+        $('result-title').textContent = '舰炮轰鸣 · 已结算';
+      } else if (g.mode === 'lastStand') {
         $('result-title').textContent = g.defense && g.defense.settled
           ? '背水一战 · 已结算'
           : (g.winner === 'blue' ? '背水一战 · 防守成功' : '背水一战 · 防线失守');

@@ -1175,6 +1175,12 @@
   };
 
   Game.prototype.settleDefense = function () {
+    if (this.mode === 'naval' && this.difficulty === 'endless' && !this.ended) {
+      this.navalSettled = true;
+      this.defense = this.defense || null;
+      this.endDefense(true, '主动结算：舰炮轰鸣无尽模式');
+      return true;
+    }
     if (this.mode !== 'lastStand' || this.ended || !this.defense || this.defense.holdTarget !== Infinity) return false;
     this.defense.settled = true;
     this.endDefense(true, '主动结算：坚守 ' + U.clock(this.defense.hold) + '，波次 ' + this.defense.wave);
