@@ -192,7 +192,7 @@
       hp: 90,
       armor: 0,
       vision: 160,
-      range: 190,
+      range: 250,
       minRange: 15,
       speed: 6.5,
       radius: 8,
