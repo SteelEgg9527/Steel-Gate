@@ -557,7 +557,8 @@
     infantry: { xp: 150, score: 10 },
     armored: { xp: 200, score: 20 },
     tank: { xp: 250, score: 35 },
-    artillery: { xp: 200, score: 25 }
+    artillery: { xp: 200, score: 25 },
+    ship: { xp: 1000, score: 500 }
   };
 
   SL.XP = {

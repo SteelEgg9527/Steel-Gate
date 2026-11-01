@@ -98,6 +98,7 @@
     this.coastalGuns = [];
     this.navalCards = [];
     this.battleships = [];
+    this.shipRecords = [];
     this.playerShipSummoned = false;
     this.shipSupportOwned = false;
     this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2000;
@@ -276,6 +277,28 @@
     ship.lastHit = this.time;
     if (ship.hp <= 0) {
       ship.hp = 0; ship.alive = false;
+      if (source && source.isShip && source.side !== ship.side) {
+        var shipReward = (SL.REWARD && SL.REWARD.ship) || { xp: 1000, score: 500 };
+        source.kills = (source.kills || 0) + 1;
+        source.score = (source.score || 0) + shipReward.score;
+        this.addScore(source.side, shipReward.score);
+        this.addXp(source.side, shipReward.xp);
+        this.teams[source.side].kills = (this.teams[source.side].kills || 0) + 1;
+        this.stats.kills[source.side] = (this.stats.kills[source.side] || 0) + 1;
+        this.feed.push({
+          id: ++this.feedSeq, t: this.time, kind: 'kill',
+          ks: source.side, vs: ship.side, killer: source.name, victim: ship.name,
+          xp: shipReward.xp, score: shipReward.score, text: ''
+        });
+        if (this.feed.length > 60) this.feed.shift();
+      }
+      if (!ship.recorded) {
+        ship.recorded = true;
+        this.shipRecords.push({
+          id: ship.id, side: ship.side, name: ship.name, isShip: true,
+          kills: ship.kills || 0, score: ship.score || 0
+        });
+      }
       this.effects.push({ kind: 'explosion', x: ship.x, y: ship.y, t: 0, dur: 1.8, size: 100, side: ship.side });
       if (ship.side === 'blue') this.shipSupportOwned = false;
       this.log(ship.name + ' 被击沉', 'loss');
@@ -1263,7 +1286,7 @@
             fireMode: s.fireMode, prewarn: s.prewarn, entering: s.entering,
             entryX: s.entryX, entryY: s.entryY, dest: s.dest, bombard: s.bombard, suppress: s.suppress,
             planeReserve: s.planeReserve, planeAmmo: s.planeAmmo, planeRecharge: s.planeRecharge,
-            supply: s.supply, lastHit: s.lastHit,
+            supply: s.supply, lastHit: s.lastHit, kills: s.kills, score: s.score,
             turrets: s.turrets.map(function (t) {
               return {
                 cls: t.cls, lx: t.lx, ly: t.ly, side: t.side, arcCenter: t.arcCenter,
@@ -1292,7 +1315,8 @@
             cd: g.cd, range: g.range, spread: g.spread, splash: g.splash, dmg: g.dmg,
             interval: g.interval, heading: g.heading
           };
-        })
+        }),
+        shipRecords: this.shipRecords || []
       } : null,
       units: this.units.filter(function (u) { return u.alive; }).map(function (u) {
         return {
@@ -1363,6 +1387,7 @@
       this.aiShipTimer = nv.aiShipTimer || this.aiShipTimer;
       this.radarScanNext = nv.radarScanNext || this.radarScanNext;
       this.radarScanUntil = nv.radarScanUntil || this.radarScanUntil;
+      this.shipRecords = nv.shipRecords || [];
       (nv.coastalGuns || []).forEach(function (g) {
         var base = T.zones.find(function (z) { return z.id === g.baseId; });
         if (!base || base.destroyed) return;
@@ -5641,6 +5666,21 @@
 
   Game.prototype.leaderboard = function (n) {
     var list = this.units.filter(function (u) { return u.score > 0; });
+    // 战舰也进入结算/实时积分榜
+    if (this.battleships) {
+      for (var i = 0; i < this.battleships.length; i++) {
+        var s = this.battleships[i];
+        if (s.alive && (s.score || s.kills)) {
+          list.push({ id: s.id, side: s.side, name: s.name, kills: s.kills || 0, score: s.score || 0, isShip: true });
+        }
+      }
+    }
+    if (this.shipRecords) {
+      for (var j = 0; j < this.shipRecords.length; j++) {
+        var rec = this.shipRecords[j];
+        if (rec.score > 0 || rec.kills > 0) list.push(rec);
+      }
+    }
     list.sort(function (a, b) { return b.score - a.score || b.kills - a.kills; });
     return list.slice(0, n || 10);
   };

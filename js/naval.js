@@ -1244,6 +1244,7 @@
       heading: Math.PI, speed: 0, maxSpeed: h.maxSpeed,
       hp: h.hp, maxHp: h.hp, armor: h.armor, vision: h.vision,
       alive: true, selected: false, nearShore: false,
+      kills: 0, score: 0,
       exposedUntil: 0, fireMode: 'free', prewarn: null,
       entering: false, entryX: x, entryY: y,
       dest: null, bombard: null, suppress: null,
