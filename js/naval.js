@@ -350,16 +350,20 @@
       T.forts.push({ name: forts[q].name, x: p0.x, y: p0.y, r: forts[q].r });
     }
 
-    // 河流：从内陆流向海岸，避开村庄中心
+    // 河流：从内陆流向海岸，并一直延伸到海中形成入海口
     var sy = size * 0.22 + rnd() * size * 0.12;
     var ey = size * 0.58 + rnd() * size * 0.16;
     var stream = [];
-    for (var si = 0; si <= 8; si++) {
-      var tt = si / 8;
+    for (var si = 0; si <= 9; si++) {
+      var tt = si / 9;
       var yy = U.lerp(sy, ey, tt);
       var edge = shoreSceneAt(yy);
-      var xx = U.lerp(size * 0.10, edge - 90, tt) + Math.sin(tt * Math.PI * 2.6) * 95;
-      stream.push({ x: U.clamp(xx, 180, edge - 50), y: yy });
+      if (si === 9) {
+        stream.push({ x: edge + 70, y: yy });
+      } else {
+        var xx = U.lerp(size * 0.10, edge - 90, tt) + Math.sin(tt * Math.PI * 2.6) * 95;
+        stream.push({ x: U.clamp(xx, 180, edge - 45), y: yy });
+      }
     }
     T.streams = [stream];
     T.stream = stream;
