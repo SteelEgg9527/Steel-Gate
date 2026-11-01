@@ -158,6 +158,7 @@
     el.buyUnitCost = $('buy-unit-cost');
     el.quickEquip = $('quick-equip');
     el.quickFort = $('quick-fort');
+    el.quickDeploy = $('quick-deploy');
     el.discard = $('discard');
     el.draft = $('draft');
     el.draftCards = $('draft-cards');
@@ -383,6 +384,7 @@
     if (el.buyUnit) el.buyUnit.addEventListener('click', function () { UI.buyUnitReinforcement(); });
     if (el.quickEquip) el.quickEquip.addEventListener('click', function () { UI.quickEquip(); });
     if (el.quickFort) el.quickFort.addEventListener('click', function () { UI.quickFort(); });
+    if (el.quickDeploy) el.quickDeploy.addEventListener('click', function () { UI.quickDeploy(); });
     if (el.fireModeBtn) el.fireModeBtn.addEventListener('click', function () { UI.cycleFireMode(); });
     if (el.grenadeModeBtn) el.grenadeModeBtn.addEventListener('click', function () { UI.cycleGrenadeMode(); });
     if (el.btnFireSupport) el.btnFireSupport.addEventListener('click', function () { UI.beginCommand('fireSupport'); });
@@ -562,39 +564,56 @@
   UI.quickEquip = function () {
     if (!game) return;
     var hand = game.teams.blue.hand;
-    var n = 0;
-    for (var i = hand.length - 1; i >= 0; i--) {
-      var c = hand[i];
-      if (!c || c.key !== 'equip') continue;
-      var inf = game.units.find(function (u) {
-        return u.alive && u.side === 'blue' && u.type === 'infantry' && u.items.length < (SL.INFANTRY_SLOTS || 6);
-      });
-      if (!inf) break;
-      var r = game.useCard(c, { unit: inf });
-      if (r && r.ok) n++;
-    }
-    UI.pushToast(n ? ('已快速装备 ' + n + ' 件装备') : '没有可装备的步兵或装备卡', n ? 'win' : 'info');
-    if (n) renderCards();
+    var card = hand.find(function (c) { return c && c.key === 'equip'; });
+    if (!card) { UI.pushToast('卡片槽里没有装备卡', 'info'); return; }
+    var inf = game.units.find(function (u) {
+      return u.alive && u.side === 'blue' && u.type === 'infantry' && u.items.length < (SL.INFANTRY_SLOTS || 6);
+    });
+    if (!inf) { UI.pushToast('没有可装备的步兵', 'info'); return; }
+    var r = game.useCard(card, { unit: inf });
+    UI.pushToast(r.msg, r.ok ? 'win' : 'loss');
+    if (r.ok) renderCards();
   };
 
   UI.quickFort = function () {
     if (!game) return;
     var hand = game.teams.blue.hand;
     var fortKeys = ['bunker', 'mortar_nest', 'at_gun_nest', 'flak88'];
-    var n = 0;
-    for (var i = hand.length - 1; i >= 0; i--) {
-      var c = hand[i];
-      if (!c || fortKeys.indexOf(c.key) < 0) continue;
-      var z = SL.Terrain.zones.find(function (zz) {
-        return zz.owner === 'blue' && zz.fortified && !zz.destroyed &&
-          (zz.structures || []).length < (SL.FORT.maxStructures || 4);
-      });
-      if (!z) break;
-      var r = game.useCard(c, { x: z.x, y: z.y });
-      if (r && r.ok) n++;
+    var card = hand.find(function (c) { return c && fortKeys.indexOf(c.key) >= 0; });
+    if (!card) { UI.pushToast('卡片槽里没有工事卡', 'info'); return; }
+    var z = SL.Terrain.zones.find(function (zz) {
+      return zz.owner === 'blue' && zz.fortified && !zz.destroyed &&
+        (zz.structures || []).length < (SL.FORT.maxStructures || 4);
+    });
+    if (!z) { UI.pushToast('没有可部署的强化工事', 'info'); return; }
+    var r = game.useCard(card, { x: z.x, y: z.y });
+    UI.pushToast(r.msg, r.ok ? 'win' : 'loss');
+    if (r.ok) renderCards();
+  };
+
+  UI.quickDeploy = function () {
+    if (!game) return;
+    var hand = game.teams.blue.hand;
+    var card = hand.find(function (c) { return c && c.key === 'unit'; });
+    if (!card) { UI.pushToast('卡片槽里没有单位卡', 'info'); return; }
+    var mates = game.units.filter(function (u) { return u.alive && u.side === 'blue'; });
+    if (!mates.length) { UI.pushToast('没有可以接应的友军单位', 'info'); return; }
+    var r = null;
+    for (var i = 0; i < 14; i++) {
+      var a = mates[Math.floor(Math.random() * mates.length)];
+      var ang = Math.random() * Math.PI * 2;
+      var rad = 50 + Math.random() * 140;
+      var x = U.clamp(a.x + Math.cos(ang) * rad, 40, SL.CONFIG.mapSize - 40);
+      var y = U.clamp(a.y + Math.sin(ang) * rad, 40, SL.CONFIG.mapSize - 40);
+      if (SL.Terrain && SL.Terrain.naval && SL.Naval && SL.Naval.isWater(x, y)) {
+        var lp = SL.Naval.nearestLandPoint(x, y);
+        x = lp.x; y = lp.y;
+      }
+      r = game.useCard(card, { x: x, y: y });
+      if (r && r.ok) break;
     }
-    UI.pushToast(n ? ('已快速部署 ' + n + ' 座工事') : '没有可部署的强化工事或工事卡', n ? 'win' : 'info');
-    if (n) renderCards();
+    UI.pushToast(r && r.msg ? r.msg : '快速部署失败', r && r.ok ? 'win' : 'loss');
+    if (r && r.ok) renderCards();
   };
 
   UI.openDraft = function () {
