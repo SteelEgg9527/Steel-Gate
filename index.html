@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.10.21">
+<link rel="stylesheet" href="css/style.css?v=0.11.0">
 </head>
 <body>
 <div id="app">
@@ -336,7 +336,15 @@
         <button id="btn-start" class="primary">开始作战</button>
       </div>
     </div>
- </div>
+    <footer class="credit-footer credit-standalone">
+      <div class="credit-links">
+        <a href="https://github.com/SteelEgg9527/Steel-Line-1944" target="_blank" rel="noopener">GitHub 项目</a>
+        <span>·</span>
+        <a href="https://github.com/SteelEgg9527/Steel-Line-1944/issues" target="_blank" rel="noopener">提交意见</a>
+      </div>
+      <div class="credit-author">作者：钢蛋</div>
+    </footer>
+  </div>
 
   <!-- 替换已满阵地的工事 -->
   <div id="fort-replace" class="overlay hidden">
@@ -426,7 +434,7 @@
         <table class="stats">
           <thead><tr><th>武器</th><th>数量</th><th>射程</th><th>伤害</th><th>溅射</th><th>散布</th><th>装填</th></tr></thead>
           <tbody>
-            <tr><td>203mm 主炮</td><td>4</td><td>3km</td><td>550</td><td>320m</td><td>520</td><td>24s</td></tr>
+            <tr><td>203mm 主炮</td><td>4</td><td>3km</td><td>550</td><td>250m</td><td>520</td><td>24s</td></tr>
             <tr><td>105mm 副炮</td><td>6</td><td>1.5km</td><td>180</td><td>160m</td><td>260</td><td>8s</td></tr>
             <tr><td>37mm 防空炮</td><td>6</td><td>对空 800 / 对地 500</td><td>35</td><td>40m</td><td>95</td><td>1.8s</td></tr>
             <tr><td>20mm 机关炮</td><td>10</td><td>对空 600 / 对地 400</td><td>14</td><td>24m</td><td>65</td><td>0.45s</td></tr>
@@ -436,20 +444,20 @@
         <table class="stats">
           <thead><tr><th>单位</th><th>视野</th><th>射程</th><th>耐久</th><th>速度</th></tr></thead>
           <tbody>
-            <tr><td>步兵班</td><td>350m</td><td>160m</td><td>300</td><td>7.2m/s</td></tr>
-            <tr><td>装甲车</td><td>200m</td><td>180m</td><td>150</td><td>14m/s</td></tr>
+            <tr><td>步兵班</td><td>350m</td><td>180m</td><td>300</td><td>7.2m/s</td></tr>
+            <tr><td>装甲车</td><td>200m</td><td>180m</td><td>300</td><td>14m/s</td></tr>
             <tr><td>中型坦克</td><td>200m</td><td>220m</td><td>400</td><td>9.5m/s</td></tr>
             <tr><td>重型坦克</td><td>200m</td><td>250m</td><td>520</td><td>8.5m/s</td></tr>
-            <tr><td>防空车</td><td>150m</td><td>190m / 对空 600m</td><td>90</td><td>13m/s</td></tr>
-            <tr><td>轻型反坦克炮</td><td>250m</td><td>250m</td><td>90</td><td>9m/s</td></tr>
-            <tr><td>火炮</td><td>160m</td><td>600m</td><td>65</td><td>14m/s</td></tr>
-            <tr><td>重型火炮</td><td>160m</td><td>800m</td><td>85</td><td>14m/s</td></tr>
-            <tr><td>自行火箭炮</td><td>200m</td><td>700m</td><td>110</td><td>10m/s</td></tr>
-            <tr><td>指挥车</td><td>450m</td><td>—</td><td>120</td><td>15m/s</td></tr>
-            <tr><td>工程车</td><td>240m</td><td>—</td><td>220</td><td>12m/s</td></tr>
+            <tr><td>防空车</td><td>250m</td><td>190m / 对空 600m</td><td>250</td><td>14m/s</td></tr>
+            <tr><td>轻型反坦克炮</td><td>250m</td><td>250m</td><td>90</td><td>14m/s</td></tr>
+            <tr><td>火炮</td><td>250m</td><td>600m</td><td>65</td><td>14m/s</td></tr>
+            <tr><td>重型火炮</td><td>250m</td><td>800m</td><td>85</td><td>14m/s</td></tr>
+            <tr><td>自行火箭炮</td><td>200m</td><td>700m</td><td>150</td><td>10m/s</td></tr>
+            <tr><td>指挥车</td><td>450m</td><td>—</td><td>150</td><td>15m/s</td></tr>
+            <tr><td>工程车</td><td>240m</td><td>—</td><td>220</td><td>14m/s</td></tr>
           </tbody>
         </table>
-        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵。玩家经验与分数均为 2.5 倍。</p>
+        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵；MG42 射程 200m。轻型反坦克炮移动后需架设 1 秒。玩家经验与分数均为 2.5 倍。</p>
       </div>
     </div>
   </div>
@@ -506,6 +514,14 @@
     <button id="gm-mainmenu" type="button">回到主菜单</button>
     <button id="gm-settings" type="button">设置</button>
     <p class="gm-tip">游戏已暂停</p>
+    <div class="credit-footer compact">
+      <div class="credit-links">
+        <a href="https://github.com/SteelEgg9527/Steel-Line-1944" target="_blank" rel="noopener">GitHub 项目</a>
+        <span>·</span>
+        <a href="https://github.com/SteelEgg9527/Steel-Line-1944/issues" target="_blank" rel="noopener">提交意见</a>
+      </div>
+      <div class="credit-author">作者：钢蛋</div>
+    </div>
   </div>
 
   <div id="settings-panel" class="settings-panel hidden">
@@ -531,15 +547,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.10.21"></script>
-<script src="js/config.js?v=0.10.21"></script>
-<script src="js/audio.js?v=0.10.21"></script>
-<script src="js/maps.js?v=0.10.21"></script>
-<script src="js/terrain.js?v=0.10.21"></script>
-<script src="js/naval.js?v=0.10.21"></script>
-<script src="js/game.js?v=0.10.21"></script>
-<script src="js/render.js?v=0.10.21"></script>
-<script src="js/ui.js?v=0.10.21"></script>
-<script src="js/main.js?v=0.10.21"></script>
+<script src="js/util.js?v=0.11.0"></script>
+<script src="js/config.js?v=0.11.0"></script>
+<script src="js/audio.js?v=0.11.0"></script>
+<script src="js/maps.js?v=0.11.0"></script>
+<script src="js/terrain.js?v=0.11.0"></script>
+<script src="js/naval.js?v=0.11.0"></script>
+<script src="js/game.js?v=0.11.0"></script>
+<script src="js/render.js?v=0.11.0"></script>
+<script src="js/ui.js?v=0.11.0"></script>
+<script src="js/main.js?v=0.11.0"></script>
 </body>
 </html>

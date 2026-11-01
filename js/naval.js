@@ -1342,6 +1342,21 @@
     return Math.abs(angleDiff(rel, center)) <= t.classDef.arc / 2;
   }
 
+  // 炮塔在自身射界内转动；目标位于死角/另一侧时，从射界内绕行，不穿越死角
+  function rotateTurretToward(ship, t, bearing, dt) {
+    var center = t.arcCenter, half = t.classDef.arc / 2;
+    var relCur = angleDiff(t.angle, center);
+    if (Math.abs(relCur) > half) relCur = U.clamp(relCur, -half, half);
+    var relTarget = angleDiff(angleDiff(bearing, ship.heading), center);
+    var desiredRel;
+    if (Math.abs(relTarget) > half) desiredRel = relTarget >= 0 ? half : -half;
+    else desiredRel = relTarget;
+    var move = U.clamp(desiredRel - relCur, -t.classDef.turnRate * dt, t.classDef.turnRate * dt);
+    t.angle = normAngle(center + relCur + move);
+    t.targetAngle = normAngle(center + desiredRel);
+    return t;
+  }
+
   function fireShipShell(game, ship, t, tx, ty, targetDist) {
     var c = t.classDef;
     if (t.ammo <= 0) return;
@@ -1375,6 +1390,7 @@
     if (SL.Audio) SL.Audio.shot({ dmg: c.dmg, kind: 'shell', label: c.name }, ship, false, from.x, from.y);
     t.ammo = Math.max(0, t.ammo - 1);
     t.cd = c.interval * (1 - 0.08 * towers);
+    t.reloadTotal = t.cd;
     if (ship.suppress) ship.suppress.shots = (ship.suppress.shots || 0) + 1;
     if (ship.nearShore && game.time >= (ship.nextExposeRoll || 0)) {
       ship.nextExposeRoll = game.time + 1;
@@ -1396,7 +1412,6 @@
     if (ship.entering) {
       var ex = ship.entryX != null ? ship.entryX : ship.x;
       var dx = ex - ship.x;
-      ship.dest = null;
       ship.heading = Math.PI;
       ship.speed = h.maxSpeed;
       if (Math.abs(dx) <= 3) {
@@ -1408,7 +1423,6 @@
         ship.x += Math.sign(dx) * Math.min(Math.abs(dx), ship.speed * dt);
       }
       ship.nearShore = NAVAL.shoreDistance(ship.x, ship.y) <= h.shoreRange;
-      return;
     }
     if (ship.bombard && game.time > ship.bombard.until) ship.bombard = null;
     if (ship.suppress) {
@@ -1420,33 +1434,35 @@
     if (ship.suppress && game.time > ship.suppress.until) ship.suppress = null;
     var shoreD = NAVAL.shoreDistance(ship.x, ship.y);
     ship.nearShore = shoreD <= h.shoreRange;
-    // 航行：加速、转向、倒船
-    if (ship.dest) {
-      var dx = ship.dest.x - ship.x, dy = ship.dest.y - ship.y;
-      var dist = Math.hypot(dx, dy);
-      if (dist < 18) {
-        ship.dest = null;
+    // 航行：加速、转向、倒船；驶入阶段保持入场航线，但接受并保留后续命令
+    if (!ship.entering) {
+      if (ship.dest) {
+        var dx = ship.dest.x - ship.x, dy = ship.dest.y - ship.y;
+        var dist = Math.hypot(dx, dy);
+        if (dist < 18) {
+          ship.dest = null;
+        } else {
+          var desired = Math.atan2(dy, dx);
+          var rel = angleDiff(desired, ship.heading);
+          var reverse = Math.abs(rel) > 2.35;
+          if (reverse) desired = normAngle(desired + Math.PI);
+          var turn = h.turnRate * dt * (1.15 - 0.3 * Math.min(1, Math.abs(ship.speed) / ship.maxSpeed));
+          ship.heading = normAngle(ship.heading + U.clamp(angleDiff(desired, ship.heading), -turn, turn));
+          var targetSpeed = reverse ? -h.reverseSpeed : ship.maxSpeed * (ship.nearShore ? h.nearShoreSpeed : 1);
+          if (dist < 140) targetSpeed *= Math.max(0.25, dist / 140);
+          var accel = h.accel * dt;
+          if (ship.speed < targetSpeed) ship.speed = Math.min(targetSpeed, ship.speed + accel);
+          else ship.speed = Math.max(targetSpeed, ship.speed - accel * 1.5);
+        }
       } else {
-        var desired = Math.atan2(dy, dx);
-        var rel = angleDiff(desired, ship.heading);
-        var reverse = Math.abs(rel) > 2.35;
-        if (reverse) desired = normAngle(desired + Math.PI);
-        var turn = h.turnRate * dt * (1.15 - 0.3 * Math.min(1, Math.abs(ship.speed) / ship.maxSpeed));
-        ship.heading = normAngle(ship.heading + U.clamp(angleDiff(desired, ship.heading), -turn, turn));
-        var targetSpeed = reverse ? -h.reverseSpeed : ship.maxSpeed * (ship.nearShore ? h.nearShoreSpeed : 1);
-        if (dist < 140) targetSpeed *= Math.max(0.25, dist / 140);
-        var accel = h.accel * dt;
-        if (ship.speed < targetSpeed) ship.speed = Math.min(targetSpeed, ship.speed + accel);
-        else ship.speed = Math.max(targetSpeed, ship.speed - accel * 1.5);
+        ship.speed = Math.max(0, ship.speed - h.accel * dt * 0.8);
       }
-    } else {
-      ship.speed = Math.max(0, ship.speed - h.accel * dt * 0.8);
-    }
-    if (Math.abs(ship.speed) > 0.01) {
-      var nx = ship.x + Math.cos(ship.heading) * ship.speed * dt;
-      var ny = ship.y + Math.sin(ship.heading) * ship.speed * dt;
-      if (NAVAL.isWater(nx, ny)) { ship.x = nx; ship.y = ny; }
-      else ship.speed *= 0.35;
+      if (Math.abs(ship.speed) > 0.01) {
+        var nx = ship.x + Math.cos(ship.heading) * ship.speed * dt;
+        var ny = ship.y + Math.sin(ship.heading) * ship.speed * dt;
+        if (NAVAL.isWater(nx, ny)) { ship.x = nx; ship.y = ny; }
+        else ship.speed *= 0.35;
+      }
     }
     ship.x = U.clamp(ship.x, 30, T.size - 30);
     ship.y = U.clamp(ship.y, 30, T.size - 30);
@@ -1486,12 +1502,9 @@
         var ed = U.dist(ship.x, ship.y, ship.bombard.x, ship.bombard.y);
         var er = Math.atan2(ship.bombard.y - ship.y, ship.bombard.x - ship.x);
         if (ed > et.classDef.range || !allowedArc(ship, et, er)) continue;
-        var erel = angleDiff(er, ship.heading);
-        var eArcHalf = et.classDef.arc / 2;
-        var eDesired = et.arcCenter + U.clamp(angleDiff(erel, et.arcCenter), -eArcHalf, eArcHalf);
-        et.angle += U.clamp(angleDiff(eDesired, et.angle), -et.classDef.turnRate * dt, et.classDef.turnRate * dt);
+        rotateTurretToward(ship, et, er, dt);
         eligible.push(et);
-        if (et.cd > 0 || Math.abs(angleDiff(erel, et.angle)) > 0.035) allReady = false;
+        if (et.cd > 0 || Math.abs(angleDiff(angleDiff(er, ship.heading), et.angle)) > 0.035) allReady = false;
       }
       if (eligible.length && allReady) ship.bombardQueue = eligible;
     }
@@ -1567,12 +1580,7 @@
       var br = Math.atan2(ty - ship.y, tx - ship.x);
       var arcOk = allowedArc(ship, t, br);
       var relToShip = angleDiff(br, ship.heading);
-      var arcCenter = t.arcCenter;
-      var arcHalf = t.classDef.arc / 2;
-      var desiredRel = arcCenter + U.clamp(angleDiff(relToShip, arcCenter), -arcHalf, arcHalf);
-      var turnRate = c.turnRate * dt;
-      t.angle += U.clamp(angleDiff(desiredRel, t.angle), -turnRate, turnRate);
-      t.targetAngle = desiredRel;
+      rotateTurretToward(ship, t, br, dt);
       var d = U.dist(ship.x, ship.y, tx, ty);
       var maxR = c.range || c.rangeGround || 500;
       t.eligible = arcOk && d <= maxR;
@@ -2064,6 +2072,19 @@
         ctx.stroke();
       }
       ctx.restore();
+      // 单炮装填进度：只显示正在装填的炮塔
+      if (t.cd > 0.04 && t.ammo > 0) {
+        var reloadMax = t.reloadTotal || c.interval || 1;
+        var rp = U.clamp(1 - t.cd / reloadMax, 0, 1);
+        var bw = (t.cls === 'main' ? 10 : 6) * one;
+        var bh = 1.6 * one;
+        var bx = t.lx - bw / 2;
+        var by = t.ly - (t.cls === 'main' ? 9 : 6) * one;
+        ctx.fillStyle = 'rgba(12,16,13,0.85)';
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.fillStyle = c.color || '#d8c17a';
+        ctx.fillRect(bx, by, bw * rp, bh);
+      }
     }
     // 船头方向箭头
     ctx.save();

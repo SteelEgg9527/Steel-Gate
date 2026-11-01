@@ -69,7 +69,7 @@
       hp: 300,
       armor: 0,
       vision: 350,
-      range: 160,
+      range: 180,
       speed: 7.2,
       radius: 7,
       canSprint: true,
@@ -83,7 +83,7 @@
       name: '装甲车',
       short: '装甲车',
       symbol: 'armored',
-      hp: 150,
+      hp: 300,
       armor: 1,
       vision: 200,
       range: 180,
@@ -119,7 +119,7 @@
       symbol: 'artillery',
       hp: 65,
       armor: 0,
-      vision: 160,
+      vision: 250,
       range: 600,
       minRange: 70,
       speed: 14,
@@ -137,7 +137,7 @@
       symbol: 'artillery',
       hp: 85,
       armor: 0,
-      vision: 160,
+      vision: 250,
       range: 800,
       minRange: 100,
       speed: 14,
@@ -170,17 +170,17 @@
       name: '防空车',
       short: '防空',
       symbol: 'armored',
-      hp: 90,
+      hp: 250,
       armor: 1,
-      vision: 150,
+      vision: 250,
       range: 190,
-      speed: 13,
+      speed: 14,
       radius: 8,
       canSprint: false,
       aaRange: 600,
       airDmg: 8,
       weapon: {
-        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 8, splash: 4,
+        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 8, splash: 8,
         mag: 20, reload: 6, ammo: 300, kind: 'direct', label: '20mm Flak 38'
       }
     },
@@ -194,7 +194,7 @@
       vision: 250,
       range: 250,
       minRange: 15,
-      speed: 9,
+      speed: 14,
       radius: 8,
       canSprint: false,
       weapon: {
@@ -207,7 +207,7 @@
       name: '自行火箭炮',
       short: '火箭',
       symbol: 'armored',
-      hp: 110,
+      hp: 150,
       armor: 1,
       vision: 200,
       range: 700,
@@ -235,7 +235,7 @@
       name: '指挥车',
       short: '指挥',
       symbol: 'armored',
-      hp: 120,
+      hp: 150,
       armor: 1,
       vision: 450,
       range: 0,
@@ -256,7 +256,7 @@
       armor: 1,
       vision: 240,
       range: 0,
-      speed: 12,
+      speed: 14,
       radius: 10,
       canSprint: false,
       weapon: {
@@ -424,14 +424,14 @@
     turretClasses: {
       main: {
         name: '203mm 主炮', count: 4, hp: 1500, range: 3000,
-        maxSpread: 520, splash: 320, dmg: 550, ap: 3.0, shots: 80,
+        maxSpread: 520, splash: 250, dmg: 550, ap: 3.0, shots: 80,
         interval: 24, turnRate: 0.12, arc: 5.24, side: 'center',
         color: '#d8c17a'
       },
       secondary: {
         name: '105mm 副炮', count: 6, hp: 300, range: 1500,
         maxSpread: 260, splash: 160, dmg: 180, ap: 1.5, shots: 240,
-        interval: 8, turnRate: 0.30, arc: 1.75, side: 'split',
+        interval: 8, turnRate: 0.30, arc: Math.PI, side: 'split',
         color: '#c8b27a'
       },
       aa37: {
@@ -679,7 +679,7 @@
     mg: {
       key: 'mg', name: '机枪', icon: 'MG', slot: 'weapon',
       desc: 'MG42，高射速大伤害，射程 180m',
-      weapon: { range: 180, dmg: 12, interval: 0.32, ap: 0.25, accuracy: 0.75, spread: 5, ammo: 120, kind: 'direct', usesUnitAmmo: true, mg: true, label: 'MG42' }
+      weapon: { range: 200, dmg: 12, interval: 0.32, ap: 0.25, accuracy: 0.75, spread: 5, ammo: 120, kind: 'direct', usesUnitAmmo: true, mg: true, label: 'MG42' }
     },
     mortar: {
       key: 'mortar', name: '迫击炮', icon: 'MT', slot: 'weapon',
@@ -884,6 +884,7 @@
 
   /* 牵引火炮：收炮/架设时间（秒），移动完成前不开火 */
   SL.ARTILLERY = {
+    at_gun: { pack: 0.5, deploy: 1.0 },
     artillery: { pack: 3.5, deploy: 4.5 },
     heavy_arty: { pack: 5.0, deploy: 6.0 }
   };

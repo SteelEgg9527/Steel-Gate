@@ -633,11 +633,7 @@
     var w = R.screenToWorld(sx, sy);
     var hitR = 22 / R.cam.zoom;
     if (game.selectedShip && game.selectedShip.alive) {
-      if (game.selectedShip.entering) {
-        UI.pushToast('战舰正在驶入海域，抵达阵位后再下达命令', 'info');
-        return;
-      }
-      if (shift && game.selectedShip.nearShore) {
+      if (shift) {
         var sr = game.navalSuppress('blue', w.x, w.y);
         if (sr.ok) { R.addMarker(w.x, w.y, 'attack'); return; }
       }
