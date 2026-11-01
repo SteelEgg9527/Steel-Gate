@@ -163,6 +163,8 @@
     el.draft = $('draft');
     el.draftCards = $('draft-cards');
     el.draftQueue = $('draft-queue');
+    el.draftQueueWrap = $('draft-queue-wrap');
+    el.draftQuick = $('draft-quick');
     el.draftCount = $('draft-count');
     el.draftLater = $('draft-later');
     el.draftAlert = $('draft-alert');
@@ -379,6 +381,7 @@
     });
     if (el.btnPause) el.btnPause.addEventListener('click', function () { if (callbacks.onTogglePause) callbacks.onTogglePause(); });
     el.draftQueue.addEventListener('click', function () { UI.openDraft(); });
+    if (el.draftQuick) el.draftQuick.addEventListener('click', function () { UI.quickDraft(); });
     el.draftAlert.addEventListener('click', function () { UI.openDraft(); });
     if (el.buyDraft) el.buyDraft.addEventListener('click', function () { UI.buyDraft(); });
     if (el.buyUnit) el.buyUnit.addEventListener('click', function () { UI.buyUnitReinforcement(); });
@@ -477,6 +480,8 @@
     if (el.rosterList) el.rosterList.innerHTML = '';
     if (el.rosterCount) el.rosterCount.textContent = '0';
     if (el.draftQueue) el.draftQueue.classList.add('hidden');
+    if (el.draftQuick) el.draftQuick.classList.add('hidden');
+    if (el.draftQueueWrap) el.draftQueueWrap.classList.add('hidden');
     if (el.draftCount) el.draftCount.textContent = '0';
     if (el.rangeTools) el.rangeTools.classList.add('hidden');
     if (el.rangeConsole) el.rangeConsole.classList.add('hidden');
@@ -621,6 +626,26 @@
     hideDraftAlert();
     uiCache.draftOpen = true;
     renderDraft(game);
+  };
+
+  UI.quickDraft = function () {
+    if (!game || !game.drafts.length || uiCache.draftOpen) return;
+    var d = game.drafts[0];
+    if (!d || !d.cards || !d.cards.length) return;
+    var idx = Math.floor(Math.random() * d.cards.length);
+    var picked = game.pickDraftCard(idx);
+    if (!picked) return;
+    hideDraftAlert();
+    if (SL.Audio) SL.Audio.card();
+    UI.pushToast('快速抽卡：获得 ' + picked.name, 'win');
+    renderCards();
+    var qn = game.drafts.length;
+    if (el.draftCount) el.draftCount.textContent = qn;
+    if (qn <= 0) {
+      if (el.draftQueueWrap) el.draftQueueWrap.classList.add('hidden');
+      if (el.draftQueue) el.draftQueue.classList.add('hidden');
+      if (el.draftQuick) el.draftQuick.classList.add('hidden');
+    }
   };
 
   function closeFortReplace() {
@@ -1255,13 +1280,17 @@
     if (qn > prevDraft && !uiCache.draftOpen && !(newestDraft && newestDraft.purchased)) showDraftAlert(qn);
     uiCache.draftSeen = qn;
     if (qn > 0 && !uiCache.draftOpen) {
+      if (el.draftQueueWrap) el.draftQueueWrap.classList.remove('hidden');
       el.draftQueue.classList.remove('hidden');
+      if (el.draftQuick) el.draftQuick.classList.remove('hidden');
       if (uiCache.draftCount !== qn) {
         uiCache.draftCount = qn;
         el.draftCount.textContent = qn;
       }
     } else {
+      if (el.draftQueueWrap) el.draftQueueWrap.classList.add('hidden');
       el.draftQueue.classList.add('hidden');
+      if (el.draftQuick) el.draftQuick.classList.add('hidden');
       if (qn === 0) hideDraftAlert();
     }
     if (uiCache.draftOpen && qn === 0) {
