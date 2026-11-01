@@ -105,6 +105,7 @@
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
     this.aiShipUsed = { red: false, green: false };
     this.aiShipRespawn = { red: false, green: false };
+    this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2000, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2000 };
     this.aiShipTimer = { red: 5, green: 8 };
     this.aiReinforceAt = { red: 0, green: 0 };
     this.shipCards = [];
@@ -303,16 +304,21 @@
         this.log(SL.SIDES[rside].name + ' 雷达对海搜索：发现海面目标', rside === 'blue' ? 'order' : 'loss');
       }
     }
-    // AI 海军：玩家首次召唤后，占有一座通讯塔即可获得第一艘；之后只在 BOSS 登场时补充
+    // AI 海军：玩家首次召唤后，占有一座通讯塔并支付舰船费用才能获得战舰
     if (this.playerShipSummoned) {
       for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
         var aside = SL.SIDE_ORDER[ai];
         if (aside === 'blue') continue;
         if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
         if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
+          var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2000);
+          if ((this.teams[aside].score || 0) < aiCost) continue;
+          this.teams[aside].score -= aiCost;
+          this.aiShipCost[aside] = Math.round(aiCost * (SL.NAVAL.shipCostStep || 1.5));
           this.spawnShip(aside);
           this.aiShipUsed[aside] = true;
           this.aiShipRespawn[aside] = false;
+          this.log(SL.SIDES[aside].name + ' 花费 ' + aiCost + ' 分召唤战舰', aside === 'blue' ? 'order' : 'loss');
         }
       }
     }
