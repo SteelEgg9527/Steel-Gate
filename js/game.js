@@ -568,7 +568,7 @@
         SL.Render.centerOn(ns.x, ns.y);
         this.setSelectedShip(ns);
       }
-      return { ok: true, msg: '战舰增援已出发（' + cost + ' 分）' };
+      return { ok: true, msg: '战舰增援已出发' };
     }
     if (key === 'ship_prewarn') {
       if (!ship) return { ok: false, msg: '没有战列舰' };
@@ -4780,6 +4780,15 @@
       var falloff = 1 - 0.55 * (d / radius);
       this.damage(u, SL.AIRSTRIKE.damage * falloff * (u.def.armor ? 0.75 : 1), credit, 2);
     }
+    // 空袭对舰船造成伤害
+    for (var bi = 0; bi < this.battleships.length; bi++) {
+      var bs = this.battleships[bi];
+      if (!bs.alive || bs.side === side) continue;
+      var bd = U.dist(bs.x, bs.y, x, y);
+      if (bd > radius + (bs.hitRadius || 30)) continue;
+      var bfall = 1 - 0.5 * Math.min(1, bd / (radius + (bs.hitRadius || 30)));
+      this.damageShip(bs, SL.AIRSTRIKE.damage * 1.35 * bfall, credit, 2.5);
+    }
     // 空袭对工事造成 500 点直击攻坚伤害
     this.damageFortifications(x, y, SL.AIRSTRIKE.fortDamage, radius);
     this.damageSupplies(x, y, SL.AIRSTRIKE.supplyDamage, radius);
@@ -4963,6 +4972,14 @@
       if (d > cfg.bombRadius) continue;
       this.hellExactDamage(u, cfg.firstBombFrac || 0.66, credit);
     }
+    for (var hb = 0; hb < this.battleships.length; hb++) {
+      var hbs = this.battleships[hb];
+      if (!hbs.alive || hbs.side === side) continue;
+      var hbd = U.dist(hbs.x, hbs.y, x, y);
+      if (hbd > cfg.bombRadius + 60) continue;
+      var hbFall = 1 - 0.5 * Math.min(1, hbd / (cfg.bombRadius + 60));
+      this.damageShip(hbs, hbs.maxHp * 0.3 * hbFall, credit, 3);
+    }
     this.hellDestroyForts(x, y, cfg.bombRadius);
     this.damageSupplies(x, y, 5000, cfg.bombRadius);
   };
@@ -4982,6 +4999,14 @@
       if (d > radius) continue;
       var frac = d <= coreR ? (cfg.extraBombCoreFrac || 0.2) : (cfg.extraBombOuterFrac || 0.1);
       this.damage(u, u.maxHp * frac, credit, 9);
+    }
+    for (var hsb = 0; hsb < this.battleships.length; hsb++) {
+      var hss = this.battleships[hsb];
+      if (!hss.alive || hss.side === side) continue;
+      var hsd = U.dist(hss.x, hss.y, x, y);
+      if (hsd > radius + 50) continue;
+      var hsf = hsd <= coreR ? 0.06 : 0.03;
+      this.damageShip(hss, hss.maxHp * hsf, credit, 2.2);
     }
     this.damageFortifications(x, y, cfg.extraBombFortDmg || 600, radius);
     this.damageSupplies(x, y, cfg.extraBombSupplyDmg || 1000, radius);
