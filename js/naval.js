@@ -1507,7 +1507,8 @@
         var auto = findShipAutoTarget(game, ship, c, t.cls === 'main');
         if (auto) { target = auto; tx = auto.x; ty = auto.y; }
       }
-      if (!target && (t.cls === 'aa37' || t.cls === 'aa20')) {
+      // 防空炮优先对空：即使地面有目标，也先打进入射界的敌机
+      if (t.cls === 'aa37' || t.cls === 'aa20') {
         var bestPlane = null, bestPd = c.rangeAir;
         for (var pi = 0; pi < game.planes.length; pi++) {
           var pl = game.planes[pi];
@@ -1518,17 +1519,21 @@
         if (bestPlane) {
           var pbr = Math.atan2(bestPlane.y - ship.y, bestPlane.x - ship.x);
           if (allowedArc(ship, t, pbr)) {
-            t.cd = Math.max(0, t.cd - dt);
+            var pRel = angleDiff(pbr, ship.heading);
+            var pDesired = t.arcCenter + U.clamp(angleDiff(pRel, t.arcCenter), -t.classDef.arc / 2, t.classDef.arc / 2);
+            t.angle += U.clamp(angleDiff(pDesired, t.angle), -c.turnRate * dt, c.turnRate * dt);
+            t.targetAngle = pDesired;
             if (t.cd <= 0 && t.ammo > 0) {
               t.ammo--;
               t.cd = c.interval;
               game.effects.push({ kind: 'tracer', x1: turretWorld(ship, t).x, y1: turretWorld(ship, t).y, x2: bestPlane.x, y2: bestPlane.y, t: 0, dur: 0.1, side: ship.side });
-              if (Math.random() < 0.32) game.damagePlane(bestPlane, c.dmg, ship);
+              game.damagePlane(bestPlane, c.dmg, ship);
             }
           }
           continue;
         }
-        // 敌方水上飞机也可被防空炮击落
+        // 敌方水上飞机也是防空目标
+        var engagedSeaplane = false;
         for (var si = 0; si < game.seaplanes.length; si++) {
           var sp = game.seaplanes[si];
           if (!sp || sp.side === ship.side || (sp.hp || 100) <= 0) continue;
@@ -1536,15 +1541,20 @@
           if (spd > c.rangeAir) continue;
           var sbr = Math.atan2(sp.y - ship.y, sp.x - ship.x);
           if (!allowedArc(ship, t, sbr)) continue;
+          engagedSeaplane = true;
+          var sRel = angleDiff(sbr, ship.heading);
+          var sDesired = t.arcCenter + U.clamp(angleDiff(sRel, t.arcCenter), -t.classDef.arc / 2, t.classDef.arc / 2);
+          t.angle += U.clamp(angleDiff(sDesired, t.angle), -c.turnRate * dt, c.turnRate * dt);
+          t.targetAngle = sDesired;
           if (t.cd <= 0 && t.ammo > 0) {
             t.ammo--; t.cd = c.interval;
             game.effects.push({ kind: 'tracer', x1: turretWorld(ship, t).x, y1: turretWorld(ship, t).y, x2: sp.x, y2: sp.y, t: 0, dur: 0.1, side: ship.side });
-            sp.hp = (sp.hp || 100) - c.dmg * 0.45;
+            sp.hp = (sp.hp || 100) - c.dmg;
             if (sp.hp <= 0) game.seaplanes.splice(si, 1);
           }
           break;
         }
-        continue;
+        if (engagedSeaplane) continue;
       }
       if (!target) continue;
       var br = Math.atan2(ty - ship.y, tx - ship.x);
@@ -1853,6 +1863,20 @@
       ctx.lineWidth = 1.2 * one;
       ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -4); ctx.lineTo(-3, 0); ctx.lineTo(-6, 4); ctx.closePath();
       ctx.fill(); ctx.stroke();
+      ctx.restore();
+      // 水上飞机血条
+      var spHpMax = SL.NAVAL.seaplaneHp || 120;
+      var spHp = Math.max(0, Math.min(1, (p.hp == null ? spHpMax : p.hp) / spHpMax));
+      var sbw = 24 * one, sbh = 3 * one;
+      var sby = p.y - 13 * one;
+      ctx.save();
+      ctx.fillStyle = 'rgba(18,24,22,0.82)';
+      ctx.fillRect(p.x - sbw / 2, sby, sbw, sbh);
+      ctx.fillStyle = p.side === 'blue' ? '#8fd6c8' : '#e08d72';
+      ctx.fillRect(p.x - sbw / 2, sby, sbw * spHp, sbh);
+      ctx.strokeStyle = 'rgba(235,240,225,0.7)';
+      ctx.lineWidth = 0.8 * one;
+      ctx.strokeRect(p.x - sbw / 2, sby, sbw, sbh);
       ctx.restore();
     }
     for (var j = 0; j < game.supplyShips.length; j++) {

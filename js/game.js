@@ -4594,8 +4594,8 @@
       case 'enemy_bomber':
         if (!this.testMode) { res.msg = '敌方轰炸机卡仅限训练场'; break; }
         if (!inside()) { res.msg = '请拖到地图上'; break; }
-        this.spawnBossHell(tx, ty, 'red');
-        res.ok = true; res.msg = '敌方地狱轰炸机已进场';
+        this.spawnPlane('airstrike', tx, ty, 'red');
+        res.ok = true; res.msg = '敌方轰炸机已进场';
         break;
       case 'boss_hell':
       case 'boss_tank':

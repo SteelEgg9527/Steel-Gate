@@ -437,13 +437,13 @@
       aa37: {
         name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
         maxSpread: 95, splash: 40, dmg: 35, ap: 0.8, shots: 1200,
-        interval: 1.8, turnRate: 0.50, arc: 1.35, side: 'split',
+        interval: 1.8, turnRate: 0.50, arc: Math.PI, side: 'split',
         color: '#b7c6ad'
       },
       aa20: {
         name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
         maxSpread: 65, splash: 24, dmg: 14, ap: 0.4, shots: 2400,
-        interval: 0.45, turnRate: 0.80, arc: 1.2, side: 'split',
+        interval: 0.45, turnRate: 0.80, arc: Math.PI, side: 'split',
         color: '#aebfae'
       }
     },
@@ -919,7 +919,7 @@
     boss_tank: { key: 'boss_tank', name: 'Boss · 超级重坦', icon: 'B', color: '#6d5630', use: 'point', desc: '仅试验场：召唤超级重坦' },
     boss_ghost: { key: 'boss_ghost', name: 'Boss · 幽灵兵团', icon: 'B', color: '#4b6a5a', use: 'point', desc: '仅试验场：召唤幽灵兵团' },
     enemy_ship: { key: 'enemy_ship', name: '敌方战舰', icon: 'ES', color: '#a35448', use: 'point', desc: '仅海岸训练场：召唤敌方战列舰' },
-    enemy_bomber: { key: 'enemy_bomber', name: '敌方轰炸机', icon: 'EB', color: '#8c3b2e', use: 'point', desc: '仅海岸训练场：召唤敌方地狱轰炸机' },
+    enemy_bomber: { key: 'enemy_bomber', name: '敌方轰炸机', icon: 'EB', color: '#8c3b2e', use: 'point', desc: '仅海岸训练场：召唤敌方普通轰炸机' },
     unit: { key: 'unit', name: '单位卡', icon: '▣', color: '#5c7fa8', use: 'unit', desc: '拖到地图：在友军 200m 内生成单位' },
     equip: { key: 'equip', name: '装备卡', icon: '✦', color: '#8a7a4a', use: 'equip', desc: '拖到步兵班：直接装备武器' }
   };
