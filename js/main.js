@@ -600,10 +600,7 @@
       }
       if (k === 'x' || k === 'f') {
         if (game.selectedShip) {
-          game.selectedShip.prewarn = null;
-          game.selectedShip.suppress = null;
-          game.selectedShip.bombard = null;
-          game.selectedShip.dest = null;
+          game.stopShip(game.selectedShip);
           UI.pushToast('已停止舰船当前指令', 'info');
         }
         if (game.selected.length) {

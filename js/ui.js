@@ -147,9 +147,14 @@
     el.shipActions = $('ship-actions');
     el.shipPrewarnBtn = $('ship-prewarn-btn');
     el.shipSuppressBtn = $('ship-suppress-btn');
+    el.shipStopBtn = $('ship-stop-btn');
     el.cardCount = $('card-count');
     el.buyDraft = $('buy-draft');
     el.buyCost = $('buy-cost');
+    el.buyUnit = $('buy-unit');
+    el.buyUnitCost = $('buy-unit-cost');
+    el.quickEquip = $('quick-equip');
+    el.quickFort = $('quick-fort');
     el.discard = $('discard');
     el.draft = $('draft');
     el.draftCards = $('draft-cards');
@@ -185,6 +190,13 @@
       if (!game || !game.selectedShip) return;
       game.pendingCommand = { kind: 'shipSuppress' };
       UI.pushToast('请在地图上点击压制区域', 'win');
+    });
+    if (el.shipStopBtn) el.shipStopBtn.addEventListener('click', function () {
+      if (!game || !game.selectedShip) return;
+      game.pendingCommand = null;
+      game.stopShip(game.selectedShip);
+      UI.pushToast('已停止舰船当前指令', 'info');
+      UI.update(game, 0.016);
     });
     var nsClose = $('naval-shop-close');
     if (nsClose) nsClose.addEventListener('click', function () { if (el.navalShop) el.navalShop.classList.add('hidden'); });    $('btn-again').addEventListener('click', function () { if (callbacks.onRestart) callbacks.onRestart(); });
@@ -297,6 +309,9 @@
     el.draftQueue.addEventListener('click', function () { UI.openDraft(); });
     el.draftAlert.addEventListener('click', function () { UI.openDraft(); });
     if (el.buyDraft) el.buyDraft.addEventListener('click', function () { UI.buyDraft(); });
+    if (el.buyUnit) el.buyUnit.addEventListener('click', function () { UI.buyUnitReinforcement(); });
+    if (el.quickEquip) el.quickEquip.addEventListener('click', function () { UI.quickEquip(); });
+    if (el.quickFort) el.quickFort.addEventListener('click', function () { UI.quickFort(); });
     if (el.fireModeBtn) el.fireModeBtn.addEventListener('click', function () { UI.cycleFireMode(); });
     if (el.grenadeModeBtn) el.grenadeModeBtn.addEventListener('click', function () { UI.cycleGrenadeMode(); });
     if (el.btnFireSupport) el.btnFireSupport.addEventListener('click', function () { UI.beginCommand('fireSupport'); });
@@ -456,6 +471,51 @@
       renderCards();
       // 不自动打开抽卡界面：抽卡次数进入队列，玩家稍后自行点击“抽卡”
     }
+  };
+
+  UI.buyUnitReinforcement = function () {
+    if (!game || game.ended) return;
+    var res = game.buyUnitReinforcement('blue');
+    UI.pushToast(res.msg, res.ok ? 'win' : 'loss');
+    if (res.ok) renderCards();
+  };
+
+  UI.quickEquip = function () {
+    if (!game) return;
+    var hand = game.teams.blue.hand;
+    var n = 0;
+    for (var i = hand.length - 1; i >= 0; i--) {
+      var c = hand[i];
+      if (!c || c.key !== 'equip') continue;
+      var inf = game.units.find(function (u) {
+        return u.alive && u.side === 'blue' && u.type === 'infantry' && u.items.length < (SL.INFANTRY_SLOTS || 6);
+      });
+      if (!inf) break;
+      var r = game.useCard(c, { unit: inf });
+      if (r && r.ok) n++;
+    }
+    UI.pushToast(n ? ('已快速装备 ' + n + ' 件装备') : '没有可装备的步兵或装备卡', n ? 'win' : 'info');
+    if (n) renderCards();
+  };
+
+  UI.quickFort = function () {
+    if (!game) return;
+    var hand = game.teams.blue.hand;
+    var fortKeys = ['bunker', 'mortar_nest', 'at_gun_nest', 'flak88'];
+    var n = 0;
+    for (var i = hand.length - 1; i >= 0; i--) {
+      var c = hand[i];
+      if (!c || fortKeys.indexOf(c.key) < 0) continue;
+      var z = SL.Terrain.zones.find(function (zz) {
+        return zz.owner === 'blue' && zz.fortified && !zz.destroyed &&
+          (zz.structures || []).length < (SL.FORT.maxStructures || 4);
+      });
+      if (!z) break;
+      var r = game.useCard(c, { x: z.x, y: z.y });
+      if (r && r.ok) n++;
+    }
+    UI.pushToast(n ? ('已快速部署 ' + n + ' 座工事') : '没有可部署的强化工事或工事卡', n ? 'win' : 'info');
+    if (n) renderCards();
   };
 
   UI.openDraft = function () {
@@ -856,10 +916,14 @@
     var sig = ev.id + ':' + ev.name;
     if (sig !== uiCache.bossKillSig) {
       uiCache.bossKillSig = sig;
+      var kicker = el.bossKillBanner.querySelector('.bkb-kicker');
+      if (kicker) kicker.textContent = ev.isShip ? '敌舰击沉' : 'BOSS 击破';
       if (el.bkbName) el.bkbName.textContent = ev.name;
       if (el.bkbRewards) {
-        el.bkbRewards.textContent = '+' + ev.xp + ' 经验   ·   +' + ev.score +
-          ' 战功   ·   +' + ev.cards + ' 张单位卡';
+        el.bkbRewards.textContent = ev.isShip
+          ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 战功'
+          : '+' + ev.xp + ' 经验   ·   +' + ev.score +
+            ' 战功   ·   +' + ev.cards + ' 张单位卡';
       }
       el.bossKillBanner.classList.remove('hidden');
       el.bossKillBanner.classList.remove('show');
@@ -1109,8 +1173,10 @@
 
     // 卡包
     var hand = g.teams.blue.hand;
+    var slotShip = g.shipOf ? g.shipOf('blue') : null;
     var handSig = hand.map(function (c) { return c.id; }).join(',') + '|' +
-      (g.navalCards || []).map(function (c) { return c.id; }).join(',');
+      (g.navalCards || []).map(function (c) { return c.id; }).join(',') + '|' +
+      (slotShip ? slotShip.planeReserve + ':' + Math.floor((slotShip.planeRecharge || 0) / 2) : 'noship');
     if (handSig !== uiCache.handSig) {
       uiCache.handSig = handSig;
       renderCards();
@@ -1635,6 +1701,11 @@
     el.buyCost.textContent = cost;
     el.buyDraft.classList.toggle('disabled', !afford);
     el.buyDraft.title = afford ? ('消耗 ' + cost + ' 分购买一次抽卡机会') : ('分数不足：需要 ' + cost);
+    if (el.buyUnitCost) el.buyUnitCost.textContent = cost;
+    if (el.buyUnit) {
+      el.buyUnit.classList.toggle('disabled', !afford);
+      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 分在友军附近召唤一个随机单位') : ('分数不足：需要 ' + cost);
+    }
   }
 
   function renderCards() {
@@ -1671,10 +1742,38 @@
           nd.style.setProperty('--c', qd.color);
           var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 2000) : (qd.key === 'naval_supply' ? 500 : 0);
           nd.title = qd.desc + (qcost ? '（' + qcost + ' 分）' : '（免费）');
+          var slotsHtml = '';
+          if (qd.key === 'seaplane') {
+            var sh = game.shipOf ? game.shipOf('blue') : null;
+            var reserve = sh ? (sh.planeReserve || 0) : 0;
+            var recharge = sh ? (sh.planeRecharge || 0) : 0;
+            slotsHtml = '<div class="plane-slots">';
+            for (var ps = 0; ps < 3; ps++) {
+              if (ps < reserve) slotsHtml += '<span class="plane-slot full"></span>';
+              else if (ps === reserve && sh) {
+                var pp = U.clamp(recharge / 45, 0, 1);
+                slotsHtml += '<span class="plane-slot refilling"><i style="width:' + Math.round(pp * 100) + '%"></i></span>';
+              } else slotsHtml += '<span class="plane-slot"></span>';
+            }
+            slotsHtml += '</div>';
+          }
           nd.innerHTML = '<div class="ic">' + qd.icon + '</div><div class="nm">' + qd.name +
-            (qcost ? '<br><small>' + qcost + '</small>' : '') + '</div>';
+            (qcost ? '<br><small>' + qcost + '</small>' : '') + '</div>' + slotsHtml;
           el.navyCards.appendChild(nd);
         }
+        var stop = document.createElement('button');
+        stop.type = 'button';
+        stop.className = 'card navy-stop-card';
+        stop.title = '停止战舰当前指令，等同 F 键';
+        stop.innerHTML = '<div class="ic">停</div><div class="nm">停止行动</div>';
+        stop.addEventListener('click', function () {
+          if (!game || !game.selectedShip) return;
+          game.pendingCommand = null;
+          game.stopShip(game.selectedShip);
+          UI.pushToast('已停止舰船当前指令', 'info');
+          UI.update(game, 0.016);
+        });
+        el.navyCards.appendChild(stop);
       }
     }
   }

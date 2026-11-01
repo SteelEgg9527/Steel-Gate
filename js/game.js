@@ -277,20 +277,30 @@
     ship.lastHit = this.time;
     if (ship.hp <= 0) {
       ship.hp = 0; ship.alive = false;
-      if (source && source.isShip && source.side !== ship.side) {
-        var shipReward = (SL.REWARD && SL.REWARD.ship) || { xp: 1000, score: 500 };
-        source.kills = (source.kills || 0) + 1;
-        source.score = (source.score || 0) + shipReward.score;
+      if (source && source.side && source.side !== ship.side) {
+        var shipReward = (SL.REWARD && SL.REWARD.ship) || { xp: 5000, score: 2500 };
+        if (source.isShip) {
+          source.kills = (source.kills || 0) + 1;
+          source.score = (source.score || 0) + shipReward.score;
+        }
         this.addScore(source.side, shipReward.score);
         this.addXp(source.side, shipReward.xp);
         this.teams[source.side].kills = (this.teams[source.side].kills || 0) + 1;
         this.stats.kills[source.side] = (this.stats.kills[source.side] || 0) + 1;
         this.feed.push({
           id: ++this.feedSeq, t: this.time, kind: 'kill',
-          ks: source.side, vs: ship.side, killer: source.name, victim: ship.name,
+          ks: source.side, vs: ship.side, killer: source.name || '舰炮', victim: ship.name,
           xp: shipReward.xp, score: shipReward.score, text: ''
         });
         if (this.feed.length > 60) this.feed.shift();
+        if (source.side === 'blue') {
+          this.bossKillEvent = {
+            name: '击沉 ' + ship.name, xp: shipReward.xp, score: shipReward.score,
+            cards: 0, isShip: true, t: this.time, id: ++this.feedSeq
+          };
+          this.fxText(ship.x, ship.y - 30, '敌舰击沉', '#ffe0a0', 'blue');
+          if (SL.Audio) SL.Audio.level();
+        }
       }
       if (!ship.recorded) {
         ship.recorded = true;
@@ -332,22 +342,20 @@
         this.log(SL.SIDES[rside].name + ' 雷达对海搜索：发现海面目标', rside === 'blue' ? 'order' : 'loss');
       }
     }
-    // AI 海军：玩家首次召唤后，占有一座通讯塔并支付舰船费用才能获得战舰
-    if (this.playerShipSummoned) {
-      for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
-        var aside = SL.SIDE_ORDER[ai];
-        if (aside === 'blue') continue;
-        if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
-        if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
-          var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2000);
-          if ((this.teams[aside].score || 0) < aiCost) continue;
-          this.teams[aside].score -= aiCost;
-          this.aiShipCost[aside] = Math.round(aiCost * (SL.NAVAL.shipCostStep || 1.5));
-          this.spawnShip(aside);
-          this.aiShipUsed[aside] = true;
-          this.aiShipRespawn[aside] = false;
-          this.log(SL.SIDES[aside].name + ' 花费 ' + aiCost + ' 分召唤战舰', aside === 'blue' ? 'order' : 'loss');
-        }
+    // AI 海军：拥有通讯塔并支付足够分数即可召唤战舰
+    for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
+      var aside = SL.SIDE_ORDER[ai];
+      if (aside === 'blue') continue;
+      if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
+      if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
+        var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2000);
+        if ((this.teams[aside].score || 0) < aiCost) continue;
+        this.teams[aside].score -= aiCost;
+        this.aiShipCost[aside] = Math.round(aiCost * (SL.NAVAL.shipCostStep || 1.5));
+        this.spawnShip(aside);
+        this.aiShipUsed[aside] = true;
+        this.aiShipRespawn[aside] = false;
+        this.log(SL.SIDES[aside].name + ' 花费 ' + aiCost + ' 分召唤战舰', 'loss');
       }
     }
     for (var i = this.battleships.length - 1; i >= 0; i--) {
@@ -627,7 +635,17 @@
 
   Game.prototype.setShipPrewarn = function (ship, x, y) {
     if (!ship || !ship.alive) return false;
+    ship.suppress = null;
     ship.prewarn = { x: x, y: y };
+    return true;
+  };
+
+  Game.prototype.stopShip = function (ship) {
+    if (!ship || !ship.alive) return false;
+    ship.prewarn = null;
+    ship.suppress = null;
+    ship.bombard = null;
+    ship.dest = null;
     return true;
   };
 
@@ -644,6 +662,8 @@
       x = ship.prewarn.x;
       y = ship.prewarn.y;
       prewarnBonus = SL.NAVAL.prewarnSpreadBonus || 0.30;
+      ship.prewarn = null;
+    } else {
       ship.prewarn = null;
     }
     ship.suppress = {
@@ -1694,6 +1714,28 @@
   Game.prototype.findSafeSpawn = function (side) {
     var margin = 140;
     var mapSize = SL.CONFIG.mapSize;
+    // AI 连队重生：优先在地图边缘、且尽量远离玩家的位置
+    if (side === 'red' || side === 'green') {
+      var best = null, bestMin = -1;
+      var edge = 90;
+      for (var et = 0; et < 180; et++) {
+        var sidePick = Math.floor(Math.random() * 4);
+        var ex, ey;
+        if (sidePick === 0) { ex = edge + Math.random() * (mapSize - edge * 2); ey = edge; }
+        else if (sidePick === 1) { ex = edge + Math.random() * (mapSize - edge * 2); ey = mapSize - edge; }
+        else if (sidePick === 2) { ex = edge; ey = edge + Math.random() * (mapSize - edge * 2); }
+        else { ex = mapSize - edge; ey = edge + Math.random() * (mapSize - edge * 2); }
+        if (T.naval && SL.Naval && SL.Naval.isWater(ex, ey)) continue;
+        var nearPlayer = Infinity;
+        for (var bi = 0; bi < this.units.length; bi++) {
+          var bu = this.units[bi];
+          if (!bu.alive || bu.side !== 'blue') continue;
+          nearPlayer = Math.min(nearPlayer, U.dist(ex, ey, bu.x, bu.y));
+        }
+        if (nearPlayer > bestMin) { bestMin = nearPlayer; best = { x: ex, y: ey }; }
+      }
+      if (best) return best;
+    }
     var minSafe = side === 'blue' ? 240 : 700;
     for (var tries = 0; tries < 120; tries++) {
       var x = margin + Math.random() * (mapSize - margin * 2);
@@ -1739,8 +1781,9 @@
     var type = this.pickUnitType(true);
     var mates = this.units.filter(function (u) { return u.alive && u.side === side; });
     var mapSize = SL.CONFIG.mapSize;
-    var anchor = mates.length ? mates[Math.floor(Math.random() * mates.length)]
-      : ((T.spawns && T.spawns[side]) || SL.SIDES[side].spawn);
+    var anchor = (side !== 'blue') ? this.findSafeSpawn(side) :
+      (mates.length ? mates[Math.floor(Math.random() * mates.length)]
+      : ((T.spawns && T.spawns[side]) || SL.SIDES[side].spawn));
     var ang = Math.random() * Math.PI * 2;
     var rr = SL.DEPLOY_RANGE * Math.sqrt(Math.random());
     var x = U.clamp(anchor.x + Math.cos(ang) * rr, 30, mapSize - 30);
@@ -2166,6 +2209,22 @@
     var ms = SL.CONFIG.mapSize;
     var m = 340;
     if (this.naval && SL.Naval) {
+      // 舰炮轰鸣：黄圈始终在雷达站附近游动
+      var radar = this.radar;
+      if (radar) {
+        for (var t = 0; t < 80; t++) {
+          var ang = Math.random() * Math.PI * 2;
+          var rad = 220 + Math.random() * 420;
+          var x = U.clamp(radar.x + Math.cos(ang) * rad, 80, ms - 80);
+          var y = U.clamp(radar.y + Math.sin(ang) * rad, 80, ms - 80);
+          if (SL.Naval.isLand(x, y) && SL.Naval.isLand(x + 120, y) && SL.Naval.isLand(x - 120, y) &&
+            SL.Naval.isLand(x, y + 120) && SL.Naval.isLand(x, y - 120)) {
+            this.yellow.x = x; this.yellow.y = y; return;
+          }
+        }
+        var lp = SL.Naval.nearestLandPoint(radar.x + (Math.random() - 0.5) * 500, radar.y + (Math.random() - 0.5) * 500);
+        this.yellow.x = lp.x; this.yellow.y = lp.y; return;
+      }
       var p = SL.Naval.randomLandPoint(m + 60);
       this.yellow.x = p.x;
       this.yellow.y = p.y;
@@ -4582,6 +4641,28 @@
     return SL.XP.buyDraftCost + (t.draftBuys || 0) * SL.XP.buyDraftStep;
   };
 
+  Game.prototype.buyUnitReinforcement = function (side) {
+    side = side || 'blue';
+    var t = this.teams[side];
+    if (!t || this.ended) return { ok: false, msg: '战斗已结束' };
+    var cost = this.buyDraftPrice(side);
+    if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
+    t.score -= cost;
+    t.draftBuys = (t.draftBuys || 0) + 1;
+    var type = this.pickUnitType(false);
+    var mates = this.units.filter(function (u) { return u.alive && u.side === side; });
+    var anchor = mates.length ? mates[Math.floor(Math.random() * mates.length)] : null;
+    var x = anchor ? anchor.x + (Math.random() - 0.5) * 70 : SL.CONFIG.mapSize / 2;
+    var y = anchor ? anchor.y + (Math.random() - 0.5) * 70 : SL.CONFIG.mapSize / 2;
+    if (T.naval && SL.Naval && SL.Naval.isWater(x, y)) {
+      var lp = SL.Naval.nearestLandPoint(x, y);
+      x = lp.x; y = lp.y;
+    }
+    var u = this.addUnit(side, type, x, y, SL.UNIT_TYPES[type].name);
+    this.log(SL.SIDES[side].name + ' 花费 ' + cost + ' 分增援 ' + u.name, side === 'blue' ? 'order' : 'loss');
+    return { ok: true, msg: '已增援 ' + u.name, cost: cost, unit: u };
+  };
+
   Game.prototype.buyDraft = function (side) {
     side = side || 'blue';
     var t = this.teams[side];
@@ -4745,8 +4826,7 @@
       case 'recon':
         if (!inside()) { res.msg = '请拖到地图上'; break; }
         var reconPlane = this.spawnPlane('recon', tx, ty);
-        this.recons.push({ x: tx, y: ty, side: 'blue', r: SL.RECON_PLANE.radius, until: this.time + SL.RECON_PLANE.duration, plane: reconPlane });
-        res.ok = true; res.msg = '侦察机已起飞';
+        res.ok = true; res.msg = '侦察机已起飞，抵达侦察圈后开始侦察';
         break;
       case 'airpatrol':
         if (!inside()) { res.msg = '请拖到地图上'; break; }
@@ -4886,10 +4966,18 @@
     if (SL.Audio) SL.Audio.plane(tx, ty);
     var ms = SL.CONFIG.mapSize;
     if (kind === 'recon') {
+      // 侦察机从地图边缘进入，抵达侦察圈后才开始盘旋和提供视野
+      var rdl = tx, rdr = ms - tx, rdt = ty, rdb = ms - ty;
+      var rm = Math.min(rdl, rdr, rdt, rdb);
+      var rsx, rsy;
+      if (rm === rdl) { rsx = -100; rsy = ty; }
+      else if (rm === rdr) { rsx = ms + 100; rsy = ty; }
+      else if (rm === rdt) { rsx = tx; rsy = -100; }
+      else { rsx = tx; rsy = ms + 100; }
       var rp = {
-        kind: 'recon', cx: tx, cy: ty, x: tx, y: ty - SL.RECON_PLANE.altitude, ang: -Math.PI / 2,
+        kind: 'recon', cx: tx, cy: ty, x: rsx, y: rsy, ang: -Math.PI / 2,
         rad: SL.RECON_PLANE.orbitRadius, t: 0, dur: SL.RECON_PLANE.duration, side: side,
-        speed: SL.PLANE.reconSpeed,
+        speed: SL.PLANE.reconSpeed, arrived: false, heading: Math.atan2(ty - rsy, tx - rsx),
         hp: SL.PLANE.reconHp, maxHp: SL.PLANE.reconHp, hitFlash: 0,
         evade: SL.PLANE.reconEvade
       };
@@ -5409,6 +5497,26 @@
         continue;
       }
       if (p.kind === 'recon') {
+        if (!p.arrived) {
+          var rdx = p.cx - p.x, rdy = p.cy - p.y;
+          var rd = U.len(rdx, rdy);
+          p.heading = Math.atan2(rdy, rdx);
+          var rstep = p.speed * dt;
+          if (rd <= rstep + 2) {
+            p.x = p.cx; p.y = p.cy;
+            p.arrived = true;
+            p.t = 0;
+            p.ang = Math.atan2(p.y - p.cy, p.x - p.cx);
+            this.recons.push({
+              x: p.cx, y: p.cy, side: p.side, r: SL.RECON_PLANE.radius,
+              until: this.time + SL.RECON_PLANE.duration, plane: p
+            });
+          } else {
+            p.x += rdx / rd * rstep;
+            p.y += rdy / rd * rstep;
+          }
+          continue;
+        }
         p.ang += p.speed * dt;
         p.x = p.cx + Math.cos(p.ang) * p.rad;
         p.y = p.cy + Math.sin(p.ang) * p.rad;
@@ -5749,7 +5857,7 @@
       var ap = s.ap || 1;
       var direct = d <= Math.min(12, s.radius * 0.3);
       var mult = u.def.armor ? (direct ? ap : 0.5 * ap) : 1;
-      if (u.side === s.side) mult *= 0.5;
+      if (u.side === s.side) mult *= s.shipShell ? 0.18 : 0.5;
       this.damage(u, s.dmg * falloff * mult, s.source, ap, !!(s.mortar && direct));
     }
     // 舰船也会被炮弹命中
@@ -5758,7 +5866,7 @@
       if (!sh.alive) continue;
       var sd = U.dist(sh.x, sh.y, s.x1, s.y1);
       if (sd > s.radius + 14) continue;
-      var smult = sh.side === s.side ? 0.5 : 1;
+      var smult = sh.side === s.side ? (s.shipShell ? 0.12 : 0.5) : 1;
       this.damageShip(sh, s.dmg * smult * (1 - 0.5 * sd / (s.radius + 14)), s.source, s.ap || 1);
     }
     // 补给舰可被击毁

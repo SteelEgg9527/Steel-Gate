@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.11.9">
+<link rel="stylesheet" href="css/style.css?v=0.12.0">
 </head>
 <body>
 <div id="app">
@@ -149,6 +149,7 @@
       <div class="command-actions" id="ship-actions" style="display:none">
         <button id="ship-prewarn-btn" class="ability-btn" type="button">预先瞄准</button>
         <button id="ship-suppress-btn" class="ability-btn" type="button">火力压制</button>
+        <button id="ship-stop-btn" class="ability-btn" type="button">停止行动（F）</button>
       </div>
       <div class="fire-mode-row" id="ship-repair-row" style="display:none">
         <span>炮塔维修</span>
@@ -199,6 +200,9 @@
       <b id="card-count">0/10</b>
       <small>拖动卡片到单位或战场</small>
       <button id="buy-draft" class="buy-draft" title="消耗战功分数购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
+    <button id="buy-unit" class="buy-draft" title="消耗战功分数在友军附近召唤一个随机单位">单位增援 <b id="buy-unit-cost">200</b></button>
+    <button id="quick-equip" class="quick-card-btn" type="button">快速装备</button>
+    <button id="quick-fort" class="quick-card-btn" type="button">快速工事</button>
       <button id="navy-system" class="buy-draft" type="button" title="购买舰船支援卡片">舰船系统</button>
     </div>
     <div id="cards"></div>
@@ -438,8 +442,8 @@
           <tbody>
             <tr><td>203mm 主炮</td><td>4</td><td>3km</td><td>550</td><td>250m</td><td>520</td><td>24s</td></tr>
             <tr><td>105mm 副炮</td><td>6</td><td>1.5km</td><td>180</td><td>160m</td><td>260</td><td>8s</td></tr>
-            <tr><td>37mm 防空炮</td><td>6</td><td>对空 800 / 对地 500</td><td>35</td><td>40m</td><td>95</td><td>1.8s</td></tr>
-            <tr><td>20mm 机关炮</td><td>10</td><td>对空 600 / 对地 400</td><td>14</td><td>24m</td><td>65</td><td>0.45s</td></tr>
+            <tr><td>37mm 防空炮</td><td>6</td><td>对空 800 / 对地 500</td><td>35</td><td>40m</td><td>220</td><td>1.8s</td></tr>
+            <tr><td>20mm 机关炮</td><td>10</td><td>对空 600 / 对地 400</td><td>14</td><td>24m</td><td>170</td><td>0.45s</td></tr>
           </tbody>
         </table>
         <h3>地面单位</h3>
@@ -549,15 +553,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.11.9"></script>
-<script src="js/config.js?v=0.11.9"></script>
-<script src="js/audio.js?v=0.11.9"></script>
-<script src="js/maps.js?v=0.11.9"></script>
-<script src="js/terrain.js?v=0.11.9"></script>
-<script src="js/naval.js?v=0.11.9"></script>
-<script src="js/game.js?v=0.11.9"></script>
-<script src="js/render.js?v=0.11.9"></script>
-<script src="js/ui.js?v=0.11.9"></script>
-<script src="js/main.js?v=0.11.9"></script>
+<script src="js/util.js?v=0.12.0"></script>
+<script src="js/config.js?v=0.12.0"></script>
+<script src="js/audio.js?v=0.12.0"></script>
+<script src="js/maps.js?v=0.12.0"></script>
+<script src="js/terrain.js?v=0.12.0"></script>
+<script src="js/naval.js?v=0.12.0"></script>
+<script src="js/game.js?v=0.12.0"></script>
+<script src="js/render.js?v=0.12.0"></script>
+<script src="js/ui.js?v=0.12.0"></script>
+<script src="js/main.js?v=0.12.0"></script>
 </body>
 </html>

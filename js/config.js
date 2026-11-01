@@ -404,7 +404,7 @@
     supplyRadius: 170,
     prewarnRadius: 170,
     suppressRadius: 260,
-    calibrationShots: 10, killCalibrationBonus: 2,
+    calibrationShots: 10, killCalibrationBonus: 0.25,
     calibrationSpreadCap: 0.35,
     prewarnSpreadBonus: 0.15,
     radarScanInterval: 30,
@@ -436,13 +436,13 @@
       },
       aa37: {
         name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
-        maxSpread: 95, splash: 40, dmg: 35, ap: 0.8, shots: 1200,
+        maxSpread: 220, splash: 40, dmg: 35, ap: 0.8, shots: 1200,
         interval: 1.8, turnRate: 0.50, arc: Math.PI, side: 'split',
         color: '#b7c6ad'
       },
       aa20: {
         name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
-        maxSpread: 65, splash: 24, dmg: 14, ap: 0.4, shots: 2400,
+        maxSpread: 170, splash: 24, dmg: 14, ap: 0.4, shots: 2400,
         interval: 0.45, turnRate: 0.80, arc: Math.PI, side: 'split',
         color: '#aebfae'
       }
@@ -558,7 +558,7 @@
     armored: { xp: 200, score: 20 },
     tank: { xp: 250, score: 35 },
     artillery: { xp: 200, score: 25 },
-    ship: { xp: 1000, score: 500 }
+    ship: { xp: 5000, score: 2500 }
   };
 
   SL.XP = {
@@ -861,14 +861,14 @@
     count: 3,                // 战斗机数量
     hp: 180,                 // 单机血量
     evade: 0.50,             // 单机闪避率
-    radius: 250,             // 制空圈半径（直径 500m）
+    radius: 800,             // 制空圈半径（直径 1600m）
     orbitRadius: 250,        // 盘旋半径（直径 500m）
     duration: 40,            // 持续 40 秒
     orbitSpeed: 0.9,         // 盘旋角速度
     chaseSpeed: 180,         // 追击敌机时的飞行速度
     tailDistance: 100,       // 追击时保持在敌机后方的距离
     jitter: 8,               // 跟随位置的轻微随机浮动幅度
-    groundRange: 300,        // 无对空目标时扫射地面目标的距离
+    groundRange: 800,        // 无对空目标时扫射地面目标的距离
     groundDamage: 15,        // 对地扫射伤害
     groundInterval: 0.6,     // 对地扫射间隔
     interval: 1.1,           // 对空射击间隔
@@ -911,8 +911,8 @@
     ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送：补给圈中心有 500 HP 补给箱，可被摧毁' },
     airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：半径 125m 伤害圈，高额杀伤' },
     artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：重炮支援 15s 30 发，直径 300m' },
-    recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：飞机盘旋 20s，侦察直径 500m' },
-    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机盘旋 40 秒，在直径 500m 空域追击敌机尾部' },
+    recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：侦察机从边缘进入，抵达后盘旋 20 秒，侦察直径 500m' },
+    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机盘旋 40 秒，在直径 1600m 空域索敌并追击' },
     fortpack: { key: 'fortpack', name: '工事装备包', icon: '堡', color: '#7c5a32', use: 'open', desc: '升级选中后立即开出一张工事卡' },
     bunker: { key: 'bunker', name: '机枪碉堡', icon: '堡', color: '#7c5a32', use: 'point', desc: '拖到强化工事区：300m 机枪火力 + 额外减伤' },
     mortar_nest: { key: 'mortar_nest', name: '迫击炮阵地', icon: '迫', color: '#6e6a3a', use: 'point', desc: '拖到强化工事区：3 门迫击炮陆续射击，射程 500m，散布 50m' },

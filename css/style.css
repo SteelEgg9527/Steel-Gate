@@ -990,6 +990,15 @@ html, body {
 .buy-draft b { display: block; margin: 0; font: 700 9px var(--mono); color: #ffe9a8; }
 .buy-draft:hover { background: rgba(76,64,36,0.98); border-color: #f0d89a; }
 .buy-draft.disabled { opacity: 0.38; cursor: default; filter: grayscale(1); }
+.quick-card-btn {
+  width: 58px; padding: 4px 2px;
+  border: 1px solid rgba(130,176,158,0.55);
+  background: rgba(30,48,40,0.92);
+  color: #b9dfcf;
+  font: 700 8px var(--font-ui);
+  cursor: pointer;
+}
+.quick-card-btn:hover { background: rgba(48,76,62,0.98); border-color: #9fe0cd; }
 #navy-system {
   width: 72px;
   padding: 7px 3px;
@@ -1073,6 +1082,34 @@ html, body {
 #navy-cards:empty { display: none; }
 #navy-cards .card { flex: 0 0 54px; width: 54px; max-width: 54px; }
 #navy-cards .card .nm { font-size: 8px; }
+.navy-stop-card {
+  border: 1px solid rgba(196,178,134,0.35);
+  background: rgba(38,34,22,0.85);
+  color: #dfca92;
+  cursor: pointer;
+  padding: 0;
+}
+.navy-stop-card:hover { border-color: #e0c274; }
+.plane-slots {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px 2px 2px;
+}
+.plane-slot {
+  position: relative;
+  width: 12px;
+  height: 5px;
+  border: 1px solid rgba(143,190,198,0.55);
+  background: rgba(15,25,24,0.8);
+  overflow: hidden;
+}
+.plane-slot.full { background: #8fd6c8; border-color: #a9e5db; }
+.plane-slot.refilling i {
+  display: block;
+  height: 100%;
+  background: rgba(143,214,200,0.65);
+}
 .card {
   position: relative;
   flex: 1 1 0;
