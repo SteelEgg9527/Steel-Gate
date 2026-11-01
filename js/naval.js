@@ -1335,7 +1335,7 @@
     return t;
   }
 
-  function fireShipShell(game, ship, t, tx, ty, targetDist) {
+  function fireShipShell(game, ship, t, tx, ty, targetDist, target) {
     var c = t.classDef;
     if (t.ammo <= 0) return;
     var maxR = c.range || c.rangeGround || 500;
@@ -1351,19 +1351,40 @@
     var px = U.clamp(tx + Math.cos(ang) * rad, 20, SL.CONFIG.mapSize - 20);
     var py = U.clamp(ty + Math.sin(ang) * rad, 20, SL.CONFIG.mapSize - 20);
     var from = turretWorld(ship, t);
-    var sv = { caliber: t.cls === 'main' ? 203 : (t.cls === 'secondary' ? 105 : (t.cls === 'aa37' ? 37 : 20)), size: 1, trail: 8 };
-    if (t.cls === 'main') { sv.size = 2.8; sv.trail = 16; }
-    else if (t.cls === 'secondary') { sv.size = 1.6; sv.trail = 8; }
-    else if (t.cls === 'aa37') { sv.size = 0.9; sv.trail = 3; }
-    else { sv.size = 0.75; sv.trail = 2; }
-    game.shells.push({
-      x0: from.x, y0: from.y, x1: px, y1: py,
-      t: 0, dur: U.clamp(U.dist(from.x, from.y, px, py) / 360 + 1.0, 1.2, 3.4),
-      dmg: c.dmg, radius: c.splash,
-      fortDmg: t.cls === 'main' ? 1200 : (t.cls === 'secondary' ? 450 : 80),
-      ap: c.ap, mortar: true, side: ship.side, source: ship,
-      shipShell: true, caliber: sv.caliber, size: sv.size, trail: sv.trail
-    });
+    // 机关炮 / 防空炮为直射弹道：命中即结算，只显示曳光，不生成抛物线炮弹
+    if (t.cls === 'aa37' || t.cls === 'aa20') {
+      game.effects.push({ kind: 'tracer', x1: from.x, y1: from.y, x2: tx, y2: ty, t: 0, dur: 0.1, side: ship.side });
+      if (target && target.def && target.alive) {
+        game.damage(target, c.dmg, ship, c.ap);
+      } else if (target && target.base) {
+        target.hp -= c.dmg;
+        game.damageFortifications(tx, ty, c.dmg, c.splash);
+      } else if (target && (target.siteKind || target.structures || target.kind === 'fort' || target.kind === 'village' || target.kind === 'forest')) {
+        game.damageFortifications(tx, ty, c.dmg, c.splash);
+      } else {
+        // 压制点没有具体单位时，对落点附近的敌军造成一次直射溅射
+        for (var du = 0; du < game.units.length; du++) {
+          var tu = game.units[du];
+          if (!tu.alive || tu.side === ship.side) continue;
+          if (U.dist(tu.x, tu.y, tx, ty) <= c.splash) {
+            game.damage(tu, c.dmg * 0.65, ship, c.ap);
+          }
+        }
+        game.damageFortifications(tx, ty, c.dmg, c.splash);
+      }
+    } else {
+      var sv = { caliber: t.cls === 'main' ? 203 : 105, size: 1, trail: 8 };
+      if (t.cls === 'main') { sv.size = 2.8; sv.trail = 16; }
+      else if (t.cls === 'secondary') { sv.size = 1.6; sv.trail = 8; }
+      game.shells.push({
+        x0: from.x, y0: from.y, x1: px, y1: py,
+        t: 0, dur: U.clamp(U.dist(from.x, from.y, px, py) / 360 + 1.0, 1.2, 3.4),
+        dmg: c.dmg, radius: c.splash,
+        fortDmg: t.cls === 'main' ? 1200 : (t.cls === 'secondary' ? 450 : 80),
+        ap: c.ap, mortar: true, side: ship.side, source: ship,
+        shipShell: true, caliber: sv.caliber, size: sv.size, trail: sv.trail
+      });
+    }
     if (game.effects) game.effects.push({ kind: 'muzzle', x: from.x, y: from.y, a: ship.heading, t: 0, dur: 0.2, size: t.cls === 'main' ? 24 : 13, side: ship.side, smoke: true, heavy: t.cls === 'main' || t.cls === 'secondary' });
     if (SL.Audio) SL.Audio.shot({ dmg: c.dmg, kind: 'shell', label: c.name }, ship, false, from.x, from.y);
     t.ammo = Math.max(0, t.ammo - 1);
@@ -1493,7 +1514,18 @@
       var c = t.classDef;
       var target = null, tx = 0, ty = 0;
       var preAim = false;
-      if (mission && (t.cls === 'main' || t.cls === 'secondary' || ship.suppress)) {
+      if (ship.suppress) {
+        var supR = c.range || c.rangeGround || 500;
+        var supD = U.dist(ship.x, ship.y, mission.x, mission.y);
+        if (supD <= supR) {
+          tx = mission.x; ty = mission.y;
+          target = { x: tx, y: ty };
+        } else {
+          // 射程外的炮塔不参与压制，自动寻找射程/视野内目标
+          var supAuto = findShipAutoTarget(game, ship, c, t.cls === 'main');
+          if (supAuto) { target = supAuto; tx = supAuto.x; ty = supAuto.y; }
+        }
+      } else if (mission && (t.cls === 'main' || t.cls === 'secondary')) {
         if (ship.bombard && !(ship.bombardQueue && ship.bombardQueue.indexOf(t) >= 0)) continue;
         tx = mission.x; ty = mission.y;
         target = { x: tx, y: ty };
@@ -1566,7 +1598,7 @@
       if (ship.fireMode === 'hold') continue;
       var aimErr = Math.abs(angleDiff(relToShip, t.angle));
       if (aimErr < 0.035 && d <= maxR && t.cd <= 0 && game.time >= (ship.nextFireAt || 0)) {
-        fireShipShell(game, ship, t, tx, ty, d);
+        fireShipShell(game, ship, t, tx, ty, d, target);
         ship.nextFireAt = game.time + 0.12;
         if (ship.bombardQueue) {
           var qi = ship.bombardQueue.indexOf(t);

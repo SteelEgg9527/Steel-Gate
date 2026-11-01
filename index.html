@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.11.2">
+<link rel="stylesheet" href="css/style.css?v=0.11.3">
 </head>
 <body>
 <div id="app">
@@ -400,7 +400,7 @@
               <li><b>侦察</b><span>指挥车建立持续侦察圈；侦察机提供 20 秒侦察区</span></li>
               <li><b>成长</b><span>玩家所有经验与分数来源为 2.5 倍；升级抽卡，分数可购买额外抽卡</span></li>
               <li><b>工事</b><span>工兵步兵在已占领区构筑强化工事；工事可部署碉堡、迫击炮、反坦克炮、88 炮</span></li>
-              <li><b>工程车</b><span>布雷、铁丝网、拒马、修复残骸；不能建立第一次强化工事</span></li>
+              <li><b>工程车</b><span>点击工程模式会立即在车下布下第一个节点；再右键移动，车辆沿行驶路线继续布设</span></li>
             </ul>
           </div>
           <div>
@@ -413,7 +413,8 @@
               <li><b>406mm 岸防炮</b><span>射程 2km、散布 500m、溅射 300m、对舰 1500 伤害，只对海</span></li>
               <li><b>战舰视野</b><span>1000m，并共享全部友军视野</span></li>
               <li><b>主炮</b><span>自动攻击射程内被友军发现的敌方战舰；不主动攻击地面</span></li>
-              <li><b>其他舰炮</b><span>副炮、37mm、20mm 自动攻击地面单位、工事、海岸基地和岸防炮</span></li>
+              <li><b>其他舰炮</b><span>副炮、37mm、20mm 自动攻击地面单位、工事、海岸基地和岸防炮；37mm/20mm 为直射弹道，不显示抛物线</span></li>
+              <li><b>压制时的空闲炮塔</b><span>射程外的炮塔会自动寻找射程和视野内目标，不再空转</span></li>
               <li><b>近岸支援</b><span>离岸 400m 内；每次开火 8% 概率暴露 5 秒，敌方优先攻击</span></li>
               <li><b>舰炮压制</b><span>持续 5 分钟；预瞄圈上使用可加速校射；F 停止</span></li>
               <li><b>校射</b><span>约 10 次射击完成，击毁目标加快；校射完成后进入效力射</span></li>
@@ -547,15 +548,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.11.2"></script>
-<script src="js/config.js?v=0.11.2"></script>
-<script src="js/audio.js?v=0.11.2"></script>
-<script src="js/maps.js?v=0.11.2"></script>
-<script src="js/terrain.js?v=0.11.2"></script>
-<script src="js/naval.js?v=0.11.2"></script>
-<script src="js/game.js?v=0.11.2"></script>
-<script src="js/render.js?v=0.11.2"></script>
-<script src="js/ui.js?v=0.11.2"></script>
-<script src="js/main.js?v=0.11.2"></script>
+<script src="js/util.js?v=0.11.3"></script>
+<script src="js/config.js?v=0.11.3"></script>
+<script src="js/audio.js?v=0.11.3"></script>
+<script src="js/maps.js?v=0.11.3"></script>
+<script src="js/terrain.js?v=0.11.3"></script>
+<script src="js/naval.js?v=0.11.3"></script>
+<script src="js/game.js?v=0.11.3"></script>
+<script src="js/render.js?v=0.11.3"></script>
+<script src="js/ui.js?v=0.11.3"></script>
+<script src="js/main.js?v=0.11.3"></script>
 </body>
 </html>

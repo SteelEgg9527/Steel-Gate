@@ -3414,9 +3414,19 @@
     for (var i = 0; i < units.length; i++) {
       var u = units[i];
       if (!u.alive || u.type !== 'engineer_vehicle') continue;
-      u.engineerMode = (u.engineerMode === mode) ? null : mode;
+      var wasActive = u.engineerMode === mode;
+      u.engineerMode = wasActive ? null : mode;
       u.engLastX = u.x; u.engLastY = u.y;
       u.engLastNode = null;
+      // 点击工程模式时立即在当前车辆位置布下第一个节点
+      if (!wasActive && u.engineerValue >= (SL.ENGINEER.cost[mode] || 10)) {
+        var first = (mode === 'wire' || mode === 'hedgehog') ? this.layBarrier(u, mode) : this.layMine(u, mode);
+        if (first) {
+          u.engineerValue = Math.max(0, u.engineerValue - (SL.ENGINEER.cost[mode] || 10));
+          u.engLastX = u.x;
+          u.engLastY = u.y;
+        }
+      }
       changed++;
     }
     return changed;
