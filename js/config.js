@@ -173,7 +173,7 @@
       hp: 90,
       armor: 1,
       vision: 150,
-      range: 160,
+      range: 190,
       speed: 13,
       radius: 8,
       canSprint: false,
