@@ -396,7 +396,7 @@
 
   /* ---------------- 舰炮轰鸣 ---------------- */
   SL.NAVAL = {
-    shipCost: 3000,
+    shipCost: 2000,
     shipCostStep: 1.5,
     planeCost: 0,
     bombardCost: 0,
@@ -472,7 +472,7 @@
   SL.NAVAL_CARDS = {
     ship_support: {
       key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
-      use: 'point', cost: 3000,
+      use: 'point', cost: 2000,
       desc: '在海域边缘召唤欧根亲王号；每次购买涨价 50%'
     },
     ship_prewarn: {

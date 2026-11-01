@@ -1667,7 +1667,7 @@
           nd.className = 'card';
           nd.dataset.navyKey = qd.key;
           nd.style.setProperty('--c', qd.color);
-          var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 3000) : (qd.key === 'naval_supply' ? 500 : 0);
+          var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 2000) : (qd.key === 'naval_supply' ? 500 : 0);
           nd.title = qd.desc + (qcost ? '（' + qcost + ' 分）' : '（免费）');
           nd.innerHTML = '<div class="ic">' + qd.icon + '</div><div class="nm">' + qd.name +
             (qcost ? '<br><small>' + qcost + '</small>' : '') + '</div>';

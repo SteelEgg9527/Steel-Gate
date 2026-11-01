@@ -100,7 +100,7 @@
     this.battleships = [];
     this.playerShipSummoned = false;
     this.shipSupportOwned = false;
-    this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 3000;
+    this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2000;
     this.radarScanNext = { blue: 30, red: 30, green: 30 };
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
     this.aiShipUsed = { red: false, green: false };
