@@ -361,8 +361,8 @@
       if (si === 9) {
         stream.push({ x: edge + 70, y: yy });
       } else {
-        var xx = U.lerp(size * 0.10, edge - 90, tt) + Math.sin(tt * Math.PI * 2.6) * 95;
-        stream.push({ x: U.clamp(xx, 180, edge - 45), y: yy });
+        var xx = U.lerp(0, edge - 90, tt) + Math.sin(tt * Math.PI * 2.6) * 95;
+        stream.push({ x: U.clamp(xx, 0, edge - 45), y: yy });
       }
     }
     T.streams = [stream];
