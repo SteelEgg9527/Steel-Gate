@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>钢线 1944 · 1944 西欧战场</title>
+<title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.9.0">
+<link rel="stylesheet" href="css/style.css?v=0.10.0">
 </head>
 <body>
 <div id="app">
@@ -59,6 +59,12 @@
     <div id="yh-status" class="yh-status">无人控制</div>
   </div>
 
+  <div id="naval-hud" class="naval-hud hidden">
+    <span>通讯塔 <b id="nh-towers">0/3</b></span>
+    <span>雷达 <b id="nh-radar">无</b></span>
+    <span id="nh-scan">对海搜索 —</span>
+  </div>
+
   <div id="defense-hud" class="yellow-hud defense-hud hidden">
     <div class="yh-head"><span>坚守</span><b id="dh-hold">00:00</b></div>
     <div class="dh-main">
@@ -93,6 +99,8 @@
     <button id="range-heavy-target-btn">重坦标靶</button>
     <button id="range-yellow-btn">刷新黄圈</button>
     <button id="range-boss-btn">Boss卡</button>
+    <button id="range-enemy-ship-btn">敌舰卡</button>
+    <button id="range-enemy-bomber-btn">敌轰炸机卡</button>
     <button id="range-clear-btn">清空标靶/单位</button>
   </div>
 
@@ -131,12 +139,20 @@
         <span>手雷模式</span>
         <button id="grenade-mode-btn" class="fire-mode-btn" type="button" title="切换：自动攻击 / 手动攻击（G键，含火箭筒）">自动攻击</button>
       </div>
-      <div class="command-actions">
+      <div class="command-actions" id="unit-actions">
         <button id="btn-fire-support" class="ability-btn" type="button">火力压制</button>
         <button id="btn-recon" class="ability-btn" type="button">侦察</button>
         <button id="btn-grenade" class="ability-btn" type="button">投掷/发射</button>
         <button id="btn-sniper-hide" class="ability-btn" type="button">就地隐蔽</button>
         <button id="btn-engineer" class="ability-btn" type="button">构筑工事</button>
+      </div>
+      <div class="command-actions" id="ship-actions" style="display:none">
+        <button id="ship-prewarn-btn" class="ability-btn" type="button">预先瞄准</button>
+        <button id="ship-suppress-btn" class="ability-btn" type="button">火力压制</button>
+      </div>
+      <div class="fire-mode-row" id="ship-repair-row" style="display:none">
+        <span>炮塔维修</span>
+        <button id="ship-repair-btn" class="fire-mode-btn" type="button">消耗舰体修复</button>
       </div>
       <div class="engineer-row" id="engineer-row" style="display:none">
         <div class="eng-head"><span>工程模式</span><b id="eng-value">200 / 200</b></div>
@@ -182,17 +198,35 @@
       <span>卡包</span>
       <b id="card-count">0/10</b>
       <small>拖动卡片到单位或战场</small>
-      <button id="buy-draft" class="buy-draft" title="消耗战功分数购买一次抽卡机会">买抽卡 <b id="buy-cost">200</b></button>
+      <button id="buy-draft" class="buy-draft" title="消耗战功分数购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
+      <button id="navy-system" class="buy-draft" type="button" title="购买舰船支援卡片">舰船系统</button>
     </div>
     <div id="cards"></div>
+    <div id="navy-cards"></div>
     <div id="discard" title="把卡片或装备拖到这里丢弃">
       <span>✕</span>
       <small>丢弃</small>
     </div>
   </div>
 
-  <div id="range-console" class="overlay hidden">
-    <div class="sheet range-sheet">
+  <div id="naval-shop" class="overlay hidden">
+    <div class="sheet">
+      <div class="sheet-head">
+        <span class="stamp">海军</span>
+        <div>
+          <h1>舰船系统</h1>
+          <p class="sub">仅限购买，不进入普通抽卡池</p>
+        </div>
+        <button id="naval-shop-close" class="icon-btn">×</button>
+      </div>
+      <div class="sheet-body">
+        <div id="naval-shop-list" class="test-card-grid"></div>
+        <p class="tip">战舰支援需要至少一座己方通讯塔；舰炮轰击需要通讯塔、水上飞机侦察圈或近岸支援。</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="range-console" class="overlay hidden">    <div class="sheet range-sheet">
       <div class="sheet-head">
         <span class="stamp">试验场</span>
         <div>
@@ -468,8 +502,26 @@
     <button id="gm-load" type="button">读取游戏</button>
     <button id="gm-settle" type="button">主动结算</button>
     <button id="gm-mainmenu" type="button">回到主菜单</button>
-    <button id="gm-sound" type="button">音效：开</button>
+    <button id="gm-settings" type="button">设置</button>
     <p class="gm-tip">游戏已暂停</p>
+  </div>
+
+  <div id="settings-panel" class="settings-panel hidden">
+    <div class="settings-card">
+      <div class="settings-head"><span>设置</span><button id="settings-close" type="button">×</button></div>
+      <div class="settings-section">显示设置</div>
+      <label class="settings-row"><span>战舰射程圈</span><input id="set-range-enabled" type="checkbox" checked></label>
+      <label class="settings-row"><span>主炮射程圈</span><input id="set-range-main" type="checkbox" checked></label>
+      <label class="settings-row"><span>副炮射程圈</span><input id="set-range-secondary" type="checkbox" checked></label>
+      <label class="settings-row"><span>防空射程圈</span><input id="set-range-aa" type="checkbox" checked></label>
+      <label class="settings-row"><span>工事射程圈</span><input id="set-range-fort" type="checkbox" checked></label>
+      <label class="settings-row"><span>未选中时保持显示</span><input id="set-range-keep" type="checkbox"></label>
+      <div class="settings-section">音效设置</div>
+      <label class="settings-slider"><span>主音量</span><input id="set-audio-master" type="range" min="0" max="1" step="0.05" value="1"></label>
+      <label class="settings-slider"><span>炮火音效</span><input id="set-audio-artillery" type="range" min="0" max="1" step="0.05" value="1"></label>
+      <label class="settings-slider"><span>爆炸音效</span><input id="set-audio-explosion" type="range" min="0" max="1" step="0.05" value="1"></label>
+      <label class="settings-slider"><span>界面音效</span><input id="set-audio-ui" type="range" min="0" max="1" step="0.05" value="1"></label>
+    </div>
   </div>
 
   <div id="pause-badge" class="hidden">已暂停</div>
@@ -477,14 +529,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.9.0"></script>
-<script src="js/config.js?v=0.9.0"></script>
-<script src="js/audio.js?v=0.9.0"></script>
-<script src="js/maps.js?v=0.9.0"></script>
-<script src="js/terrain.js?v=0.9.0"></script>
-<script src="js/game.js?v=0.9.0"></script>
-<script src="js/render.js?v=0.9.0"></script>
-<script src="js/ui.js?v=0.9.0"></script>
-<script src="js/main.js?v=0.9.0"></script>
+<script src="js/util.js?v=0.10.0"></script>
+<script src="js/config.js?v=0.10.0"></script>
+<script src="js/audio.js?v=0.10.0"></script>
+<script src="js/maps.js?v=0.10.0"></script>
+<script src="js/terrain.js?v=0.10.0"></script>
+<script src="js/naval.js?v=0.10.0"></script>
+<script src="js/game.js?v=0.10.0"></script>
+<script src="js/render.js?v=0.10.0"></script>
+<script src="js/ui.js?v=0.10.0"></script>
+<script src="js/main.js?v=0.10.0"></script>
 </body>
 </html>

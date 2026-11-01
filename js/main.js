@@ -13,6 +13,7 @@
   var gameMode = 'melee';
   var difficulty = 'normal';
   if (params.get('mode') === 'lastStand') gameMode = 'lastStand';
+  if (params.get('mode') === 'naval') gameMode = 'naval';
   if (params.get('difficulty') && (SL.LAST_STAND.difficulties[params.get('difficulty')] || SL.MELEE_DIFFICULTIES[params.get('difficulty')])) {
     difficulty = params.get('difficulty');
   }
@@ -28,12 +29,17 @@
     var paramMap = params.get('map');
     // 先让加载层画出来，再做地图测绘
     setTimeout(function () {
-      var playable = SL.MAPS.filter(function (m) { return !m.test; });
+      var playable = SL.MAPS.filter(function (m) {
+        return !m.test && (gameMode === 'naval' ? m.naval : !m.naval);
+      });
+      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
       var chosen = (paramMap && SL.MAP_BY_ID[paramMap])
         ? paramMap
         : playable[Math.floor(Math.random() * playable.length)].id;
+      if (SL.MAP_BY_ID[chosen].naval) gameMode = 'naval';
+      else if (gameMode === 'naval') gameMode = 'melee';
       SL.Terrain.setMap(chosen);
-      if (SL.MAP_BY_ID[chosen].test) gameMode = 'melee';
+      if (SL.MAP_BY_ID[chosen].test) gameMode = SL.MAP_BY_ID[chosen].naval ? 'naval' : 'melee';
       SL.Terrain.build(seed);
       world = document.getElementById('world');
       R.init(world, document.getElementById('overlay'));
@@ -54,7 +60,7 @@
         }
       });
       newGame(params.get('autostart') === '1');
-      UI.setMapButtons(SL.Terrain.map.id);
+      UI.setMapButtons(SL.Terrain.map.id, gameMode);
       renderModeButtons();
       updateObjective();
       bindInput();
@@ -90,20 +96,21 @@
     if (el && m) {
       el.textContent = m.test ? '训练场 · 无敌人'
         : actualMode === 'lastStand' ? '背水一战 · ' + diff.name + ' · ' + m.name
-          : '三军混战 · ' + diff.name + ' · ' + m.name;
+          : actualMode === 'naval' ? '舰炮轰鸣 · ' + diff.name + ' · ' + m.name
+            : '三军混战 · ' + diff.name + ' · ' + m.name;
     }
     var cur = document.getElementById('map-current');
     if (cur && m) cur.textContent = m.name + ' · ' + m.subtitle;
     var title = document.getElementById('brief-title');
     if (title && m) title.textContent = '作战简报 · ' + m.name;
     var stamp = document.getElementById('brief-stamp');
-    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : '车轮战';
+    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var missionTag = document.getElementById('mission-tag');
-    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : '车轮战';
+    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var sub = document.getElementById('brief-sub');
     if (sub) {
       sub.textContent = '1944 年 6 月 10 日 · ' +
-        (m.test ? '训练场 · 无敌人' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
+        (m.test ? '训练场 · 无敌人' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : actualMode === 'naval' ? '海陆协同 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
     }
     var copy = document.getElementById('brief-copy');
     if (copy) {
@@ -111,7 +118,9 @@
         ? '训练场用于测试单位、武器、工事与占领机制；可选择任意测试卡，不受资源与波次限制。'
         : actualMode === 'lastStand'
           ? '背水一战。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
-          : '1944 年 6 月，西欧战场。蓝、红、绿三支合成部队在 2 km × 2 km 战场上争夺黄圈。' +
+          : actualMode === 'naval'
+            ? '1944 年 6 月，海岸线。蓝、红、绿三支合成部队在 4 km 海陆战场争夺黄圈；占领通讯塔与雷达站，购买战舰支援与舰船卡片，用舰炮火力打开局面。'
+            : '1944 年 6 月，西欧战场。蓝、红、绿三支合成部队在 2 km × 2 km 战场上争夺黄圈。' +
             (diff.endless
               ? '无限难度没有胜利条件。玩家累计50,000黄圈经验时红/绿一方召唤一次BOSS；此后AI每次全灭重生按时间概率召唤，45分钟达到峰值。'
               : diff.id === 'easy'
@@ -204,12 +213,22 @@
     if (!SL.MODES[id] || id === gameMode) return;
     if (SL.Terrain.map && SL.Terrain.map.test && id === 'lastStand') return;
     gameMode = id;
+    var cur = SL.Terrain.map;
+    var needSwitch = (id === 'naval' && (!cur || !cur.naval)) ||
+      (id !== 'naval' && cur && cur.naval && !cur.test);
+    if (needSwitch) {
+      var pool = SL.MAPS.filter(function (m) {
+        return !m.test && (id === 'naval' ? m.naval : !m.naval);
+      });
+      if (pool.length) { chooseMap(pool[0].id); return; }
+    }
     newGame(false);
     renderModeButtons();
+    if (UI.setMapButtons) UI.setMapButtons(SL.Terrain.map.id, gameMode);
   }
 
   function selectDifficulty(id) {
-    var valid = SL.LAST_STAND.difficulties[id] || SL.MELEE_DIFFICULTIES[id];
+    var valid = gameMode === 'lastStand' ? SL.LAST_STAND.difficulties[id] : SL.MELEE_DIFFICULTIES[id];
     if (!valid || id === difficulty) return;
     difficulty = id;
     if (!SL.Terrain.map.test) newGame(false);
@@ -223,11 +242,16 @@
   // 在简报里换战场：重生成地形并开一局新的（仅开局前可见）
   function chooseMap(id) {
     if (id === 'random') {
-      var playable = SL.MAPS.filter(function (m) { return !m.test; });
+      var playable = SL.MAPS.filter(function (m) {
+        return !m.test && (gameMode === 'naval' ? m.naval : !m.naval);
+      });
+      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
       id = playable[Math.floor(Math.random() * playable.length)].id;
     }
     if (!SL.MAP_BY_ID[id] || (SL.Terrain.map && id === SL.Terrain.map.id)) return;
-    if (SL.MAP_BY_ID[id].test) gameMode = 'melee';
+    if (SL.MAP_BY_ID[id].naval) gameMode = 'naval';
+    else if (gameMode === 'naval') gameMode = 'melee';
+    if (SL.MAP_BY_ID[id].test) gameMode = SL.MAP_BY_ID[id].naval ? 'naval' : 'melee';
     SL.Terrain.setMap(id);
     SL.Terrain.build();
     game = SL.Game.create(gameOptions());
@@ -236,7 +260,7 @@
     paused = false;
     UI.showBriefing(true);
     centerOnArmy();
-    UI.setMapButtons(id);
+    UI.setMapButtons(id, gameMode);
     renderModeButtons();
     updateObjective();
     R.draw(game, 0);
@@ -280,6 +304,13 @@
       // 防守模式开局同时看到边缘出生点与黄圈，便于立即布防
       R.cam.zoom = U.clamp(Math.min(z, 0.82), R.cam.min, R.cam.max);
       R.centerOn((cx / n + game.yellow.x) / 2, (cy / n + game.yellow.y) / 2);
+      R.clampCamStrict();
+      return;
+    }
+    if (game.mode === 'naval' && game.radar) {
+      R.cam.zoom = U.clamp(0.62, R.cam.min, R.cam.max);
+      if (n) R.centerOn(cx / n, cy / n);
+      else R.centerOn(game.radar.x, game.radar.y);
       R.clampCamStrict();
       return;
     }
@@ -448,6 +479,15 @@
           } else {
             UI.pushToast('无法在此建立狙击隐蔽', 'info');
           }
+        } else if (pc === 'shipPrewarn') {
+          if (game.selectedShip && game.setShipPrewarn(game.selectedShip, w.x, w.y)) {
+            R.addMarker(w.x, w.y, 'move');
+            UI.pushToast('全舰炮塔开始预先瞄准', 'order');
+          }
+        } else if (pc === 'shipSuppress') {
+          var ssr = game.navalSuppress('blue', w.x, w.y);
+          UI.pushToast(ssr.msg, ssr.ok ? 'order' : 'loss');
+          if (ssr.ok) R.addMarker(w.x, w.y, 'attack');
         } else {
           var hasRocket = game.selected.some(function (u) { return u.type === 'rocket_arty'; });
           var hasArty = game.selected.some(function (u) { return u.type === 'artillery' || u.type === 'heavy_arty'; });
@@ -458,6 +498,8 @@
         }
         return;
       }
+      var ship = game.shipAt ? game.shipAt(w.x, w.y, 115 / R.cam.zoom) : null;
+      if (ship) { game.setSelectedShip(ship); return; }
       var own = game.unitAt(w.x, w.y, 20 / R.cam.zoom);
       if (own) {
         if (ev.shiftKey) {
@@ -545,9 +587,10 @@
       }
       if (k === 'escape') {
         if (game && game.pendingCommand) { game.pendingCommand = null; UI.pushToast('已取消指令', 'info'); return; }
+        if (UI.isSettingsOpen && UI.isSettingsOpen()) { UI.closeSettings(); return; }
         if (UI.isGameMenuOpen()) { closeGameMenu(); return; }
-        if (UI.isHelpOpen()) UI.toggleHelp(false);
-        else game.setSelection([]);
+        if (UI.isHelpOpen()) { UI.toggleHelp(false); return; }
+        openGameMenu();
         return;
       }
       if (k === 'enter') { if (!started) begin(); return; }
@@ -556,6 +599,13 @@
         return;
       }
       if (k === 'x' || k === 'f') {
+        if (game.selectedShip) {
+          game.selectedShip.prewarn = null;
+          game.selectedShip.suppress = null;
+          game.selectedShip.bombard = null;
+          game.selectedShip.dest = null;
+          UI.pushToast('已停止舰船当前指令', 'info');
+        }
         if (game.selected.length) {
           game.clearOrders(game.selected);
         }
@@ -582,6 +632,23 @@
     if (game.state !== 'playing') return;
     var w = R.screenToWorld(sx, sy);
     var hitR = 22 / R.cam.zoom;
+    if (game.selectedShip && game.selectedShip.alive) {
+      if (game.selectedShip.entering) {
+        UI.pushToast('战舰正在驶入海域，抵达阵位后再下达命令', 'info');
+        return;
+      }
+      if (shift && game.selectedShip.nearShore) {
+        var sr = game.navalSuppress('blue', w.x, w.y);
+        if (sr.ok) { R.addMarker(w.x, w.y, 'attack'); return; }
+      }
+      if (!SL.Naval.isWater(w.x, w.y)) {
+        UI.pushToast('战舰只能在海域内移动', 'info');
+        return;
+      }
+      game.selectedShip.dest = { x: w.x, y: w.y };
+      R.addMarker(w.x, w.y, 'move');
+      return;
+    }
     var enemy = game.enemyAt(w.x, w.y, hitR);
     if (!game.selected.length) {
       var own = game.unitAt(w.x, w.y, hitR);

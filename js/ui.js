@@ -53,10 +53,22 @@
     el.gmLoad = $('gm-load');
     el.gmSettle = $('gm-settle');
     el.gmMainMenu = $('gm-mainmenu');
+    el.gmSettings = $('gm-settings');
+    el.settingsPanel = $('settings-panel');
+    el.settingsClose = $('settings-close');
+    el.setRangeEnabled = $('set-range-enabled');
+    el.setRangeMain = $('set-range-main');
+    el.setRangeSecondary = $('set-range-secondary');
+    el.setRangeAa = $('set-range-aa');
+    el.setRangeFort = $('set-range-fort');
+    el.setRangeKeep = $('set-range-keep');
+    el.setAudioMaster = $('set-audio-master');
+    el.setAudioArtillery = $('set-audio-artillery');
+    el.setAudioExplosion = $('set-audio-explosion');
+    el.setAudioUi = $('set-audio-ui');
     el.renderError = $('render-error');
     el.ctxLost = $('context-lost');
     el.btnHelp = $('btn-help');
-    el.btnSound = $('gm-sound');
     el.detail = $('sel-detail');
     el.dType = $('d-type');
     el.dName = $('d-name');
@@ -89,10 +101,14 @@
     el.engRow = $('engineer-row');
     el.engValue = $('eng-value');
     el.engModes = Array.prototype.slice.call(document.querySelectorAll('.eng-mode'));
-    el.commandActions = document.querySelector('.command-actions');
+    el.commandActions = document.querySelector('#unit-actions');
     el.counts = { blue: $('count-blue'), red: $('count-red'), green: $('count-green') };
     el.scores = { blue: $('score-blue'), red: $('score-red'), green: $('score-green') };
     el.yellowHud = $('yellow-hud');
+    el.navalHud = $('naval-hud');
+    el.nhTowers = $('nh-towers');
+    el.nhRadar = $('nh-radar');
+    el.nhScan = $('nh-scan');
     el.yhTime = $('yh-time');
     el.yhStatus = $('yh-status');
     el.yhFills = { blue: $('yh-fill-blue'), red: $('yh-fill-red'), green: $('yh-fill-green') };
@@ -122,6 +138,15 @@
     el.killfeed = $('killfeed');
     el.lbRows = $('lb-rows');
     el.cards = $('cards');
+    el.navyCards = $('navy-cards');
+    el.navySystem = $('navy-system');
+    el.navalShop = $('naval-shop');
+    el.navalShopList = $('naval-shop-list');
+    el.shipRepairRow = $('ship-repair-row');
+    el.shipRepairBtn = $('ship-repair-btn');
+    el.shipActions = $('ship-actions');
+    el.shipPrewarnBtn = $('ship-prewarn-btn');
+    el.shipSuppressBtn = $('ship-suppress-btn');
     el.cardCount = $('card-count');
     el.buyDraft = $('buy-draft');
     el.buyCost = $('buy-cost');
@@ -145,7 +170,24 @@
     bindCardDrag();
 
     $('btn-start').addEventListener('click', function () { if (callbacks.onStart) callbacks.onStart(); });
-    $('btn-again').addEventListener('click', function () { if (callbacks.onRestart) callbacks.onRestart(); });
+    if (el.navySystem) el.navySystem.addEventListener('click', function () { UI.openNavalShop(); });
+    if (el.shipRepairBtn) el.shipRepairBtn.addEventListener('click', function () {
+      if (!game) return;
+      var r = game.repairShipTurret();
+      UI.pushToast(r.msg, r.ok ? 'order' : 'loss');
+    });
+    if (el.shipPrewarnBtn) el.shipPrewarnBtn.addEventListener('click', function () {
+      if (!game || !game.selectedShip) return;
+      game.pendingCommand = { kind: 'shipPrewarn' };
+      UI.pushToast('请在地图上点击预先瞄准方向', 'win');
+    });
+    if (el.shipSuppressBtn) el.shipSuppressBtn.addEventListener('click', function () {
+      if (!game || !game.selectedShip) return;
+      game.pendingCommand = { kind: 'shipSuppress' };
+      UI.pushToast('请在地图上点击压制区域', 'win');
+    });
+    var nsClose = $('naval-shop-close');
+    if (nsClose) nsClose.addEventListener('click', function () { if (el.navalShop) el.navalShop.classList.add('hidden'); });    $('btn-again').addEventListener('click', function () { if (callbacks.onRestart) callbacks.onRestart(); });
     $('btn-help').addEventListener('click', function () { UI.toggleHelp(); });
     $('btn-help-close').addEventListener('click', function () { UI.toggleHelp(false); });
     var frCancel = $('fort-replace-cancel');
@@ -157,18 +199,83 @@
       if (callbacks.onReturnMenu) callbacks.onReturnMenu();
       else if (callbacks.onMenu) callbacks.onMenu();
     });
-    var soundBtn = el.btnSound;
-    function syncSound() {
-      if (!soundBtn || !SL.Audio) return;
-      soundBtn.textContent = '音效：' + (SL.Audio.muted ? '关' : '开');
-      soundBtn.title = SL.Audio.muted ? '音效已关闭' : '音效已开启';
-      soundBtn.classList.toggle('muted', !!SL.Audio.muted);
+    var SETTINGS_KEY = 'steel_settings_v1';
+    function loadSettings() {
+      var defaults = {
+        shipRanges: { enabled: true, main: true, secondary: true, aa: true, keep: false, fort: true },
+        audio: { master: 1, artillery: 1, explosion: 1, ui: 1 }
+      };
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch (e) {}
+      SL.SETTINGS = SL.SETTINGS || defaults;
+      if (saved) {
+        if (saved.shipRanges) for (var k in defaults.shipRanges) SL.SETTINGS.shipRanges[k] = saved.shipRanges[k] != null ? saved.shipRanges[k] : defaults.shipRanges[k];
+        if (saved.audio) for (var a in defaults.audio) SL.SETTINGS.audio[a] = saved.audio[a] != null ? saved.audio[a] : defaults.audio[a];
+      }
+      if (SL.Audio && SL.Audio.setVolumes) SL.Audio.setVolumes(SL.SETTINGS.audio);
     }
-    UI.syncSound = syncSound;
-    if (soundBtn) soundBtn.addEventListener('click', function () {
-      if (SL.Audio) { SL.Audio.toggle(); syncSound(); }
+    function saveSettings() {
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SL.SETTINGS)); } catch (e) {}
+    }
+    function syncSettingsUI() {
+      var r = SL.SETTINGS.shipRanges, a = SL.SETTINGS.audio;
+      if (el.setRangeEnabled) el.setRangeEnabled.checked = r.enabled !== false;
+      if (el.setRangeMain) el.setRangeMain.checked = r.main !== false;
+      if (el.setRangeSecondary) el.setRangeSecondary.checked = r.secondary !== false;
+      if (el.setRangeAa) el.setRangeAa.checked = r.aa !== false;
+      if (el.setRangeFort) el.setRangeFort.checked = r.fort !== false;
+      if (el.setRangeKeep) el.setRangeKeep.checked = !!r.keep;
+      if (el.setAudioMaster) el.setAudioMaster.value = a.master == null ? 1 : a.master;
+      if (el.setAudioArtillery) el.setAudioArtillery.value = a.artillery == null ? 1 : a.artillery;
+      if (el.setAudioExplosion) el.setAudioExplosion.value = a.explosion == null ? 1 : a.explosion;
+      if (el.setAudioUi) el.setAudioUi.value = a.ui == null ? 1 : a.ui;
+    }
+    function openSettings() {
+      if (!el.settingsPanel) return;
+      syncSettingsUI();
+      el.settingsPanel.classList.remove('hidden');
+    }
+    function closeSettings() {
+      if (el.settingsPanel) el.settingsPanel.classList.add('hidden');
+    }
+    UI.closeSettings = closeSettings;
+    UI.isSettingsOpen = function () {
+      return !!(el.settingsPanel && !el.settingsPanel.classList.contains('hidden'));
+    };
+    loadSettings();
+    syncSettingsUI();
+    if (el.settingsClose) el.settingsClose.addEventListener('click', closeSettings);
+    if (el.gmSettings) el.gmSettings.addEventListener('click', openSettings);
+    if (el.setRangeEnabled) el.setRangeEnabled.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.enabled = el.setRangeEnabled.checked; saveSettings();
     });
-    syncSound();
+    if (el.setRangeMain) el.setRangeMain.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.main = el.setRangeMain.checked; saveSettings();
+    });
+    if (el.setRangeSecondary) el.setRangeSecondary.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.secondary = el.setRangeSecondary.checked; saveSettings();
+    });
+    if (el.setRangeAa) el.setRangeAa.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.aa = el.setRangeAa.checked; saveSettings();
+    });
+    if (el.setRangeFort) el.setRangeFort.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.fort = el.setRangeFort.checked; saveSettings();
+    });
+    if (el.setRangeKeep) el.setRangeKeep.addEventListener('change', function () {
+      SL.SETTINGS.shipRanges.keep = el.setRangeKeep.checked; saveSettings();
+    });
+    function audioSettingsChanged() {
+      SL.SETTINGS.audio.master = parseFloat(el.setAudioMaster.value);
+      SL.SETTINGS.audio.artillery = parseFloat(el.setAudioArtillery.value);
+      SL.SETTINGS.audio.explosion = parseFloat(el.setAudioExplosion.value);
+      SL.SETTINGS.audio.ui = parseFloat(el.setAudioUi.value);
+      if (SL.Audio && SL.Audio.setVolumes) SL.Audio.setVolumes(SL.SETTINGS.audio);
+      saveSettings();
+    }
+    if (el.setAudioMaster) el.setAudioMaster.addEventListener('input', audioSettingsChanged);
+    if (el.setAudioArtillery) el.setAudioArtillery.addEventListener('input', audioSettingsChanged);
+    if (el.setAudioExplosion) el.setAudioExplosion.addEventListener('input', audioSettingsChanged);
+    if (el.setAudioUi) el.setAudioUi.addEventListener('input', audioSettingsChanged);
     if (el.gmClose) el.gmClose.addEventListener('click', function () { if (callbacks.onCloseMenu) callbacks.onCloseMenu(); });
     if (el.gmResume) el.gmResume.addEventListener('click', function () { if (callbacks.onCloseMenu) callbacks.onCloseMenu(); });
     if (el.gmRestart) el.gmRestart.addEventListener('click', function () { if (callbacks.onRestart) callbacks.onRestart(); });
@@ -221,6 +328,8 @@
       if (game && game.refreshYellow && game.refreshYellow()) UI.pushToast('黄圈已刷新', 'info');
     });
     $('range-boss-btn').addEventListener('click', function () { UI.addBossCards(); });
+    $('range-enemy-ship-btn').addEventListener('click', function () { UI.addTestCard('enemy_ship'); });
+    $('range-enemy-bomber-btn').addEventListener('click', function () { UI.addTestCard('enemy_bomber'); });
     $('range-clear-btn').addEventListener('click', function () { UI.clearTestUnits(); });
     $('range-console-close').addEventListener('click', function () {
       el.rangeConsole.classList.add('hidden');
@@ -296,11 +405,14 @@
     el.briefing.classList.toggle('hidden', !show);
   };
 
-  UI.setMapButtons = function (current) {
+  UI.setMapButtons = function (current, mode) {
     var box = $('map-buttons');
     if (!box) return;
     box.innerHTML = '';
-    var list = SL.MAPS.map(function (m) { return { id: m.id, name: m.name }; });
+    var fleet = mode || (game ? game.mode : 'melee');
+    var list = SL.MAPS.filter(function (m) {
+      return fleet === 'naval' ? !!m.naval : !m.naval;
+    }).map(function (m) { return { id: m.id, name: m.name }; });
     list.push({ id: 'random', name: '随机' });
     for (var i = 0; i < list.length; i++) {
       (function (item) {
@@ -396,7 +508,6 @@
     if (hand.length >= SL.XP.handMax) hand.shift();
     var card = game.makeCard(key, sub);
     hand.push(card);
-    if (el.testPack) el.testPack.classList.add('hidden');
     game.log('测试卡包：' + card.name, 'order');
   };
 
@@ -445,8 +556,32 @@
     el.rangeConsole.classList.remove('hidden');
   };
 
-  UI.openTestPack = function () {
-    if (!game || !game.testMode || !el.testPack) return;
+  UI.openNavalShop = function () {
+    if (!el.navalShop || !el.navalShopList) return;
+    if (!game || !game.naval) {
+      UI.pushToast('舰船系统仅在舰炮轰鸣模式可用', 'info');
+      return;
+    }
+    el.navalShopList.innerHTML = '';
+    var keys = Object.keys(SL.NAVAL_CARDS);
+    for (var i = 0; i < keys.length; i++) {
+      (function (key) {
+        var d = SL.NAVAL_CARDS[key];
+        var b = document.createElement('button');
+        b.className = 'test-card';
+        b.innerHTML = '<b>' + d.name + '</b><span>' + d.cost + ' 分 · ' + d.desc + '</span>';
+        b.addEventListener('click', function () {
+          var r = game.buyNavalCard(key);
+          UI.pushToast(r.msg, r.ok ? 'win' : 'loss');
+          if (r.ok) renderCards();
+        });
+        el.navalShopList.appendChild(b);
+      })(keys[i]);
+    }
+    el.navalShop.classList.remove('hidden');
+  };
+
+  UI.openTestPack = function () {    if (!game || !game.testMode || !el.testPack) return;
     if (el.rangeConsole) el.rangeConsole.classList.add('hidden');
     function section(title, items) {
       var box = document.createElement('div');
@@ -615,6 +750,30 @@
     }
   }
 
+  function renderNavalHud(g) {
+    if (!el.navalHud) return;
+    if (!g.naval) {
+      el.navalHud.classList.add('hidden');
+      return;
+    }
+    el.navalHud.classList.remove('hidden');
+    var blueTowers = g.navalTowerCount ? g.navalTowerCount('blue') : 0;
+    var radarOwner = g.radar && !g.radar.destroyed ? g.radar.owner : null;
+    if (el.nhTowers) el.nhTowers.textContent = blueTowers + ' / 3';
+    if (el.nhRadar) {
+      el.nhRadar.textContent = radarOwner ? (SL.SIDES[radarOwner] || {}).name || radarOwner : '无';
+      el.nhRadar.className = radarOwner === 'blue' ? '' : (radarOwner ? 'red' : '');
+    }
+    if (el.nhScan) {
+      if (!radarOwner) el.nhScan.textContent = '对海搜索 —';
+      else if (g.time < (g.radarScanUntil[radarOwner] || 0)) {
+        el.nhScan.textContent = '对海搜索 ' + Math.ceil(g.radarScanUntil[radarOwner] - g.time) + 's';
+      } else {
+        el.nhScan.textContent = '对海冷却 ' + Math.ceil(Math.max(0, g.radarScanNext[radarOwner] || 0)) + 's';
+      }
+    }
+  }
+
   function renderDefenseHud(g) {
     if (!el.defenseHud) return;
     if (g.mode !== 'lastStand' || !g.defense) {
@@ -711,7 +870,9 @@
 
   function updateFireModeUI() {
     if (!el.fireModeBtn) return;
-    var u = game && game.selected && game.selected.length ? game.selected[0] : null;
+    var u = game && game.selectedShip && game.selectedShip.alive
+      ? game.selectedShip
+      : (game && game.selected && game.selected.length ? game.selected[0] : null);
     var mode = u && SL.FIRE_MODES[u.fireMode] ? u.fireMode : 'free';
     el.fireModeBtn.dataset.mode = mode;
     el.fireModeBtn.textContent = SL.FIRE_MODES[mode].name;
@@ -726,7 +887,6 @@
     var endless = game.mode === 'lastStand' && game.difficulty === 'endless' && !game.ended;
     if (el.gmSave) el.gmSave.disabled = !endless;
     if (el.gmSettle) el.gmSettle.disabled = !endless;
-    if (UI.syncSound) UI.syncSound();
     renderLeaderboard(game);
   };
 
@@ -776,7 +936,16 @@
     perfElapsed = 0;
   };
 
-  UI.cycleFireMode = function () {    if (!game || !game.selected || !game.selected.length) return;
+  UI.cycleFireMode = function () {
+    if (!game) return;
+    if (game.selectedShip && game.selectedShip.alive) {
+      var so = ['free', 'return', 'hold'];
+      var sc = game.selectedShip.fireMode || 'free';
+      game.selectedShip.fireMode = so[(so.indexOf(sc) + 1) % so.length];
+      updateFireModeUI();
+      return;
+    }
+    if (!game.selected || !game.selected.length) return;
     var order = ['free', 'return', 'hold'];
     var current = game.selected[0].fireMode || 'free';
     var next = order[(order.indexOf(current) + 1) % order.length];
@@ -836,7 +1005,7 @@
         el.counts[side].textContent = counts[side];
         uiCache.counts[side] = counts[side];
       }
-      var sc = g.teams[side].score;
+      var sc = Math.floor(g.teams[side].score || 0);
       if (uiCache.scores[side] !== sc && el.scores[side]) {
         el.scores[side].textContent = sc;
         uiCache.scores[side] = sc;
@@ -860,6 +1029,7 @@
     if (uiCache.clock !== clockText) { el.clock.textContent = clockText; uiCache.clock = clockText; }
     renderBuyDraft(g);
     renderYellowHud(g);
+    renderNavalHud(g);
     renderDefenseHud(g);
     renderBossHud(g);
     renderBossKillBanner(g);
@@ -891,17 +1061,19 @@
       el.ctxLost.classList.add('hidden');
     }
 
-    var sig = g.selected.map(function (u) { return u.id; }).join(',');
+    var sig = g.selected.map(function (u) { return u.id; }).join(',') +
+      '|ship:' + (g.selectedShip ? g.selectedShip.id : '');
     if (sig !== selSig) {
       selSig = sig;
       rebuildSelection(g);
     } else {
       updateBars();
     }
-    if (uiCache.selCount !== g.selected.length) {
-      uiCache.selCount = g.selected.length;
-      el.count.textContent = g.selected.length;
-      el.empty.style.display = g.selected.length ? 'none' : 'block';
+    var selN = g.selected.length + (g.selectedShip ? 1 : 0);
+    if (uiCache.selCount !== selN) {
+      uiCache.selCount = selN;
+      el.count.textContent = selN;
+      el.empty.style.display = selN ? 'none' : 'block';
     }
 
     // 只显示玩家自己的击杀与晋升，不刷其他队的战报
@@ -937,7 +1109,8 @@
 
     // 卡包
     var hand = g.teams.blue.hand;
-    var handSig = hand.map(function (c) { return c.id; }).join(',');
+    var handSig = hand.map(function (c) { return c.id; }).join(',') + '|' +
+      (g.navalCards || []).map(function (c) { return c.id; }).join(',');
     if (handSig !== uiCache.handSig) {
       uiCache.handSig = handSig;
       renderCards();
@@ -1007,6 +1180,39 @@
 
   function rebuildSelection(g) {
     var i;
+    if (g.selectedShip && g.selectedShip.alive) {
+      primaryId = null;
+      var sh = g.selectedShip;
+      el.detail.classList.remove('hidden');
+      el.dType.textContent = sh.entering ? '战列舰 · 驶入海域' : (sh.nearShore ? '战列舰 · 近岸支援' : '战列舰');
+      el.dName.textContent = sh.name;
+      el.dVision.textContent = (sh.vision || 1000) + ' m';
+      el.dStRow.style.display = 'none';
+      el.dHp.textContent = Math.ceil(sh.hp) + ' / ' + sh.maxHp;
+      el.dHpbar.style.width = Math.max(0, sh.hp / sh.maxHp * 100).toFixed(0) + '%';
+      el.dHpbar.style.background = sh.hp / sh.maxHp > 0.35 ? '#7fd4a0' : '#e06a52';
+      el.dRange.textContent = '主炮 3000m';
+      el.dCover.textContent = sh.nearShore ? '近岸暴露' : '海上';
+      el.dKills.textContent = '—';
+      if (el.dAmmoRow) el.dAmmoRow.style.display = '';
+      if (el.dReloadRow) el.dReloadRow.style.display = 'none';
+      if (el.dFireRow) el.dFireRow.style.display = '';
+      if (el.grenadeModeRow) el.grenadeModeRow.style.display = 'none';
+      if (el.commandActions) el.commandActions.style.display = 'none';
+      if (el.shipActions) el.shipActions.style.display = 'flex';
+      if (el.shipRepairRow) el.shipRepairRow.style.display = 'none';
+      var mainAmmo = 0, mainMax = 0;
+      for (var ai = 0; ai < sh.turrets.length; ai++) {
+        if (sh.turrets[ai].cls !== 'main') continue;
+        mainAmmo += sh.turrets[ai].ammo;
+        mainMax += sh.turrets[ai].maxAmmo;
+      }
+      if (el.dAmbar) el.dAmbar.style.width = (mainMax ? mainAmmo / mainMax * 100 : 0).toFixed(0) + '%';
+      if (el.dAmmo) el.dAmmo.textContent = mainAmmo + ' / ' + mainMax;
+      el.list.innerHTML = '';
+      rows = [];
+      return;
+    }
     if (!g.selected.length) {
       primaryId = null;
       el.detail.classList.add('hidden');
@@ -1025,6 +1231,9 @@
     el.detail.classList.remove('hidden');
     el.dType.textContent = SL.TYPE_LABEL[primary.type] || primary.type;
     el.dName.textContent = primary.name;
+    if (el.shipRepairRow) el.shipRepairRow.style.display = 'none';
+    if (el.shipActions) el.shipActions.style.display = 'none';
+    if (el.commandActions) el.commandActions.style.display = '';
     el.dVision.textContent = (game.unitVision ? game.unitVision(primary) : primary.def.vision) + ' m';
     el.dStRow.style.display = primary.def.canSprint ? 'grid' : 'none';
 
@@ -1124,6 +1333,22 @@
 
   function updateBars() {
     var i;
+    if (game && game.selectedShip && game.selectedShip.alive) {
+      var ss = game.selectedShip;
+      var shr = U.clamp(ss.hp / ss.maxHp, 0, 1);
+      el.dHp.textContent = Math.ceil(ss.hp) + ' / ' + ss.maxHp;
+      el.dHpbar.style.width = (shr * 100).toFixed(0) + '%';
+      el.dHpbar.style.background = shr > 0.35 ? '#7fd4a0' : '#e06a52';
+      var shipAmmo = 0, shipAmmoMax = 0;
+      for (var sa = 0; sa < ss.turrets.length; sa++) {
+        if (ss.turrets[sa].cls !== 'main') continue;
+        shipAmmo += ss.turrets[sa].ammo;
+        shipAmmoMax += ss.turrets[sa].maxAmmo;
+      }
+      if (el.dAmbar) el.dAmbar.style.width = (shipAmmoMax ? shipAmmo / shipAmmoMax * 100 : 0).toFixed(0) + '%';
+      if (el.dAmmo) el.dAmmo.textContent = shipAmmo + ' / ' + shipAmmoMax;
+      return;
+    }
     for (i = 0; i < rows.length; i++) {
       var r = rows[i];
       var ratio = U.clamp(r.u.hp / r.u.maxHp, 0, 1);
@@ -1400,7 +1625,7 @@
   function renderBuyDraft(g) {
     if (!el.buyDraft) return;
     var cost = g.buyDraftPrice('blue');
-    var score = g.teams.blue.score;
+    var score = Math.floor(g.teams.blue.score || 0);
     var afford = !g.ended && score >= cost;
     var sig = cost + '|' + afford + '|' + score;
     if (uiCache.buyDraft === sig) return;
@@ -1415,6 +1640,7 @@
     var hand = game.teams.blue.hand;
     el.cardCount.textContent = hand.length + '/' + SL.XP.handMax;
     renderBuyDraft(game);
+    if (el.navySystem) el.navySystem.style.display = 'none';
     el.cards.innerHTML = '';
     for (var i = 0; i < SL.XP.handMax; i++) {
       var c = hand[i];
@@ -1431,6 +1657,24 @@
       d.innerHTML = '<div class="ic">' + c.icon + '</div><div class="nm">' + c.name + '</div>';
       el.cards.appendChild(d);
     }
+    if (el.navyCards) {
+      el.navyCards.innerHTML = '';
+      if (game.naval) {
+        var quick = ['ship_support', 'ship_prewarn', 'naval_suppress', 'seaplane', 'naval_supply'];
+        for (var j = 0; j < quick.length; j++) {
+          var qd = SL.NAVAL_CARDS[quick[j]];
+          var nd = document.createElement('div');
+          nd.className = 'card';
+          nd.dataset.navyKey = qd.key;
+          nd.style.setProperty('--c', qd.color);
+          var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 3000) : (qd.key === 'naval_supply' ? 500 : 0);
+          nd.title = qd.desc + (qcost ? '（' + qcost + ' 分）' : '（免费）');
+          nd.innerHTML = '<div class="ic">' + qd.icon + '</div><div class="nm">' + qd.name +
+            (qcost ? '<br><small>' + qcost + '</small>' : '') + '</div>';
+          el.navyCards.appendChild(nd);
+        }
+      }
+    }
   }
 
   function bindCardDrag() {
@@ -1444,6 +1688,20 @@
       cardDrag = {
         card: card, node: node, x: ev.clientX, y: ev.clientY, moved: false,
         ghost: makeGhost(card.icon, card.name, card.color)
+      };
+      moveGhost(cardDrag.ghost, ev.clientX, ev.clientY);
+    });
+
+    if (el.navyCards) el.navyCards.addEventListener('pointerdown', function (ev) {
+      var node = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
+      if (!node || !node.dataset.navyKey || !game) return;
+      var qd = SL.NAVAL_CARDS[node.dataset.navyKey];
+      if (!qd) return;
+      ev.preventDefault();
+      node.classList.add('dragging');
+      cardDrag = {
+        card: qd, navy: true, node: node, x: ev.clientX, y: ev.clientY, moved: false,
+        ghost: makeGhost(qd.icon, qd.name, qd.color)
       };
       moveGhost(cardDrag.ghost, ev.clientX, ev.clientY);
     });
@@ -1468,6 +1726,15 @@
         if (d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
         el.discard.classList.remove('hot');
         if (!game) return;
+        if (d.navy) {
+          var underN = document.elementFromPoint(ev.clientX, ev.clientY);
+          if (!underN || underN.id !== 'world') return;
+          var wn = worldAt(ev.clientX, ev.clientY);
+          var rn = game.quickNavalCard(d.card.key, wn.x, wn.y);
+          UI.pushToast(rn.msg, rn.ok ? 'order' : 'loss');
+          renderCards();
+          return;
+        }
         if (overDiscard(ev.clientX, ev.clientY)) {
           game.discardCard(d.card);
           UI.pushToast('已丢弃 ' + d.card.name, 'info');

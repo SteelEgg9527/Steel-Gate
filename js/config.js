@@ -91,7 +91,7 @@
       radius: 8,
       canSprint: false,
       weapon: {
-        dmg: 18, interval: 0.42, ap: 0.6, accuracy: 0.82, spread: 3, splash: 10,
+        dmg: 18, interval: 0.42, ap: 0.6, accuracy: 0.82, spread: 6, splash: 10,
         mag: 10, reload: 2.4, ammo: 200, kind: 'direct', label: '30mm MK 103'
       }
     },
@@ -102,7 +102,7 @@
       symbol: 'tank',
       hp: 400,
       armor: 1,
-      vision: 190,
+      vision: 150,
       range: 190,
       speed: 9.5,
       radius: 9,
@@ -127,7 +127,7 @@
       canSprint: false,
       weapon: {
         dmg: 95, interval: 7.5, ap: 0.55, accuracy: 1,
-        ammo: 36, kind: 'shell', splash: 50, scatter: 100, label: '105mm leFH 18'
+        ammo: 36, kind: 'shell', splash: 100, scatter: 100, label: '105mm leFH 18'
       }
     },
     heavy_arty: {
@@ -145,7 +145,7 @@
       canSprint: false,
       weapon: {
         dmg: 180, interval: 14, ap: 1.3, accuracy: 1,
-        ammo: 18, kind: 'shell', splash: 100, scatter: 150, label: '150mm sFH 18'
+        ammo: 18, kind: 'shell', splash: 120, scatter: 150, label: '150mm sFH 18'
       }
     },
     heavy_tank: {
@@ -180,7 +180,7 @@
       aaRange: 600,
       airDmg: 8,
       weapon: {
-        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 4, splash: 4,
+        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 8, splash: 4,
         mag: 20, reload: 6, ammo: 300, kind: 'direct', label: '20mm Flak 38'
       }
     },
@@ -216,7 +216,7 @@
       canSprint: false,
       weapon: {
         dmg: 190, interval: 90, ap: 0.65, accuracy: 1,
-        ammo: 100, kind: 'shell', splash: 150, scatter: 200,
+        ammo: 30, kind: 'shell', splash: 150, scatter: 200,
         rockets: 10, rocketDelay: 0.5, reload: 90, fixedScatter: true, label: '十联装火箭炮'
       }
     },
@@ -332,12 +332,21 @@
     hell: {
       name: '地狱轰炸机', hp: 3000, speed: 60, length: 80,
       bombRadius: 300, coreRadius: 100, coreFrac: 0.6, outerFrac: 0.3,
-      orbitSpeed: 0.08, gunRange: 520, gunAirRange: 520, gunGroundRange: 400,
-      gunInterval: 0.45, gunDmg: 7, gunSplash: 50,
-      fortDmg: 2500, extraBombAt: 0.3,
-      extraBombCount: 8, extraBombRadius: 75, extraBombInterval: 0.6,
+      firstBombFrac: 0.66, highDamageMul: 0.15,
+      orbitSpeed: 0.08, orbitTurnRate: 1.35, secondRunDelay: 45,
+      gunRange: 650, gunAirRange: 650, gunGroundRange: 650,
+      gunInterval: 0.55, gunDmg: 16, gunSplash: 66, gunAP: 0.3,
+      low1GunCount: 4, low1GunDmg: 16, low1GunSplash: 66,
+      low1GunSpread: 80, low1GunRange: 650, low1GunAirRange: 650,
+      low1GunInterval: 0.55, low1GunAP: 0.3,
+      low2GunCount: 2, low2GunDmg: 66, low2GunSplash: 30,
+      low2GunRange: 800, low2GunAirRange: 800, low2GunInterval: 3.5, low2GunAP: 2.8,
+      fortDmg: 2500,
+      extraBombCount: 6, extraBombDuration: 10,
+      extraBombRadius: 75, extraBombInterval: 1.8,
       extraBombCoreRadius: 25, extraBombCoreFrac: 0.2, extraBombOuterFrac: 0.1,
-      extraBombFortDmg: 600, extraBombSupplyDmg: 1000    },
+      extraBombFortDmg: 600, extraBombSupplyDmg: 1000
+    },
     superTank: {
       name: '超级重坦', hp: 3000, range: 400, mgRange: 400, speed: 6.5,
       chargeMul: 3.5, spiralSpeed: 18, spiralRadial: 6, patrolSpeed: 12,
@@ -350,9 +359,10 @@
       crushDmg: 50, crushInterval: 0.1
     },
     ghost: {
-      name: '幽灵兵团', count: 10, hp: 1500, speed: 20, revealRadius: 30,
+      name: '幽灵兵团', count: 10, countByDifficulty: { easy: 6, normal: 8, hard: 10, endless: 10 },
+      hp: 1200, speed: 20, revealRadius: 30,
       damageScale: 0.45, fireRateScale: 2.0,
-      halfBombAt: 0.5, bombRadius: 50, bombDmg: 400, bombDelay: 10
+      halfBombAt: 0.5, bombRadius: 50, bombDmg: 250, bombDelay: 10
     }
   };
 
@@ -377,11 +387,122 @@
     lastStand: {
       id: 'lastStand', name: '背水一战',
       desc: '蓝队固守随机黄圈，红队分波进攻；守住目标时间即胜，黄圈被红队占领即败。'
+    },
+    naval: {
+      id: 'naval', name: '舰炮轰鸣',
+      desc: '4km 海陆战场：占领通讯塔与雷达站，召唤战列舰进行岸轰支援；黄圈经验决定胜负。'
     }
   };
 
-  SL.LAST_STAND = {
-    prepTime: 60,
+  /* ---------------- 舰炮轰鸣 ---------------- */
+  SL.NAVAL = {
+    shipCost: 3000,
+    shipCostStep: 1.5,
+    planeCost: 0,
+    bombardCost: 0,
+    supplyCost: 0,
+    supplyRadius: 170,
+    prewarnRadius: 170,
+    suppressRadius: 260,
+    calibrationShots: 10, killCalibrationBonus: 2,
+    calibrationSpreadCap: 0.35,
+    prewarnSpreadBonus: 0.15,
+    radarScanInterval: 30,
+    radarScanDuration: 5,
+    seaplaneHp: 120,
+    seaplaneRadius: 250,
+    seaplaneSpeed: 220,
+    coastGun: { range: 2000, spread: 500, splash: 300, dmg: 1500, interval: 12, hp: 1200 },
+    hull: {
+      name: '欧根亲王号', hp: 5000, armor: 4, vision: 1000,
+      length: 212.5, beam: 21.8, maxSpeed: 17, accel: 1.6,
+      turnRate: 0.08, reverseSpeed: 6.5, shoreRange: 400,
+      suppressDuration: 300,
+      nearShoreSpeed: 0.82, repairHullPerTurretHp: 0.2,
+      nearShoreExposeChance: 0.22, exposeDuration: 8
+    },
+    turretClasses: {
+      main: {
+        name: '203mm 主炮', count: 4, hp: 1500, range: 3000,
+        maxSpread: 520, splash: 320, dmg: 550, ap: 3.0, shots: 80,
+        interval: 24, turnRate: 0.12, arc: 5.24, side: 'center',
+        color: '#d8c17a'
+      },
+      secondary: {
+        name: '105mm 副炮', count: 6, hp: 300, range: 1500,
+        maxSpread: 260, splash: 160, dmg: 180, ap: 1.5, shots: 240,
+        interval: 8, turnRate: 0.30, arc: 1.75, side: 'split',
+        color: '#c8b27a'
+      },
+      aa37: {
+        name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
+        maxSpread: 95, splash: 40, dmg: 35, ap: 0.8, shots: 1200,
+        interval: 1.8, turnRate: 0.50, arc: 1.35, side: 'split',
+        color: '#b7c6ad'
+      },
+      aa20: {
+        name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
+        maxSpread: 65, splash: 24, dmg: 14, ap: 0.4, shots: 2400,
+        interval: 0.45, turnRate: 0.80, arc: 1.2, side: 'split',
+        color: '#aebfae'
+      }
+    },
+    mainTurrets: [
+      { x: 62, y: 0, side: 0, arcCenter: 0 },
+      { x: 28, y: 0, side: 0, arcCenter: 0 },
+      { x: -38, y: 0, side: 0, arcCenter: Math.PI },
+      { x: -74, y: 0, side: 0, arcCenter: Math.PI }
+    ],
+    secondaryTurrets: [
+      { x: 34, y: -8, side: -1 }, { x: 2, y: -8, side: -1 }, { x: -30, y: -8, side: -1 },
+      { x: 34, y: 8, side: 1 }, { x: 2, y: 8, side: 1 }, { x: -30, y: 8, side: 1 }
+    ],
+    aa37Turrets: [
+      { x: 48, y: -9, side: -1 }, { x: 10, y: -9, side: -1 }, { x: -52, y: -9, side: -1 },
+      { x: 48, y: 9, side: 1 }, { x: 10, y: 9, side: 1 }, { x: -52, y: 9, side: 1 }
+    ],
+    aa20Turrets: [
+      { x: 70, y: -10, side: -1 }, { x: 55, y: -10, side: -1 }, { x: 20, y: -10, side: -1 },
+      { x: -18, y: -10, side: -1 }, { x: -62, y: -10, side: -1 },
+      { x: 70, y: 10, side: 1 }, { x: 55, y: 10, side: 1 }, { x: 20, y: 10, side: 1 },
+      { x: -18, y: 10, side: 1 }, { x: -62, y: 10, side: 1 }
+    ]
+  };
+
+  SL.NAVAL_CARDS = {
+    ship_support: {
+      key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
+      use: 'point', cost: 3000,
+      desc: '在海域边缘召唤欧根亲王号；每次购买涨价 50%'
+    },
+    ship_prewarn: {
+      key: 'ship_prewarn', name: '预先瞄准', icon: 'PA', color: '#74a99d',
+      use: 'point', cost: 0,
+      desc: '全舰炮塔转向目标地点；可在预瞄圈上使用舰炮压制以降低散布'
+    },
+    naval_suppress: {
+      key: 'naval_suppress', name: '舰炮压制', icon: 'FS', color: '#a58e5c',
+      use: 'point', cost: 0,
+      desc: '全舰持续压制目标区域 5 分钟；校射完成后进入效力射'
+    },
+    seaplane: {
+      key: 'seaplane', name: '水上飞机', icon: 'AR', color: '#75a0a5',
+      use: 'point', cost: 0,
+      desc: '向战舰 2km 内派出水上侦察机，盘旋 40 秒'
+    },
+    naval_supply: {
+      key: 'naval_supply', name: '舰船补给', icon: 'NS', color: '#7b9b7e',
+      use: 'point', cost: 500,
+      desc: '召唤补给舰，为战舰补充舰体与弹药（500分）'
+    },
+    naval_bombard: {
+      key: 'naval_bombard', name: '舰炮轰击', icon: 'NF', color: '#b18b5e',
+      use: 'point', cost: 0,
+      desc: '旧版目标区域轰击'
+    }
+  };
+
+  SL.LAST_STAND = {    prepTime: 60,
     waveGap: 60,
     captureTime: 30,
     firstWave: 9,
@@ -453,7 +574,9 @@
     zoneRate: 3,       // 每个有人驻守的占领区每秒经验
     zoneMax: 8,        // 最多按 8 个占领区结算
     catchupPerLevel: 0.10, // 每落后 1 级，经验 +10%
-    catchupCap: 1.0    // 后追加成上限 +100%（最高双倍）
+    catchupCap: 1.0,   // 后追加成上限 +100%（最高双倍）
+    playerXpMult: 2.5,
+    playerScoreMult: 2.5
   };
 
   /* AI 成长速度：敌方经验略减，避免 AI 滚雪球过快 */
@@ -520,12 +643,12 @@
     atNestAmmo: 30,
     flakAmmo: 80,
     bunkerRange: 300,
-    bunkerInterval: 0.22,
+    bunkerInterval: 0.12,
     mortarRange: 500,
     mortarTubes: 3,
     mortarDelay: 0.45,
     mortarScatter: 50,
-    mortarSplash: 40,      // 迫击炮阵地单发溅射半径
+    mortarSplash: 90,      // 迫击炮阵地单发溅射半径
     mgDamageVsGarrison: 0.25,
     atNestRange: 500,
     atNestDmg: 120,
@@ -560,13 +683,13 @@
     },
     mortar: {
       key: 'mortar', name: '迫击炮', icon: 'MT', slot: 'weapon',
-      desc: '8cm 迫击炮，射程 300m，散布 65m，溅射 60m；停止移动后才能开火',
-      weapon: { range: 300, dmg: 70, interval: 5, ap: 0.45, accuracy: 1, spread: 0, ammo: 0, kind: 'shell', minRange: 40, scatter: 65, splash: 60, usesUnitAmmo: true, requiresStop: true, mortar: true, label: '8cm GrW 34' }
+      desc: '8cm 迫击炮，射程 300m，散布 65m，溅射 90m；停止移动后才能开火',
+      weapon: { range: 300, dmg: 70, interval: 5, ap: 0.45, accuracy: 1, spread: 0, ammo: 0, kind: 'shell', minRange: 40, scatter: 65, splash: 90, usesUnitAmmo: true, requiresStop: true, mortar: true, label: '8cm GrW 34' }
     },
     bazooka: {
       key: 'bazooka', name: '火箭筒', icon: 'BZ', slot: 'weapon',
-      desc: 'Panzerschreck，3 发，对装甲高额杀伤，射程 200m；散布较大，不吃高地射程加成',
-      weapon: { range: 200, dmg: 300, interval: 5, ap: 1.9, accuracy: 0.9, spread: 8, noRangeBonus: true, ammo: 3, kind: 'direct', antiArmor: true, rocket: true, projectileSpeed: 55, label: 'Panzerschreck' }
+      desc: 'Panzerschreck，2 发，对装甲高额杀伤，射程 200m；散布较大，不吃高地射程加成',
+      weapon: { range: 200, dmg: 300, interval: 5, ap: 1.9, accuracy: 0.9, spread: 8, noRangeBonus: true, ammo: 2, kind: 'direct', antiArmor: true, rocket: true, projectileSpeed: 55, label: 'Panzerschreck' }
     },
     atgrenade: {
       key: 'atgrenade', name: '反坦克手雷', icon: '雷', slot: 'weapon',
@@ -580,11 +703,11 @@
     },
     sniper: {
       key: 'sniper', name: '狙击侦察小组', icon: '狙', slot: 'weapon',
-      desc: '狙击步枪+反坦克步枪：视野+100m，对步兵600m/150伤害，对装甲车400m高伤，对中坦轻伤，对重坦无效；可创建一次灌木隐蔽',
+      desc: '狙击步枪+反坦克步枪：视野+100m，对步兵400m/150伤害，对装甲300m，对装甲车75伤害、对中坦35伤害，对重坦无效；可创建一次灌木隐蔽',
       weapon: {
-        range: 600, dmg: 150, interval: 4.5, ap: 0.5, accuracy: 0.9, spread: 1,
+        range: 400, dmg: 150, interval: 4.5, ap: 0.5, accuracy: 0.9, spread: 1,
         ammo: 0, kind: 'direct', usesUnitAmmo: true, sniper: true,
-        antiArmorRange: 400, armoredDmg: 180, tankDmg: 35, heavyDmg: 0,
+        antiArmorRange: 300, armoredDmg: 75, tankDmg: 35, heavyDmg: 0,
         label: '狙击步枪 / 反坦克步枪'
       },
       uses: 1
@@ -622,6 +745,8 @@
     cost: { mine_ap: 8, mine_at: 14, wire: 12, hedgehog: 12 },
     connectRange: 52,
     nodeHp: 1500,
+    wireHp: 1000,
+    hedgehogHp: 1500,
     mineTrigger: 16,
     mineSplash: { mine_ap: 34, mine_at: 48 },
     mineDamage: { mine_ap: 190, mine_at: 520 },
@@ -634,7 +759,7 @@
   SL.EQUIP_PACK = [
     { key: 'mg', w: 14 },
     { key: 'mortar', w: 14 },
-    { key: 'bazooka', w: 14 },
+    { key: 'bazooka', w: 12 },
     { key: 'sniper', w: 10 },
     { key: 'camo', w: 14 },
     { key: 'medkit', w: 14 },
@@ -689,7 +814,8 @@
     aiCap: 14,
     playerCap: 12
   };
-  SL.AI_UNIT_CAP = { easy: 14, normal: 20, hard: 26, endless: 32 };
+  SL.AI_UNIT_CAP = { easy: 10, normal: 16, hard: 22, endless: 28 };
+  SL.AI_REINFORCE_GAP = { easy: 45, normal: 35, hard: 25, endless: 18 };
 
   /* 黄圈争夺区：同一落点持续 2.5 分钟，结束后换点 */
   SL.YELLOW = {
@@ -792,13 +918,15 @@
     boss_hell: { key: 'boss_hell', name: 'Boss · 地狱轰炸机', icon: 'B', color: '#8c3b2e', use: 'point', desc: '仅试验场：召唤地狱轰炸机' },
     boss_tank: { key: 'boss_tank', name: 'Boss · 超级重坦', icon: 'B', color: '#6d5630', use: 'point', desc: '仅试验场：召唤超级重坦' },
     boss_ghost: { key: 'boss_ghost', name: 'Boss · 幽灵兵团', icon: 'B', color: '#4b6a5a', use: 'point', desc: '仅试验场：召唤幽灵兵团' },
+    enemy_ship: { key: 'enemy_ship', name: '敌方战舰', icon: 'ES', color: '#a35448', use: 'point', desc: '仅海岸训练场：召唤敌方战列舰' },
+    enemy_bomber: { key: 'enemy_bomber', name: '敌方轰炸机', icon: 'EB', color: '#8c3b2e', use: 'point', desc: '仅海岸训练场：召唤敌方地狱轰炸机' },
     unit: { key: 'unit', name: '单位卡', icon: '▣', color: '#5c7fa8', use: 'unit', desc: '拖到地图：在友军 200m 内生成单位' },
     equip: { key: 'equip', name: '装备卡', icon: '✦', color: '#8a7a4a', use: 'equip', desc: '拖到步兵班：直接装备武器' }
   };
 
   /* 抽卡池权重 */
   SL.CARD_POOL = [
-    { key: 'unitpack', w: 11 },
+    { key: 'unitpack', w: 13 },
     { key: 'equippack', w: 11 },
     { key: 'ammo', w: 11 },
     { key: 'fortpack', w: 11 },
@@ -850,4 +978,8 @@
 
   SL.FONT_UI = '"Noto Sans SC","Microsoft YaHei","PingFang SC",system-ui,sans-serif';
   SL.FONT_MONO = '"Cascadia Mono",Consolas,"Courier New",monospace';
+  SL.SETTINGS = {
+    shipRanges: { enabled: true, main: true, secondary: true, aa: true, keep: false, fort: true },
+    audio: { master: 1, artillery: 1, explosion: 1, ui: 1 }
+  };
 })();

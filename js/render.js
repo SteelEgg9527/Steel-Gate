@@ -117,7 +117,7 @@
     proj.w = W;
     proj.h = H;
     // 最小缩放 = 让地图刚好铺满屏幕较长的一边，始终不露出地图外的空白
-    cam.min = Math.max(W, H) / SL.CONFIG.mapSize;
+    cam.min = Math.min(W, H) / (T.naval ? ((T.size || 4000) + 300) : SL.CONFIG.mapSize);
     cam.max = Math.max(3.6, cam.min * 1.7);
     cam.zoom = U.clamp(cam.zoom, cam.min, cam.max);
     R.clampCam();
@@ -128,13 +128,13 @@
     var halfW = W / 2 / cam.zoom;
     var halfH = H / 2 / cam.zoom;
     // 允许镜头越出地图边缘一段距离，拖动时不会顶死在边界上
-    var OS = 220;
+    var OS = 320;
     var loX = T.origin + halfW - OS;
     var hiX = T.end - halfW + OS;
     var loY = T.origin + halfH - OS;
     var hiY = T.end - halfH + OS;
-    cam.x = loX <= hiX ? U.clamp(cam.x, loX, hiX) : 500;
-    cam.y = loY <= hiY ? U.clamp(cam.y, loY, hiY) : 500;
+    cam.x = loX <= hiX ? U.clamp(cam.x, loX, hiX) : (T.origin + T.end) / 2;
+    cam.y = loY <= hiY ? U.clamp(cam.y, loY, hiY) : (T.origin + T.end) / 2;
   };
 
   // 开局取景：严格限制在地图内，避免第一眼就看到大片黑边
@@ -144,8 +144,8 @@
     var halfH = H / 2 / cam.zoom;
     var loX = T.origin + halfW, hiX = T.end - halfW;
     var loY = T.origin + halfH, hiY = T.end - halfH;
-    cam.x = loX <= hiX ? U.clamp(cam.x, loX, hiX) : 500;
-    cam.y = loY <= hiY ? U.clamp(cam.y, loY, hiY) : 500;
+    cam.x = loX <= hiX ? U.clamp(cam.x, loX, hiX) : (T.origin + T.end) / 2;
+    cam.y = loY <= hiY ? U.clamp(cam.y, loY, hiY) : (T.origin + T.end) / 2;
   };
 
   R.centerOn = function (x, y) {
@@ -272,7 +272,7 @@
     visible.sort(function (a, b) { return a.y - b.y; });
     R.visibleUnits = visible.length;
     // 近景显示完整信息；中景保留血条；远景只画单位本体
-    R.lod = cam.zoom >= 1.15 ? 2 : (cam.zoom >= 0.85 ? 1 : 0);
+    R.lod = cam.zoom >= 0.55 ? 2 : (cam.zoom >= 0.30 ? 1 : 0);
 
     stage('support', function () {
       drawSupport(game);
@@ -290,6 +290,26 @@
       for (var v2 = 0; v2 < visible.length; v2++) {
         if (visible[v2].selected) drawUnit(game, visible[v2]);
       }
+    });
+    stage('ships', function () {
+      if (!game.battleships || !SL.Naval || !SL.Naval.drawShip) return;
+      if (SL.Naval.drawSiteMarkers) SL.Naval.drawSiteMarkers(ctx, game, proj, cam.zoom);
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-cam.x, -cam.y);
+      for (var si = 0; si < game.battleships.length; si++) {
+        var sh = game.battleships[si];
+        if (!sh.alive) continue;
+        if (sh.side !== 'blue' && !game.unitVisibleTo('blue', sh)) continue;
+        SL.Naval.drawShip(ctx, game, sh, cam.zoom);
+      }
+      if (SL.Naval.drawShipRanges) SL.Naval.drawShipRanges(ctx, game, cam.zoom);
+      if (SL.Naval.drawFortRanges) SL.Naval.drawFortRanges(ctx, game, cam.zoom);
+      if (SL.Naval.drawSupport) SL.Naval.drawSupport(ctx, game, cam.zoom);
+      ctx.restore();
+      if (SL.Naval.drawShipBadges) SL.Naval.drawShipBadges(ctx, game, proj, cam.zoom);
+      if (SL.Naval.drawFortificationRings) SL.Naval.drawFortificationRings(ctx, game, proj, cam.zoom);
     });
     stage('fortMarkers', function () {
       drawFortMarkers(game);
@@ -1078,6 +1098,23 @@
       ctx.restore();
     }
 
+    // 工程车工程模式标签
+    if (full && u.type === 'engineer_vehicle' && u.engineerMode) {
+      var engLabel = u.engineerMode === 'wire' ? '铁丝网' :
+        (u.engineerMode === 'hedgehog' ? '拒马' : '布雷');
+      ctx.save();
+      ctx.font = '800 9px ' + SL.FONT_MONO;
+      var etw = ctx.measureText(engLabel).width + 14;
+      var etx = sx - etw / 2, ety = sy + h / 2 + 31;
+      ctx.fillStyle = 'rgba(24,34,28,0.95)';
+      roundRect(ctx, etx, ety, etw, 14, 4); ctx.fill();
+      ctx.strokeStyle = 'rgba(126,205,190,0.9)'; ctx.lineWidth = 1.1;
+      roundRect(ctx, etx, ety, etw, 14, 4); ctx.stroke();
+      ctx.fillStyle = '#a8e4d4'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(engLabel, sx, ety + 7.5);
+      ctx.restore();
+    }
+
     // 小字名牌
     if (full) {
       ctx.font = '10px ' + SL.FONT_UI;
@@ -1509,10 +1546,30 @@
         sx = proj.x(e.x); sy = proj.y(e.y);
         ctx.save();
         ctx.globalAlpha = (1 - k) * 0.95;
+        var mx = sx + Math.cos(e.a) * (e.heavy ? 14 : 8);
+        var my = sy + Math.sin(e.a) * (e.heavy ? 14 : 8);
         ctx.fillStyle = '#ffe9a8';
         ctx.beginPath();
-        ctx.arc(sx + Math.cos(e.a) * 8, sy + Math.sin(e.a) * 8, e.size * (0.5 + k), 0, Math.PI * 2);
+        ctx.arc(mx, my, e.size * (0.5 + k), 0, Math.PI * 2);
         ctx.fill();
+        if (e.heavy) {
+          ctx.globalAlpha = (1 - k) * 0.8;
+          ctx.fillStyle = '#fff2c8';
+          ctx.beginPath();
+          ctx.ellipse(mx, my, e.size * 1.25, e.size * 0.55, e.a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (e.smoke || e.heavy || e.size >= 12) {
+          ctx.globalAlpha = (1 - k) * 0.32;
+          for (var sm = 0; sm < 3; sm++) {
+            var so = 8 + sm * 7;
+            ctx.fillStyle = sm === 0 ? 'rgba(238,226,196,0.8)' : 'rgba(108,104,94,0.55)';
+            ctx.beginPath();
+            ctx.arc(sx + Math.cos(e.a) * so + (sm - 1) * 3, sy + Math.sin(e.a) * so - sm * 2.5,
+              e.size * (0.42 + sm * 0.12), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
         ctx.restore();
       } else if (e.kind === 'explosion') {
         sx = proj.x(e.x); sy = proj.y(e.y);
@@ -1650,25 +1707,37 @@
         continue;
       }
       var dist = U.dist(s2.x0, s2.y0, s2.x1, s2.y1);
-      var arc = Math.sin(Math.PI * p) * Math.min(120, dist * 0.32) * cam.zoom;
+      var sz = s2.size || 1;
+      var arc = Math.sin(Math.PI * p) * Math.min(120, dist * 0.32) * cam.zoom * sz;
+      var shellAng = Math.atan2(s2.y1 - s2.y0, s2.x1 - s2.x0);
+      var trail = (s2.trail || 8) * cam.zoom;
       ctx.save();
       ctx.globalAlpha = 0.25;
       ctx.fillStyle = '#201a12';
       ctx.beginPath();
-      ctx.ellipse(gx, gy, 2.5, 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(gx, gy, 2.5 * sz, 1.4 * sz, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 0.8;
-      ctx.fillStyle = '#3a3126';
-      ctx.beginPath();
-      ctx.arc(gx, gy - arc, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = '#4a3f30';
+      if (s2.caliber >= 88) {
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = s2.caliber >= 200 ? '#e8c27a' : '#b69a68';
+        ctx.lineWidth = s2.caliber >= 200 ? 2.4 : 1.5;
+        ctx.beginPath();
+        ctx.moveTo(gx - Math.cos(shellAng) * trail, gy - Math.sin(shellAng) * trail);
+        ctx.lineTo(gx, gy - arc);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = 'rgba(220,190,130,0.6)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(gx, gy);
       ctx.lineTo(gx, gy - arc);
       ctx.stroke();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = s2.caliber >= 88 ? '#4a3923' : '#3a3126';
+      ctx.beginPath();
+      ctx.arc(gx, gy - arc, Math.max(1.6, 2.2 * sz), 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
   }
@@ -2024,6 +2093,15 @@
         ctx.fillRect(sx - pbw / 2, sy - (p.kind === 'hellBomber' ? 28 : 14), pbw, 2.6);
         ctx.fillStyle = '#d8b25e';
         ctx.fillRect(sx - pbw / 2, sy - (p.kind === 'hellBomber' ? 28 : 14), pbw * Math.max(0, p.hp / p.maxHp), 2.6);
+      }
+      if (p.kind === 'hellBomber' && p.altitude) {
+        ctx.save();
+        ctx.font = '700 11px ' + SL.FONT_UI;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = p.altitude === 'high' ? '#b8e6d2' : '#ffd08a';
+        ctx.fillText(p.altitude === 'high' ? '[高空]' : '[低空]', sx, sy - (p.kind === 'hellBomber' ? 36 : 20));
+        ctx.restore();
       }
     }
   }

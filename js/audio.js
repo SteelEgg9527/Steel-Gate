@@ -12,6 +12,19 @@
 
   A.muted = false;
   try { A.muted = localStorage.getItem('steel_muted') === '1'; } catch (e) {}
+  A.volumes = (window.SL && SL.SETTINGS && SL.SETTINGS.audio) || { master: 1, artillery: 1, explosion: 1, ui: 1 };
+  A.volume = function (kind) {
+    return kind === 'master' ? (A.volumes.master == null ? 1 : A.volumes.master)
+      : (A.volumes[kind] == null ? 1 : A.volumes[kind]);
+  };
+  A.setVolumes = function (vals) {
+    if (!vals) return;
+    A.volumes.master = vals.master == null ? A.volumes.master : vals.master;
+    A.volumes.artillery = vals.artillery == null ? A.volumes.artillery : vals.artillery;
+    A.volumes.explosion = vals.explosion == null ? A.volumes.explosion : vals.explosion;
+    A.volumes.ui = vals.ui == null ? A.volumes.ui : vals.ui;
+    if (master) { try { master.gain.setTargetAtTime(A.muted ? 0 : 0.34 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {} }
+  };
 
   function ensure() {
     if (ctx) {
@@ -23,7 +36,7 @@
     try {
       ctx = new C();
       master = ctx.createGain();
-      master.gain.value = A.muted ? 0 : 0.28;
+      master.gain.value = A.muted ? 0 : 0.34 * A.volume('master');
       master.connect(ctx.destination);
       var len = Math.floor(ctx.sampleRate * 0.7);
       noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
@@ -50,18 +63,24 @@
     return true;
   }
 
-  // 以屏幕中心为听点：中心最响，越靠近边缘越轻，屏幕外完全静音
-  A.gainAt = function (x, y) {
+  // 以屏幕中心为听点：中心最响；己方武器使用更大的世界传播范围
+  A.gainAt = function (x, y, side) {
     if (x == null || y == null) return 1;
     var R = SL.Render;
     if (!R || !R.proj || !R.proj.w || !R.proj.h) return 1;
     var w = R.proj.w, h = R.proj.h;
     var sx = R.proj.x(x), sy = R.proj.y(y);
-    if (sx < 0 || sx > w || sy < 0 || sy > h) return 0;
+    var onScreen = sx >= 0 && sx <= w && sy >= 0 && sy <= h;
     var maxD = Math.sqrt(w * w + h * h) / 2;
     var d = Math.sqrt((sx - w / 2) * (sx - w / 2) + (sy - h / 2) * (sy - h / 2));
-    var g = Math.max(0, 1 - d / maxD);
-    return Math.pow(g, 1.15);
+    var g = onScreen ? Math.pow(Math.max(0, 1 - d / maxD), 1.15) : 0;
+    if (side === 'blue' && R.cam) {
+      // 己方火炮/舰炮传播范围大幅提高，屏幕外也保留清晰可闻的炮声
+      var wd = Math.sqrt((x - R.cam.x) * (x - R.cam.x) + (y - R.cam.y) * (y - R.cam.y));
+      var longRange = Math.max(0, 1 - wd / 5200);
+      g = Math.max(g, Math.pow(longRange, 0.62) * 0.95);
+    }
+    return g;
   };
 
   function tone(freq, dur, type, vol, slideTo) {
@@ -106,35 +125,35 @@
   A.click = function () {
     if (!ensure() || A.muted) return;
     if (!gate('click', 0.035)) return;
-    tone(980, 0.035, 'triangle', 0.045, 720);
+    tone(980, 0.035, 'triangle', 0.045 * A.volume('ui'), 720);
   };
 
   A.shot = function (w, u, secondary, x, y) {
     if (x == null && u && u.x != null) { x = u.x; y = u.y; }
-    var g = A.gainAt(x, y);
+    var g = A.gainAt(x, y, u && u.side) * A.volume('artillery');
     if (g <= 0 || !ensure() || A.muted) return;
     if (!gate('shot', 0.028)) return;
     var dmg = (w && w.dmg) || 10;
     var label = (w && w.label) || '';
     if (w && w.kind === 'shell') {
-      tone(70, 0.24, 'sine', 0.26 * g, 38);
-      noise(0.18, 0.14 * g, 500, 'lowpass');
+      tone(70, 0.3, 'sine', 0.66 * g, 36);
+      noise(0.24, 0.4 * g, 460, 'lowpass');
       return;
     }
     if (dmg >= 45 || label.indexOf('KwK') >= 0 || label.indexOf('Pak') >= 0 || label.indexOf('88') >= 0) {
-      tone(92, 0.2, 'sawtooth', 0.18 * g, 42);
-      noise(0.16, 0.16 * g, 900, 'lowpass');
+      tone(92, 0.24, 'sawtooth', 0.4 * g, 40);
+      noise(0.2, 0.34 * g, 820, 'lowpass');
     } else if (label.indexOf('MG') >= 0 || (w && w.mg)) {
-      noise(0.055, 0.12 * g, 1500, 'bandpass', 0.9);
-      tone(190, 0.045, 'square', 0.05 * g, 90);
+      noise(0.055, 0.16 * g, 1500, 'bandpass', 0.9);
+      tone(190, 0.045, 'square', 0.07 * g, 90);
     } else {
-      noise(0.07, 0.1 * g, 850, 'bandpass', 0.8);
-      tone(150, 0.06, 'sawtooth', 0.05 * g, 80);
+      noise(0.07, 0.14 * g, 850, 'bandpass', 0.8);
+      tone(150, 0.06, 'sawtooth', 0.07 * g, 80);
     }
   };
 
   A.explosion = function (radius, x, y) {
-    var g = A.gainAt(x, y);
+    var g = A.gainAt(x, y) * A.volume('explosion');
     if (g <= 0 || !ensure() || A.muted) return;
     if (!gate('boom', 0.045)) return;
     var r = Math.max(15, radius || 30);
@@ -146,14 +165,14 @@
   A.card = function () {
     if (!ensure() || A.muted) return;
     if (!gate('card', 0.08)) return;
-    tone(640, 0.075, 'sine', 0.07, 820);
+    tone(640, 0.075, 'sine', 0.07 * A.volume('ui'), 820);
     setTimeout(function () { if (!A.muted) tone(880, 0.09, 'sine', 0.055, 1040); }, 55);
   };
 
   A.level = function () {
     if (!ensure() || A.muted) return;
     if (!gate('level', 0.5)) return;
-    tone(523, 0.16, 'triangle', 0.09);
+    tone(523, 0.16, 'triangle', 0.09 * A.volume('ui'));
     setTimeout(function () { if (!A.muted) tone(659, 0.16, 'triangle', 0.09); }, 120);
     setTimeout(function () { if (!A.muted) tone(784, 0.26, 'triangle', 0.1); }, 240);
   };
@@ -208,7 +227,7 @@
       A.click();
     }
     if (master) {
-      try { master.gain.setTargetAtTime(A.muted ? 0 : 0.28, ctx.currentTime, 0.03); } catch (e) {}
+      try { master.gain.setTargetAtTime(A.muted ? 0 : 0.34 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {}
     }
     return A.muted;
   };
