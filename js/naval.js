@@ -336,7 +336,7 @@
         if (!ok) continue;
         T.villages.push({
           id: 'v' + T.villages.length, name: names[T.villages.length % names.length],
-          x: vgx, y: vgy, r: 58 + rnd() * 18
+          x: vgx, y: vgy, r: 85 + rnd() * 25
         });
         break;
       }
@@ -476,7 +476,7 @@
     var fallbackNames = ['新村', '南村', '北村', '西村', '东村', '港湾村'];
     for (var vf = 0; valid.length < 6 && vf < 120; vf++) {
       var vp = NAVAL.randomLandPoint(220);
-      var vr = 56 + Math.random() * 16;
+      var vr = 80 + Math.random() * 25;
       if (!circleLand(vp.x, vp.y, vr) || !siteClear(vp.x, vp.y, vr, 55)) continue;
       var tooClose = false;
       for (var vc = 0; vc < valid.length; vc++) {
@@ -559,7 +559,7 @@
 
     // 村庄/城镇外围：每个村庄 2~3 个小型工事圈
     var generatedForts = [];
-    var fortR = 42;
+    var fortR = 62;
     for (var fvi = 0; fvi < chosenVillages.length; fvi++) {
       var fv = chosenVillages[fvi];
       var targetForts = 2 + (Math.random() < 0.35 ? 1 : 0);
