@@ -1644,8 +1644,8 @@
       ammoMax: def.weapon.ammo,
       ammoWarned: false,
       magLeft: def.weapon.mag || 0,
-      mgAmmo: (typeKey === 'tank' || typeKey === 'heavy_tank') ? SL.EQUIP.mg.weapon.ammo : 0,
-      mgAmmoMax: (typeKey === 'tank' || typeKey === 'heavy_tank') ? SL.EQUIP.mg.weapon.ammo : 0,
+      mgAmmo: (typeKey === 'tank' || typeKey === 'heavy_tank' || typeKey === 'armored') ? SL.EQUIP.mg.weapon.ammo : 0,
+      mgAmmoMax: (typeKey === 'tank' || typeKey === 'heavy_tank' || typeKey === 'armored') ? SL.EQUIP.mg.weapon.ammo : 0,
       reloadT: 0,
       flash: 0,
       hitFlash: 0,
@@ -3789,8 +3789,8 @@
       else if (w.kind === 'direct' && !target.def.armor) prio = 2;
       if (prio > bestPrio) { best = { weapon: w, item: it, prio: prio }; bestPrio = prio; }
     }
-    // 坦克 / 重型坦克的并列机枪：使用步兵装备包中的 MG42 数据
-    if ((u.type === 'tank' || u.type === 'heavy_tank') && u.mgAmmo > 0 &&
+    // 装甲车 / 坦克 / 重型坦克的并列机枪：使用步兵装备包中的 MG42 数据
+    if ((u.type === 'tank' || u.type === 'heavy_tank' || u.type === 'armored') && u.mgAmmo > 0 &&
       !target.def.armor) {
       var mgw = SL.EQUIP.mg.weapon;
       if (d <= mgw.range * bonus && d >= (mgw.minRange || 0) && 3 > bestPrio) {
