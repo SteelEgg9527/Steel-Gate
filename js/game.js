@@ -3789,12 +3789,20 @@
       else if (w.kind === 'direct' && !target.def.armor) prio = 2;
       if (prio > bestPrio) { best = { weapon: w, item: it, prio: prio }; bestPrio = prio; }
     }
-    // 装甲车 / 坦克 / 重型坦克的并列机枪：使用步兵装备包中的 MG42 数据
-    if ((u.type === 'tank' || u.type === 'heavy_tank' || u.type === 'armored') && u.mgAmmo > 0 &&
+    // 坦克 / 重型坦克的并列机枪：使用步兵装备包中的 MG42 数据
+    if ((u.type === 'tank' || u.type === 'heavy_tank') && u.mgAmmo > 0 &&
       !target.def.armor) {
       var mgw = SL.EQUIP.mg.weapon;
       if (d <= mgw.range * bonus && d >= (mgw.minRange || 0) && 3 > bestPrio) {
         best = { weapon: mgw, item: null, prio: 3, secondary: true };
+        bestPrio = 3;
+      }
+    }
+    // 装甲车机炮和并列机枪交替射击步兵：机炮本身也可以直接打步兵
+    if (u.type === 'armored' && u.mgAmmo > 0 && !target.def.armor && !u.lastShotSecondary) {
+      var amgw = SL.EQUIP.mg.weapon;
+      if (d <= amgw.range * bonus && d >= (amgw.minRange || 0)) {
+        best = { weapon: amgw, item: null, prio: 3, secondary: true };
         bestPrio = 3;
       }
     }
@@ -3821,6 +3829,7 @@
 
   Game.prototype.fire = function (u, target, w, item, secondary) {
     w = w || u.def.weapon;
+    u.lastShotSecondary = !!secondary;
     if (w.requiresStop && (u.moving || u.sprinting)) return false;
     var usesSquadAmmo = !!(item && w.usesUnitAmmo);
     if (item) item.usesUnitAmmo = !!w.usesUnitAmmo;
