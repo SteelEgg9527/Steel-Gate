@@ -1725,11 +1725,50 @@
       if (!z || z.tempBush) continue;
       var isCoast = z.siteKind === 'coastbase';
       if (z.site && !isCoast) continue;
-      if (!z.fortified && !(z.fortifyProgress > 0)) continue;
+      var hasRubble = !!(z.rubble || (z.rubbles && z.rubbles.length));
+      if (!z.fortified && !(z.fortifyProgress > 0) && !hasRubble && !z.destroyed) continue;
       var x = proj.x(z.x), y = proj.y(z.y), r = z.r * zoom;
       if (x < -r - 40 || x > proj.w + r + 40 || y < -r - 40 || y > proj.h + r + 40) continue;
       ctx.save();
-      if (z.fortified) {
+      if (z.destroyed) {
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(186,92,76,0.9)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(x, y, r + 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '800 11px ' + SL.FONT_MONO;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(18,22,18,0.8)';
+        ctx.strokeText('已摧毁', x, y + r + 8);
+        ctx.fillStyle = '#df8d78';
+        ctx.fillText('已摧毁', x, y + r + 8);
+      } else if (hasRubble) {
+        // 工事残骸 / 正在修复
+        ctx.fillStyle = 'rgba(168,92,60,0.09)';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = 'rgba(214,132,92,0.9)';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath(); ctx.arc(x, y, r + 3, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        var rubbleCount = z.rubbles ? z.rubbles.length : 1;
+        var rubbleRepairing = (z.rubbleProgress || 0) > 0;
+        if (rubbleRepairing) {
+          ctx.strokeStyle = 'rgba(244,196,104,0.98)';
+          ctx.lineWidth = 6;
+          ctx.beginPath();
+          ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, z.rubbleProgress));
+          ctx.stroke();
+        }
+        ctx.font = '800 11px ' + SL.FONT_MONO;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(18,22,18,0.8)';
+        var rubbleText = (rubbleRepairing ? '修复中 ' + Math.round(z.rubbleProgress * 100) + '%' : '工事残骸') +
+          (rubbleCount > 1 ? ' ×' + rubbleCount : '');
+        ctx.strokeText(rubbleText, x, y + r + 8);
+        ctx.fillStyle = rubbleRepairing ? '#ffdda0' : '#e3a27c';
+        ctx.fillText(rubbleText, x, y + r + 8);
+      } else if (z.fortified) {
         ctx.fillStyle = 'rgba(238,198,76,0.07)';
         ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
         ctx.setLineDash([10, 6]);
