@@ -55,6 +55,9 @@
     el.gmMainMenu = $('gm-mainmenu');
     el.gmSettings = $('gm-settings');
     el.settingsPanel = $('settings-panel');
+    el.recentResults = $('recent-results');
+    el.recentResultsList = $('recent-results-list');
+    el.recentResultsClose = $('recent-results-close');
     el.settingsClose = $('settings-close');
     el.setRangeEnabled = $('set-range-enabled');
     el.setRangeMain = $('set-range-main');
@@ -251,9 +254,71 @@
       if (el.settingsPanel) el.settingsPanel.classList.add('hidden');
     }
     UI.closeSettings = closeSettings;
+  UI.openSettings = openSettings;
     UI.isSettingsOpen = function () {
       return !!(el.settingsPanel && !el.settingsPanel.classList.contains('hidden'));
     };
+
+    function readRecentResults() {
+      try {
+        var raw = localStorage.getItem('steel1944_recent_results');
+        var list = raw ? JSON.parse(raw) : [];
+        return Array.isArray(list) ? list : [];
+      } catch (e) { return []; }
+    }
+
+    function renderRecentResults() {
+      if (!el.recentResultsList) return;
+      var list = readRecentResults();
+      el.recentResultsList.innerHTML = '';
+      if (!list.length) {
+        var empty = document.createElement('div');
+        empty.className = 'recent-empty';
+        empty.textContent = '还没有战绩记录。完成一局对战后会自动保存在这里。';
+        el.recentResultsList.appendChild(empty);
+        return;
+      }
+      var head = document.createElement('div');
+      head.className = 'recent-row recent-head';
+      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数'].forEach(function (t) {
+        var c = document.createElement('span'); c.textContent = t; head.appendChild(c);
+      });
+      el.recentResultsList.appendChild(head);
+      for (var i = 0; i < list.length; i++) {
+        var r = list[i];
+        var row = document.createElement('div');
+        row.className = 'recent-row';
+        var d = document.createElement('span');
+        d.textContent = new Date(r.ts).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        var mm = document.createElement('span');
+        mm.textContent = (r.mode || '混战') + ' · ' + (r.map || '未知地图') +
+          (r.difficulty ? ' · ' + r.difficulty : '');
+        var oc = document.createElement('span');
+        oc.className = 'recent-outcome ' + (r.win ? 'win' : 'loss');
+        oc.textContent = r.outcome || (r.win ? '胜利' : '失败');
+        var tm = document.createElement('span'); tm.textContent = r.time || '—';
+        var kl = document.createElement('span'); kl.textContent = (r.kills || 0) + ' / ' + (r.losses || 0);
+        var sc = document.createElement('span'); sc.textContent = String(r.score || 0);
+        row.appendChild(d); row.appendChild(mm); row.appendChild(oc);
+        row.appendChild(tm); row.appendChild(kl); row.appendChild(sc);
+        el.recentResultsList.appendChild(row);
+      }
+    }
+
+    UI.openRecentResults = function () {
+      renderRecentResults();
+      if (el.recentResults) el.recentResults.classList.remove('hidden');
+    };
+    UI.closeRecentResults = function () {
+      if (el.recentResults) el.recentResults.classList.add('hidden');
+    };
+    if (el.recentResultsClose) el.recentResultsClose.addEventListener('click', UI.closeRecentResults);
+    if (el.recentResults) el.recentResults.addEventListener('click', function (ev) {
+      if (ev.target === el.recentResults) UI.closeRecentResults();
+    });
+    var mmLeaderboard = document.getElementById('mm-leaderboard');
+    if (mmLeaderboard) mmLeaderboard.addEventListener('click', function () { UI.openRecentResults(); });
+
     loadSettings();
     syncSettingsUI();
     if (el.settingsClose) el.settingsClose.addEventListener('click', closeSettings);
@@ -381,6 +446,14 @@
     el.minimap.addEventListener('pointerup', function () { dragging = false; });
     el.minimap.addEventListener('pointercancel', function () { dragging = false; });
   };
+
+  function readRecentResultsStore() {
+    try {
+      var raw = localStorage.getItem('steel1944_recent_results');
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
 
   UI.bind = function (g) {
     game = g;
@@ -1527,7 +1600,40 @@
     }, 3000);
   }
 
+  function recordRecentResult(g) {
+    if (!g || g._recentSaved || g.testMode || g.demo) return;
+    g._recentSaved = true;
+    var mode = g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '背水一战' : '三军混战');
+    var diff = '普通';
+    if (g.mode === 'lastStand') {
+      var ld = SL.LAST_STAND && SL.LAST_STAND.difficulties && SL.LAST_STAND.difficulties[g.difficulty];
+      if (ld) diff = ld.name;
+    } else {
+      var md = SL.MELEE_DIFFICULTIES && SL.MELEE_DIFFICULTIES[g.difficulty];
+      if (md) diff = md.name;
+    }
+    var rec = {
+      ts: Date.now(),
+      mode: mode,
+      map: (SL.Terrain && SL.Terrain.map && SL.Terrain.map.name) || '未知地图',
+      difficulty: diff,
+      win: g.state === 'won',
+      outcome: g.state === 'won' ? (g.navalSettled ? '主动结算' : '胜利') : '失败',
+      time: U.clock(g.time),
+      kills: (g.stats && g.stats.kills && g.stats.kills.blue) || 0,
+      losses: (g.stats && g.stats.losses && g.stats.losses.blue) || 0,
+      score: Math.floor((g.teams && g.teams.blue && g.teams.blue.scoreEarned) || 0),
+      reason: g.endReason || ''
+    };
+    try {
+      var list = readRecentResultsStore();
+      list.unshift(rec);
+      localStorage.setItem('steel1944_recent_results', JSON.stringify(list.slice(0, 12)));
+    } catch (e) {}
+  }
+
   function showResult(g) {
+    recordRecentResult(g);
     renderResultLeaderboard(g);
     var win = g.state === 'won';
     hideDraft();

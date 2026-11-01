@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.12.2">
+<link rel="stylesheet" href="css/style.css?v=0.12.3">
 </head>
 <body>
 <div id="app">
@@ -273,9 +273,9 @@
           <button id="mm-start" type="button" class="mm-btn primary">开始游戏 <span>›</span></button>
           <button id="mm-continue" type="button" class="mm-btn">继续游戏 <span>›</span></button>
           <button id="mm-settings" type="button" class="mm-btn">游戏设置 <span>›</span></button>
-          <button id="mm-leaderboard" type="button" class="mm-btn muted" disabled>排行榜 <small>制作中</small></button>
+          <button id="mm-leaderboard" type="button" class="mm-btn">排行榜 <small>近期战绩</small></button>
         </div>
-        <p class="main-menu-version">v0.12.2 · 钢线 1944</p>
+        <p class="main-menu-version">v0.12.3 · 钢线 1944</p>
       </div>
       <div class="main-menu-emblem" aria-hidden="true">
         <div class="emblem-ring">
@@ -294,6 +294,21 @@
       <a href="https://github.com/SteelEgg9527/Steel-Line-1944/issues" target="_blank" rel="noopener">意见反馈</a>
       <span>作者：钢蛋</span>
     </footer>
+  </div>
+
+  <!-- 近期战绩 -->
+  <div id="recent-results" class="overlay hidden">
+    <div class="sheet recent-sheet">
+      <div class="sheet-head">
+        <div>
+          <div class="sheet-kicker">AFTER ACTION · RECENT</div>
+          <h2>近期战绩</h2>
+          <p class="sheet-sub">本机保存的最近对局记录</p>
+        </div>
+        <button id="recent-results-close" class="icon-btn" type="button">×</button>
+      </div>
+      <div class="sheet-body recent-body" id="recent-results-list"></div>
+    </div>
   </div>
 
   <!-- 作战简报 -->
@@ -587,15 +602,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.12.2"></script>
-<script src="js/config.js?v=0.12.2"></script>
-<script src="js/audio.js?v=0.12.2"></script>
-<script src="js/maps.js?v=0.12.2"></script>
-<script src="js/terrain.js?v=0.12.2"></script>
-<script src="js/naval.js?v=0.12.2"></script>
-<script src="js/game.js?v=0.12.2"></script>
-<script src="js/render.js?v=0.12.2"></script>
-<script src="js/ui.js?v=0.12.2"></script>
-<script src="js/main.js?v=0.12.2"></script>
+<script src="js/util.js?v=0.12.3"></script>
+<script src="js/config.js?v=0.12.3"></script>
+<script src="js/audio.js?v=0.12.3"></script>
+<script src="js/maps.js?v=0.12.3"></script>
+<script src="js/terrain.js?v=0.12.3"></script>
+<script src="js/naval.js?v=0.12.3"></script>
+<script src="js/game.js?v=0.12.3"></script>
+<script src="js/render.js?v=0.12.3"></script>
+<script src="js/ui.js?v=0.12.3"></script>
+<script src="js/main.js?v=0.12.3"></script>
 </body>
 </html>
