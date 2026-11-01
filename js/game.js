@@ -1177,7 +1177,7 @@
   };
 
   Game.prototype.saveToStorage = function () {
-    if (this.mode !== 'lastStand' || this.difficulty !== 'endless' || this.ended) return false;
+    if ((this.mode !== 'lastStand' && this.mode !== 'naval') || this.difficulty !== 'endless' || this.ended) return false;
     try {
       localStorage.setItem('steel1944_endless_save', JSON.stringify(this.snapshot()));
       return true;
@@ -1220,7 +1220,7 @@
       zones: T.zones.map(function (z) {
         return {
           id: z.id, owner: z.owner, cap: z.cap, capSide: z.capSide,
-          fortified: z.fortified, hp: z.hp, maxHp: z.maxHp,
+          fortified: z.fortified, hp: z.hp, maxHp: z.maxHp, destroyed: !!z.destroyed,
           fortifyProgress: z.fortifyProgress, structure: z.structure,
           structures: z.structures || [], rubble: z.rubble || null,
           rubbleProgress: z.rubbleProgress || 0
@@ -1232,6 +1232,57 @@
       barriers: this.barriers,
       recons: [],
       planes: this.planes,
+      naval: this.naval ? {
+        playerShipSummoned: this.playerShipSummoned,
+        shipSupportOwned: this.shipSupportOwned,
+        shipPurchaseCost: this.shipPurchaseCost,
+        navalCards: this.navalCards || [],
+        shipCards: this.shipCards || [],
+        aiShipUsed: this.aiShipUsed,
+        aiShipRespawn: this.aiShipRespawn,
+        aiShipCost: this.aiShipCost,
+        aiShipTimer: this.aiShipTimer,
+        radarScanNext: this.radarScanNext,
+        radarScanUntil: this.radarScanUntil,
+        ships: this.battleships.map(function (s) {
+          return {
+            side: s.side, name: s.name, x: s.x, y: s.y, heading: s.heading, speed: s.speed,
+            maxSpeed: s.maxSpeed, hp: s.hp, maxHp: s.maxHp, armor: s.armor, vision: s.vision,
+            alive: s.alive, nearShore: s.nearShore, exposedUntil: s.exposedUntil,
+            fireMode: s.fireMode, prewarn: s.prewarn, entering: s.entering,
+            entryX: s.entryX, entryY: s.entryY, dest: s.dest, bombard: s.bombard, suppress: s.suppress,
+            planeReserve: s.planeReserve, planeAmmo: s.planeAmmo, planeRecharge: s.planeRecharge,
+            supply: s.supply, lastHit: s.lastHit,
+            turrets: s.turrets.map(function (t) {
+              return {
+                cls: t.cls, lx: t.lx, ly: t.ly, side: t.side, arcCenter: t.arcCenter,
+                angle: t.angle, targetAngle: t.targetAngle, hp: t.hp, maxHp: t.maxHp,
+                destroyed: t.destroyed, ammo: t.ammo, maxAmmo: t.maxAmmo, cd: t.cd,
+                reloadTotal: t.reloadTotal
+              };
+            })
+          };
+        }),
+        seaplanes: this.seaplanes.map(function (p) {
+          return {
+            side: p.side, x: p.x, y: p.y, tx: p.tx, ty: p.ty, t: p.t, ready: p.ready,
+            returning: p.returning, hp: p.hp, cx: p.cx, cy: p.cy, heading: p.heading, orbitAng: p.orbitAng
+          };
+        }),
+        supplyShips: this.supplyShips.map(function (s) {
+          return {
+            side: s.side, x: s.x, y: s.y, tx: s.tx, ty: s.ty, heading: s.heading,
+            r: s.r, life: s.life, hp: s.hp, maxHp: s.maxHp, resource: s.resource
+          };
+        }),
+        coastalGuns: this.coastalGuns.map(function (g) {
+          return {
+            baseId: g.base && g.base.id, side: g.side, x: g.x, y: g.y, hp: g.hp, maxHp: g.maxHp,
+            cd: g.cd, range: g.range, spread: g.spread, splash: g.splash, dmg: g.dmg,
+            interval: g.interval, heading: g.heading
+          };
+        })
+      } : null,
       units: this.units.filter(function (u) { return u.alive; }).map(function (u) {
         return {
           side: u.side, type: u.type, name: u.name, x: u.x, y: u.y,
@@ -1252,7 +1303,8 @@
   };
 
   Game.prototype.restoreSnapshot = function (data) {
-    if (!data || data.v !== 1 || data.map !== T.map.id || data.mode !== 'lastStand' || data.difficulty !== 'endless') return false;
+    if (!data || data.v !== 1 || data.map !== T.map.id ||
+      (data.mode !== 'lastStand' && data.mode !== 'naval') || data.difficulty !== 'endless') return false;
     var self = this;
     this.time = data.time || 0;
     this.ended = false; this.winner = null; this.state = 'playing';
@@ -1282,6 +1334,54 @@
       if (!zone) return;
       for (var k in z) zone[k] = z[k];
     });
+    this.selectedShip = null;
+    this.battleships.length = 0;
+    this.seaplanes = [];
+    this.supplyShips = [];
+    this.coastalGuns = [];
+    if (data.naval) {
+      var nv = data.naval;
+      this.playerShipSummoned = !!nv.playerShipSummoned;
+      this.shipSupportOwned = !!nv.shipSupportOwned;
+      this.shipPurchaseCost = nv.shipPurchaseCost || this.shipPurchaseCost;
+      this.navalCards = nv.navalCards || [];
+      this.shipCards = nv.shipCards || [];
+      this.aiShipUsed = nv.aiShipUsed || this.aiShipUsed;
+      this.aiShipRespawn = nv.aiShipRespawn || this.aiShipRespawn;
+      this.aiShipCost = nv.aiShipCost || this.aiShipCost;
+      this.aiShipTimer = nv.aiShipTimer || this.aiShipTimer;
+      this.radarScanNext = nv.radarScanNext || this.radarScanNext;
+      this.radarScanUntil = nv.radarScanUntil || this.radarScanUntil;
+      (nv.coastalGuns || []).forEach(function (g) {
+        var base = T.zones.find(function (z) { return z.id === g.baseId; });
+        if (!base || base.destroyed) return;
+        var gun = {};
+        for (var k in g) gun[k] = g[k];
+        gun.base = base;
+        self.coastalGuns.push(gun);
+      });
+      (nv.ships || []).forEach(function (s) {
+        var ship = SL.Naval.createShip(self, s.side, s.x, s.y);
+        for (var k in s) {
+          if (k === 'turrets') continue;
+          ship[k] = s[k];
+        }
+        for (var i = 0; i < ship.turrets.length && i < (s.turrets || []).length; i++) {
+          var st = s.turrets[i], t = ship.turrets[i];
+          for (var q in st) t[q] = st[q];
+          t.classDef = SL.NAVAL.turretClasses[t.cls];
+        }
+        ship.target = null;
+        ship.selected = false;
+      });
+      (nv.seaplanes || []).forEach(function (p) {
+        var sp = {};
+        for (var k in p) sp[k] = p[k];
+        sp.ship = self.shipOf(p.side);
+        self.seaplanes.push(sp);
+      });
+      this.supplyShips = nv.supplyShips || [];
+    }
     this.supplies = data.supplies || [];
     this.drops = data.drops || [];
     this.mines = data.mines || [];
@@ -1304,7 +1404,7 @@
       }
     });
     this.computeFog();
-    this.log('已读取无尽防线存档', 'win');
+    this.log('已读取无尽模式存档', 'win');
     return true;
   };
 

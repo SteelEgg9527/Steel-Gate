@@ -884,7 +884,7 @@
     el.gameMenu.classList.remove('hidden');
     document.body.classList.add('menu-open');
     if (el.leaderboard) el.leaderboard.classList.add('show');
-    var endless = game.mode === 'lastStand' && game.difficulty === 'endless' && !game.ended;
+    var endless = game.difficulty === 'endless' && (game.mode === 'lastStand' || game.mode === 'naval') && !game.ended;
     if (el.gmSave) el.gmSave.disabled = !endless;
     if (el.gmSettle) el.gmSettle.disabled = !endless;
     renderLeaderboard(game);
@@ -902,7 +902,7 @@
 
   UI.saveGame = function () {
     if (!game) return false;
-    if (game.saveToStorage()) { UI.pushToast('无尽防线已存档', 'win'); return true; }
+    if (game.saveToStorage()) { UI.pushToast('无尽模式已存档', 'win'); return true; }
     UI.pushToast('存档失败：仅无尽模式进行中可存档', 'loss');
     return false;
   };
@@ -911,7 +911,7 @@
     if (!game) return false;
     if (game.loadFromStorage()) {
       game.selected = [];
-      UI.pushToast('已读取无尽防线存档', 'win');
+      UI.pushToast('已读取无尽模式存档', 'win');
       UI.update(game, 0.016);
       return true;
     }
