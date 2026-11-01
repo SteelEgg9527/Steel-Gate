@@ -194,7 +194,7 @@
       vision: 250,
       range: 250,
       minRange: 15,
-      speed: 6.5,
+      speed: 9,
       radius: 8,
       canSprint: false,
       weapon: {
@@ -239,7 +239,7 @@
       armor: 1,
       vision: 450,
       range: 0,
-      speed: 12,
+      speed: 15,
       radius: 9,
       canSprint: false,
       weapon: {
