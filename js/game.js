@@ -4887,7 +4887,7 @@
     return plane;
   };
 
-  Game.prototype.airstrikeBomb = function (x, y, side) {
+  Game.prototype.airstrikeBomb = function (x, y, side, antiShip) {
     side = side || 'blue';
     var radius = SL.AIRSTRIKE.radius;
     if (SL.Audio) SL.Audio.explosion(radius, x, y);
@@ -4907,9 +4907,11 @@
       var bs = this.battleships[bi];
       if (!bs.alive || bs.side === side) continue;
       var bd = U.dist(bs.x, bs.y, x, y);
-      if (bd > radius + (bs.hitRadius || 30)) continue;
-      var bfall = 1 - 0.5 * Math.min(1, bd / (radius + (bs.hitRadius || 30)));
-      this.damageShip(bs, SL.AIRSTRIKE.damage * 1.35 * bfall, credit, 2.5);
+      var shipR = radius + (bs.hitRadius || 60);
+      if (bd > shipR) continue;
+      var bfall = 1 - 0.5 * Math.min(1, bd / shipR);
+      var shipMul = antiShip ? ((SL.AI_AIR && SL.AI_AIR.antiShipDamageMul) || 2.4) : 1.35;
+      this.damageShip(bs, SL.AIRSTRIKE.damage * shipMul * bfall, credit, antiShip ? 3.2 : 2.5);
     }
     // 空袭对工事造成 500 点直击攻坚伤害
     this.damageFortifications(x, y, SL.AIRSTRIKE.fortDamage, radius);
@@ -5397,7 +5399,7 @@
           p.dropped = true;
           if (p.kind === 'supply') this.deploySupply(p.tx, p.ty, p.side);
           else this.airstrikeBomb(p.bombTx != null ? p.bombTx : p.tx,
-            p.bombTy != null ? p.bombTy : p.ty, p.side);
+            p.bombTy != null ? p.bombTy : p.ty, p.side, !!p.antiShip);
         } else {
           p.x += dx / d * step;
           p.y += dy / d * step;
@@ -5815,13 +5817,15 @@
   };
 
   // 两种模式共用：三角编队 + 每架飞机独立随机落点
-  Game.prototype.spawnAirGroup = function (side, sx, sy, tx, ty, radius, count) {
+  Game.prototype.spawnAirGroup = function (side, sx, sy, tx, ty, radius, count, antiShip) {
     for (var gi = 0; gi < count; gi++) {
       var plane = this.spawnPlane('airstrike', sx, sy, side);
       var bang = Math.random() * Math.PI * 2;
-      var brad = Math.sqrt(Math.random()) * radius;
+      var scatterR = antiShip ? Math.min(radius || 42, (SL.AI_AIR && SL.AI_AIR.antiShipRadius) || 42) : radius;
+      var brad = Math.sqrt(Math.random()) * scatterR;
       plane.bombTx = tx + Math.cos(bang) * brad;
       plane.bombTy = ty + Math.sin(bang) * brad;
+      plane.antiShip = !!antiShip;
       var row = Math.floor((Math.sqrt(8 * gi + 1) - 1) / 2);
       var inRow = gi - row * (row + 1) / 2;
       var lat = (inRow - row / 2) * 32;
@@ -5862,11 +5866,18 @@
       var count = this.meleeAirGroupSize();
       if (this.aliveCount(side) === 0 || this.planes.length + count > 30) continue;
       var gx, gy, tx, ty, radius;
-      var airShip = this.naval ? this.navalPlayerShipExposed() : null;
+      var airShip = null;
+      if (this.naval) {
+        var ps = this.shipOf('blue');
+        if (ps && ps.alive && (this.unitVisibleTo(side, ps) || this.radarScanActive(side))) airShip = ps;
+      }
+      var antiShip = !!airShip;
       if (airShip) {
-        tx = airShip.x; ty = airShip.y; radius = 300;
+        tx = airShip.x; ty = airShip.y;
+        radius = (SL.AI_AIR && SL.AI_AIR.antiShipRadius) || 42;
+        count = Math.min(30 - this.planes.length, count + ((SL.AI_AIR && SL.AI_AIR.antiShipCountBonus) || 2));
         var acang = Math.random() * Math.PI * 2;
-        var acrad = Math.sqrt(Math.random()) * 180;
+        var acrad = Math.sqrt(Math.random()) * 120;
         gx = tx + Math.cos(acang) * acrad;
         gy = ty + Math.sin(acang) * acrad;
       } else if (this.yellow && this.yellow.active) {
@@ -5889,7 +5900,7 @@
         gx = tx + (Math.random() - 0.5) * 80;
         gy = ty + (Math.random() - 0.5) * 80;
       }
-      this.spawnAirGroup(side, gx, gy, tx, ty, radius, count);
+      this.spawnAirGroup(side, gx, gy, tx, ty, radius, count, antiShip);
     }
   };
 

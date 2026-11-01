@@ -877,7 +877,10 @@
     minGap: 20, maxGap: 45, chance: 0.6,
     groupBase: 2,
     groupTier: 300,
-    maxGroup: 10
+    maxGroup: 10,
+    antiShipRadius: 42,
+    antiShipDamageMul: 2.4,
+    antiShipCountBonus: 2
   };
 
   /* 炮火支援：显示圈与落点共用 radius */
