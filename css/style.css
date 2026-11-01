@@ -500,6 +500,20 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-height: calc(92vh - 92px);
+}
+#briefing {
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+  box-sizing: border-box;
+}
+.credit-footer.credit-standalone {
+  width: min(780px, 92vw);
+  padding: 7px 20px 9px;
+  border: 1px solid rgba(214,196,150,0.22);
+  background: rgba(12,16,13,0.90);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
 }
 #briefing .sheet-head,
 #briefing .sheet-foot { flex: none; }
@@ -805,16 +819,16 @@ html, body {
   border-top: 1px dashed rgba(214,196,150,0.18);
   text-align: center;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1.7;
   letter-spacing: 0.06em;
-  color: #8f8a75;
+  color: #aaa187;
 }
 .credit-footer.compact {
   margin: 8px 10px 0;
   padding: 8px 2px 2px;
   text-align: left;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.6;
 }
 .credit-links {
