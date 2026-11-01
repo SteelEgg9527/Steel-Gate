@@ -3678,14 +3678,15 @@
         this.finishStealth(u, wasActive);
         continue;
       }
-      // 反坦克炮 / 指挥车：原地 5 秒不开炮进入隐蔽，移动/开火立即解除
+      // 反坦克炮原地 3 秒、指挥车原地 5 秒不开炮进入隐蔽，移动/开火立即解除
       if (u.type === 'at_gun' || u.type === 'command') {
         var stationary = !u.moving && !u.sprinting;
         var justFired = (this.time - u.lastFire) < 0.2;
         var safe = !this.enemyWithin(u, SL.AT_STEALTH.revealRange || 50);
         if (stationary && !justFired && safe) u.atStealthT = (u.atStealthT || 0) + dt;
         else u.atStealthT = 0;
-        u.concealed = (u.atStealthT >= (SL.AT_STEALTH.delay || 5));
+        var stealthDelay = u.type === 'at_gun' ? (SL.AT_STEALTH.atGunDelay || 3) : (SL.AT_STEALTH.delay || 5);
+        u.concealed = (u.atStealthT >= stealthDelay);
         u.ghost = false;
         this.finishStealth(u, wasActive);
         continue;

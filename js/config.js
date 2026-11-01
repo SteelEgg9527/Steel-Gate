@@ -623,7 +623,7 @@
     spotRange: 100,    // 狙击小组创建灌木的最大距离
     bushRadius: 45     // 创建的灌木半径
   };
-  SL.AT_STEALTH = { delay: 5, revealRange: 50 };
+  SL.AT_STEALTH = { delay: 5, atGunDelay: 3, revealRange: 50 };
   SL.AI_EQUIP = { easy: 0.20, normal: 0.45, hard: 0.70, endless: 0.90 };
   SL.AI_EQUIP_MAX = { easy: 2, normal: 4, hard: 6, endlessEarly: 2, endlessMid: 4, endlessLate: 6 };
   SL.AI_EQUIP_TIME = { early: 900, mid: 1800 };
