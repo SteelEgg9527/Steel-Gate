@@ -200,7 +200,7 @@
     var cx = Math.max(430, Math.min(edge * 0.48, 980));
     var rad = U.clamp(edge * 0.30, 420, 460);
     var angles = [-Math.PI / 2, Math.PI / 6, Math.PI * 5 / 6];
-    var names = ['通讯塔 · 北岸', '通讯塔 · 内陆', '通讯塔 · 南岸'];
+    var names = ['通讯塔 A', '通讯塔 B', '通讯塔 C'];
     var towers = [];
     for (var ti = 0; ti < 3; ti++) {
       var a = angles[ti] + (Math.random() - 0.5) * 0.16;
