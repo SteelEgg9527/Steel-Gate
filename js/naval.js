@@ -1139,28 +1139,6 @@
       ctx.strokeText(z.name, z.x, z.y - z.r - 5);
       ctx.fillStyle = z.owner === 'blue' ? '#b5dcf1' : (z.owner === 'red' ? '#f0b3a4' : '#e8dcc0');
       ctx.fillText(z.name, z.x, z.y - z.r - 5);
-      // 工兵强化工事：黄色进度圈 / 完成后的黄色强化圈
-      if (z.fortified) {
-        ctx.strokeStyle = 'rgba(240,202,92,0.85)';
-        ctx.lineWidth = 2.4 * one;
-        ctx.setLineDash([9, 6]);
-        ctx.beginPath();
-        ctx.arc(z.x, z.y, z.r + 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else if (z.fortifyProgress > 0) {
-        ctx.save();
-        ctx.strokeStyle = 'rgba(240,202,92,0.95)';
-        ctx.lineWidth = 5 * one;
-        ctx.beginPath();
-        ctx.arc(z.x, z.y, z.r - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, z.fortifyProgress));
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(246,218,122,0.95)';
-        ctx.font = '700 ' + Math.round(9 * Math.max(0.8, one)) + 'px ' + SL.FONT_UI;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-        ctx.fillText('强化工事 ' + Math.round(z.fortifyProgress * 100) + '%', z.x, z.y + z.r + 8);
-        ctx.restore();
-      }
       ctx.restore();
     }
   };
@@ -1642,23 +1620,6 @@
         ctx.arc(x, y, Math.max(1, rr - 4), -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, z.cap / 3));
         ctx.stroke();
       }
-      if (z.siteKind === 'coastbase' && !z.fortified && z.fortifyProgress > 0) {
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = 'rgba(244,206,96,0.98)';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(x, y, Math.max(1, rr - 7), -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, z.fortifyProgress));
-        ctx.stroke();
-      } else if (z.siteKind === 'coastbase' && z.fortified) {
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = 'rgba(244,206,96,0.82)';
-        ctx.lineWidth = 2.2;
-        ctx.setLineDash([8, 5]);
-        ctx.beginPath();
-        ctx.arc(x, y, rr + 3, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
       ctx.globalAlpha = 1;
       ctx.translate(x, y);
       ctx.fillStyle = z.destroyed ? 'rgba(70,55,48,0.85)' : 'rgba(22,34,32,0.88)';
@@ -1726,6 +1687,7 @@
   };
 
   NAVAL.drawFortificationRings = function (ctx, game, proj, zoom) {
+    if (!SL.Terrain || !SL.Terrain.naval) return;
     for (var i = 0; i < SL.Terrain.zones.length; i++) {
       var z = SL.Terrain.zones[i];
       if (!z || z.tempBush) continue;
@@ -1743,7 +1705,7 @@
         ctx.lineWidth = 2.6;
         ctx.beginPath(); ctx.arc(x, y, r + 4, 0, Math.PI * 2); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.font = '800 9px ' + SL.FONT_MONO;
+        ctx.font = '800 11px ' + SL.FONT_MONO;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(18,22,18,0.8)';
         ctx.strokeText('强化工事', x, y + r + 8);
@@ -1755,10 +1717,10 @@
         ctx.beginPath();
         ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.min(1, z.fortifyProgress));
         ctx.stroke();
-        ctx.font = '800 9px ' + SL.FONT_MONO;
+        ctx.font = '800 11px ' + SL.FONT_MONO;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillStyle = '#ffe28a';
-        ctx.fillText('强化中 ' + Math.round(z.fortifyProgress * 100) + '%', x, y + r + 8);
+        ctx.fillText('强化工事 ' + Math.round(z.fortifyProgress * 100) + '%', x, y + r + 8);
       }
       ctx.restore();
     }
