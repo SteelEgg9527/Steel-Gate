@@ -508,13 +508,6 @@ html, body {
   padding: 16px 0;
   box-sizing: border-box;
 }
-.credit-footer.credit-standalone {
-  width: min(780px, 92vw);
-  padding: 7px 20px 9px;
-  border: 1px solid rgba(214,196,150,0.22);
-  background: rgba(12,16,13,0.90);
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-}
 #briefing .sheet-head,
 #briefing .sheet-foot { flex: none; }
 #briefing .sheet-body {
@@ -813,40 +806,6 @@ html, body {
 #game-menu > button:hover { border-color: #e0c274; color: #f5e8bc; }
 #game-menu > button:disabled { opacity: 0.35; cursor: default; }
 .gm-tip { margin: 9px 11px 0; color: #8f8a75; font-size: 9px; letter-spacing: 0.15em; }
-.credit-footer {
-  flex: none;
-  padding: 10px 28px 14px;
-  border-top: 1px dashed rgba(214,196,150,0.18);
-  text-align: center;
-  font-family: var(--mono);
-  font-size: 10px;
-  line-height: 1.7;
-  letter-spacing: 0.06em;
-  color: #aaa187;
-}
-.credit-footer.compact {
-  margin: 8px 10px 0;
-  padding: 8px 2px 2px;
-  text-align: left;
-  font-size: 9px;
-  line-height: 1.6;
-}
-.credit-links {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.credit-footer.compact .credit-links { justify-content: flex-start; }
-.credit-links a {
-  color: #8fb9c8;
-  text-decoration: none;
-  border-bottom: 1px dotted rgba(143,185,200,0.5);
-}
-.credit-links a:hover { color: #c7e4ec; border-bottom-color: #c7e4ec; }
-.credit-author { margin-top: 2px; color: #c7b98f; }
-.credit-thanks { margin-top: 1px; color: #8f8a75; }
 .settings-panel {
   position: fixed; inset: 0; z-index: 80;
   display: flex; align-items: center; justify-content: center;
