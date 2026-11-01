@@ -3607,13 +3607,6 @@
 
   // 侦察机是否照亮了某点
   Game.prototype.reconSees = function (side, x, y) {
-    // 指挥车自身持续观察圈：无需进入隐蔽，也不依赖临时侦察区
-    var cr = SL.COMMAND_RECON.radius || 150;
-    for (var cu = 0; cu < this.units.length; cu++) {
-      var cmd = this.units[cu];
-      if (!cmd || !cmd.alive || cmd.side !== side || cmd.type !== 'command') continue;
-      if (U.dist2(cmd.x, cmd.y, x, y) <= cr * cr) return true;
-    }
     for (var i = 0; i < this.recons.length; i++) {
       var r = this.recons[i];
       if (r.side !== side || this.time >= r.until) continue;

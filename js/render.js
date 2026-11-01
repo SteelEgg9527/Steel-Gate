@@ -309,7 +309,6 @@
       if (SL.Naval.drawSupport) SL.Naval.drawSupport(ctx, game, cam.zoom);
       ctx.restore();
       if (SL.Naval.drawShipBadges) SL.Naval.drawShipBadges(ctx, game, proj, cam.zoom);
-      drawCommandObservation(game, proj, cam.zoom);
       if (SL.Naval.drawFortificationRings) SL.Naval.drawFortificationRings(ctx, game, proj, cam.zoom);
     });
     stage('fortMarkers', function () {
@@ -1300,47 +1299,6 @@
   }
 
   /* ---------------- 迷雾 ---------------- */
-
-  function drawCommandObservation(game, proj, zoom) {
-    if (!game || !game.units || !proj) return;
-    var one = 1 / zoom;
-    for (var i = 0; i < game.units.length; i++) {
-      var u = game.units[i];
-      if (!u || !u.alive || u.side !== 'blue' || u.type !== 'command') continue;
-      var x = proj.x(u.x), y = proj.y(u.y);
-      var vision = (game.unitVision ? game.unitVision(u) : 450) * zoom;
-      var sustained = (SL.COMMAND_RECON.radius || 150) * zoom;
-      if (x < -vision - 40 || x > proj.w + vision + 40 || y < -vision - 40 || y > proj.h + vision + 40) continue;
-      ctx.save();
-      // 持续观察圈
-      ctx.beginPath();
-      ctx.arc(x, y, sustained, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(104,220,225,0.055)';
-      ctx.fill();
-      ctx.setLineDash([5, 4]);
-      ctx.strokeStyle = 'rgba(122,228,224,0.72)';
-      ctx.lineWidth = 1.5 * one;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // 视野范围
-      ctx.beginPath();
-      ctx.arc(x, y, vision, 0, Math.PI * 2);
-      ctx.setLineDash([10, 7]);
-      ctx.strokeStyle = 'rgba(150,210,220,0.30)';
-      ctx.lineWidth = 1.1 * one;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.font = '700 ' + Math.round(9 * Math.max(0.8, one)) + 'px ' + SL.FONT_MONO;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(16,24,22,0.72)';
-      ctx.strokeText('持续观察 ' + Math.round(sustained / zoom * 2) + 'm', x, y - sustained - 5);
-      ctx.fillStyle = '#a9e5df';
-      ctx.fillText('持续观察 ' + Math.round(sustained / zoom * 2) + 'm', x, y - sustained - 5);
-      ctx.restore();
-    }
-  }
 
   function drawFog(game) {
     if (game.fogEnabled === false) return;
