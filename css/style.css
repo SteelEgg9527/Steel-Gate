@@ -1512,45 +1512,6 @@ html, body {
   color: #d9e8cf;
 }
 .emblem-core b { display: block; font: 700 57px/1 var(--mono); letter-spacing: 0.12em; color: #dce9d2; }
-.emblem-core .emblem-sl {
-  position: relative;
-  display: inline-block;
-  margin-left: 0.04em;
-  font-family: "Arial Black", Impact, "Noto Sans SC", sans-serif;
-  font-size: 84px;
-  font-weight: 900;
-  line-height: 0.9;
-  font-style: italic;
-  letter-spacing: -0.01em;
-  transform: skewX(-9deg);
-  background: linear-gradient(168deg, #fff9dc 0%, #f0d88d 30%, #c7a85f 55%, #93a58e 78%, #e9d18b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 14px rgba(143,214,200,0.26)) drop-shadow(0 4px 0 rgba(7,12,10,0.85));
-}
-.emblem-core .emblem-sl::before {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  color: transparent;
-  -webkit-text-stroke: 1.5px rgba(190,230,214,0.62);
-  transform: translate(4px, 3px);
-}
-.emblem-core .emblem-sl::after {
-  content: "";
-  position: absolute;
-  left: -8%;
-  top: 44%;
-  width: 118%;
-  height: 5px;
-  transform: rotate(-9deg);
-  background: linear-gradient(90deg, transparent, rgba(255,241,176,0.9), transparent);
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  filter: blur(0.4px);
-}
 .emblem-core span { display: block; margin-top: 8px; font: 600 13px var(--mono); letter-spacing: 0.55em; color: #9fb7a5; }
 .emblem-plaque {
   position: relative;
@@ -1566,49 +1527,6 @@ html, body {
 }
 .emblem-plaque span { display: block; color: #8fa597; font: 600 8px var(--mono); letter-spacing: 0.42em; }
 .emblem-plaque b { display: block; margin-top: 5px; color: #f1e6c8; font: 600 25px var(--font-ui); letter-spacing: 0.22em; }
-.emblem-ship {
-  position: relative;
-  width: min(470px, 100%);
-  margin-top: -4px;
-  filter: drop-shadow(0 12px 18px rgba(0,0,0,0.55)) drop-shadow(0 0 24px rgba(110,190,176,0.14));
-  animation: emblem-ship-bob 6s ease-in-out infinite;
-}
-.emblem-ship svg { display: block; width: 100%; height: auto; overflow: visible; }
-.emblem-ship::after {
-  content: "";
-  position: absolute;
-  left: 4%; right: 4%;
-  top: 58%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(154,235,219,0.95), transparent);
-  box-shadow: 0 0 12px rgba(143,214,200,0.5);
-  opacity: 0;
-  animation: ship-scan 4.2s linear infinite;
-  pointer-events: none;
-}
-.emblem-ship-caption {
-  margin-top: 2px;
-  text-align: center;
-  color: #73887b;
-  font: 600 8px var(--mono);
-  letter-spacing: 0.34em;
-}
-.ship-sonar { opacity: 0.65; }
-.ship-mast circle { animation: mast-pulse 2.4s ease-in-out infinite; }
-@keyframes emblem-ship-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
-}
-@keyframes ship-scan {
-  0% { transform: translateX(-46%) scaleX(0.2); opacity: 0; }
-  18% { opacity: 0.85; }
-  82% { opacity: 0.85; }
-  100% { transform: translateX(46%) scaleX(0.2); opacity: 0; }
-}
-@keyframes mast-pulse {
-  0%, 100% { fill-opacity: 0.35; }
-  50% { fill-opacity: 1; }
-}
 .main-menu-footer {
   position: absolute;
   right: 42px;
@@ -1632,8 +1550,6 @@ html, body {
   .main-menu-emblem { min-height: 310px; }
   .emblem-ring { width: 190px; height: 190px; }
   .emblem-core b { font-size: 40px; }
-  .emblem-core .emblem-sl { font-size: 58px; }
-  .emblem-ship { width: min(330px, 100%); }
   .emblem-plaque { min-width: 220px; padding: 9px 18px 10px; }
   .emblem-plaque b { font-size: 19px; }
   .main-menu-footer { right: 0; left: 0; bottom: 18px; justify-content: center; }
