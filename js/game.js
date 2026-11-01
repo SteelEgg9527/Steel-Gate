@@ -3378,15 +3378,22 @@
   Game.prototype.layBarrier = function (u, type) {
     if (this.barriers.length >= 240) return null;
     var nodeHp = type === 'wire' ? (SL.ENGINEER.wireHp || 1000) : (SL.ENGINEER.hedgehogHp || 1500);
+    var ms = SL.CONFIG.mapSize;
+    var edgeSnap = SL.ENGINEER.edgeSnap || 36;
+    var nx = u.x, ny = u.y;
+    if (nx <= edgeSnap) nx = 0; else if (nx >= ms - edgeSnap) nx = ms;
+    if (ny <= edgeSnap) ny = 0; else if (ny >= ms - edgeSnap) ny = ms;
     var node = {
-      id: nextId++, isBarrier: true, type: type, x: u.x, y: u.y, side: u.side,
+      id: nextId++, isBarrier: true, type: type, x: nx, y: ny, side: u.side,
       hp: nodeHp, maxHp: nodeHp, alive: true,
       links: [], hitFlash: 0, name: type === 'wire' ? '铁丝网' : '拒马',
       def: { armor: 0 }, cover: { dr: 0, evade: 0 }
     };
-    var prev = u.engLastNode ? this.barrierById(u.engLastNode) : null;
-    if (prev && prev.alive && prev.side === u.side && prev.type === type &&
-      U.dist(prev.x, prev.y, node.x, node.y) <= SL.ENGINEER.connectRange) {
+    // 邻近的同阵营、同类型节点自动连成防线
+    for (var bi = 0; bi < this.barriers.length; bi++) {
+      var prev = this.barriers[bi];
+      if (!prev.alive || prev.side !== u.side || prev.type !== type) continue;
+      if (U.dist(prev.x, prev.y, node.x, node.y) > (SL.ENGINEER.connectRange || 52)) continue;
       node.links.push(prev.id);
       prev.links.push(node.id);
     }
