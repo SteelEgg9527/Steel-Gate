@@ -415,9 +415,32 @@
   function drawRangeRing(u, nSel) {
     var sx = proj.x(u.x), sy = proj.y(u.y);
     var k = nSel <= 1 ? 1 : (nSel <= 3 ? 0.62 : 0.34);
-    var rRange = (u.maxRangeNow || u.rangeNow || u.def.range) * cam.zoom;
+    var isCommand = u.type === 'command';
+    var reconRange = isCommand ? (SL.COMMAND_RECON.range * (1 + ((u.cover && u.cover.rangeBonus) || 0))) : 0;
+    var rRange = (isCommand ? reconRange : (u.maxRangeNow || u.rangeNow || u.def.range)) * cam.zoom;
     var rVis = u.def.vision * cam.zoom;
     ctx.save();
+
+    if (isCommand) {
+      // 指挥车只显示可建立持续侦察区的 600m 范围，不显示自身视野圈
+      ctx.setLineDash([7, 5]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(92,196,204,' + (0.72 * k).toFixed(2) + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy, rRange, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = '700 9px ' + SL.FONT_MONO;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(16,24,22,0.72)';
+      ctx.strokeText('持续观察 ' + Math.round(reconRange) + 'm', sx, sy - rRange - 5);
+      ctx.fillStyle = '#9fe3df';
+      ctx.fillText('持续观察 ' + Math.round(reconRange) + 'm', sx, sy - rRange - 5);
+      ctx.restore();
+      return;
+    }
 
     // 视野圈
     if (k > 0.4) {
