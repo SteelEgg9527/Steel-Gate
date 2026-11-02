@@ -1000,21 +1000,21 @@ html, body {
 .buy-draft.disabled { opacity: 0.38; cursor: default; filter: grayscale(1); }
 .quick-card-btn {
   width: 100%; padding: 0 1px;
-  border: 1px solid rgba(130,176,158,0.55);
-  background: rgba(30,48,40,0.92);
-  color: #b9dfcf;
-  font: 700 8px var(--font-ui);
-  letter-spacing: -0.02em;
+  border: 1px solid rgba(130,176,158,0.42);
+  background: rgba(27,42,36,0.82);
+  color: #9fb9ac;
+  font: 600 7px var(--font-ui);
+  letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
 }
-.quick-card-btn:hover { background: rgba(48,76,62,0.98); border-color: #9fe0cd; }
+.quick-card-btn:hover { background: rgba(48,76,62,0.92); border-color: #8fcbb9; color: #c7e0d5; }
 .quick-card-btn.deploy {
-  border-color: rgba(214,178,92,0.62);
-  background: rgba(54,45,26,0.94);
-  color: #f0d89a;
+  border-color: rgba(214,178,92,0.42);
+  background: rgba(48,41,25,0.86);
+  color: #d3c08c;
 }
-.quick-card-btn.deploy:hover { background: rgba(82,68,36,0.98); border-color: #f0d89a; }
+.quick-card-btn.deploy:hover { background: rgba(78,64,35,0.94); border-color: #d9bd7d; color: #f0dca4; }
 .card-quick-actions {
   flex: 0 0 66px;
   display: flex;
