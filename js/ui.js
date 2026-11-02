@@ -1961,7 +1961,9 @@
     renderBuyDraft(game);
     if (el.navySystem) el.navySystem.style.display = 'none';
     el.cards.innerHTML = '';
-    for (var i = 0; i < SL.XP.handMax; i++) {
+    // 只补少量空槽，避免低分辨率/高缩放下把 10 个空槽压成细条
+    var slotCount = Math.min(SL.XP.handMax, Math.max(2, hand.length + 2));
+    for (var i = 0; i < slotCount; i++) {
       var c = hand[i];
       var d = document.createElement('div');
       if (!c) {
