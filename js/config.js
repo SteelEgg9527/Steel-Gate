@@ -818,6 +818,7 @@
   };
   SL.AI_UNIT_CAP = { easy: 10, normal: 16, hard: 22, endless: 28 };
   SL.AI_REINFORCE_GAP = { easy: 45, normal: 35, hard: 25, endless: 18 };
+  SL.AI_NAVAL_REPLENISH = { interval: 24, cost: 120, first: 16 };
 
   /* 黄圈争夺区：同一落点持续 2.5 分钟，结束后换点 */
   SL.YELLOW = {
@@ -861,7 +862,8 @@
     count: 3,                // 战斗机数量
     hp: 180,                 // 单机血量
     evade: 0.50,             // 单机闪避率
-    radius: 800,             // 制空圈半径（直径 1600m）
+    radius: 800,             // 标识制空圈半径（直径 1600m）
+  searchBonus: 300,        // 实际追击范围比标识圈多 300m
     orbitRadius: 250,        // 盘旋半径（直径 500m）
     duration: 40,            // 持续 40 秒
     orbitSpeed: 0.9,         // 盘旋角速度

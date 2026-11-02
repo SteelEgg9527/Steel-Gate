@@ -590,11 +590,12 @@
     for (var i = 0; i < game.planes.length; i++) {
       var p = game.planes[i];
       if (!p || p.kind !== 'fighter' || p.hp <= 0) continue;
+      if (p.arrived === false) continue;
       var left = Math.max(0, (p.dur || 0) - (p.t || 0));
       if (left <= 0) continue;
       var key = p.side + ':' + Math.round(p.cx) + ':' + Math.round(p.cy);
       if (!groups[key] || left > groups[key].left) {
-        groups[key] = { cx: p.cx, cy: p.cy, r: p.orbitR || 250, left: left, dur: p.dur || 60, side: p.side };
+        groups[key] = { cx: p.cx, cy: p.cy, r: (SL.AIR_PATROL && SL.AIR_PATROL.radius) || 800, left: left, dur: p.dur || 60, side: p.side };
       }
     }
     for (var k in groups) {
@@ -603,39 +604,39 @@
       var rr = g.r * cam.zoom;
       var blue = g.side === 'blue';
       ctx.save();
-      ctx.fillStyle = blue ? 'rgba(70,140,230,0.055)' : 'rgba(220,90,50,0.05)';
+      ctx.fillStyle = blue ? 'rgba(70,140,230,0.022)' : 'rgba(220,90,50,0.02)';
       ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.fill();
       ctx.setLineDash([10, 6]);
-      ctx.strokeStyle = blue ? 'rgba(120,190,255,0.92)' : 'rgba(255,135,90,0.9)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = blue ? 'rgba(120,190,255,0.34)' : 'rgba(255,135,90,0.32)';
+      ctx.lineWidth = 1.3;
       ctx.beginPath(); ctx.arc(sx, sy, rr, 0, Math.PI * 2); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.strokeStyle = blue ? 'rgba(180,225,255,0.95)' : 'rgba(255,190,130,0.95)';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = blue ? 'rgba(180,225,255,0.55)' : 'rgba(255,190,130,0.52)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(sx, sy, rr + 5, -Math.PI / 2,
         -Math.PI / 2 + Math.PI * 2 * U.clamp(g.left / g.dur, 0, 1));
       ctx.stroke();
-      ctx.strokeStyle = blue ? 'rgba(180,225,255,0.7)' : 'rgba(255,190,130,0.7)';
+      ctx.strokeStyle = blue ? 'rgba(180,225,255,0.35)' : 'rgba(255,190,130,0.34)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(sx - 12, sy); ctx.lineTo(sx + 12, sy);
       ctx.moveTo(sx, sy - 12); ctx.lineTo(sx, sy + 12);
       ctx.stroke();
       var label = '制空圈 · 剩余 ' + g.left.toFixed(1) + 's';
-      ctx.font = '800 12px ' + SL.FONT_MONO;
+      ctx.font = '700 11px ' + SL.FONT_MONO;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       var tw = ctx.measureText(label).width + 14;
       var lx = sx - tw / 2, ly = sy - rr - 24;
-      ctx.fillStyle = 'rgba(10,20,32,0.82)';
+      ctx.fillStyle = 'rgba(10,20,32,0.55)';
       roundRect(ctx, lx, ly, tw, 18, 4);
       ctx.fill();
-      ctx.strokeStyle = blue ? 'rgba(120,190,255,0.9)' : 'rgba(255,135,90,0.9)';
+      ctx.strokeStyle = blue ? 'rgba(120,190,255,0.45)' : 'rgba(255,135,90,0.45)';
       ctx.lineWidth = 1;
       roundRect(ctx, lx, ly, tw, 18, 4);
       ctx.stroke();
-      ctx.fillStyle = blue ? '#d2ecff' : '#ffe0c8';
+      ctx.fillStyle = blue ? 'rgba(210,236,255,0.78)' : 'rgba(255,224,200,0.78)';
       ctx.fillText(label, sx, ly + 9.5);
       ctx.restore();
     }

@@ -112,6 +112,7 @@
     this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2000, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2000 };
     this.aiShipTimer = { red: 5, green: 8 };
     this.aiReinforceAt = { red: 0, green: 0 };
+    this.aiNavalReplenishTimer = (SL.AI_NAVAL_REPLENISH && SL.AI_NAVAL_REPLENISH.first) || 16;
     this.shipCards = [];
     this.seaplanes = [];
     this.supplyShips = [];
@@ -326,8 +327,28 @@
     }
   };
 
+  Game.prototype.updateAINavalReplenish = function (dt) {
+    var cfg = SL.AI_NAVAL_REPLENISH || { interval: 24, cost: 120 };
+    this.aiNavalReplenishTimer = (this.aiNavalReplenishTimer || 0) - dt;
+    if (this.aiNavalReplenishTimer > 0) return;
+    this.aiNavalReplenishTimer = cfg.interval;
+    var sides = ['red', 'green'];
+    for (var i = 0; i < sides.length; i++) {
+      var side = sides[i];
+      if (this.aliveCount(side) <= 0) continue; // 全灭时等待固定重生
+      if (this.aliveCount(side) >= this.aiUnitCap()) continue;
+      var team = this.teams[side];
+      if (!team || (team.score || 0) < cfg.cost) continue;
+      team.score -= cfg.cost;
+      var u = this.spawnReinforcement(side);
+      if (u) this.log(SL.SIDES[side].name + ' 花费 ' + cfg.cost + ' 分补充 ' + u.name, 'info');
+      else team.score += cfg.cost;
+    }
+  };
+
   Game.prototype.updateNaval = function (dt) {
     if (!this.naval) return;
+    this.updateAINavalReplenish(dt);
     // 雷达每 30 秒扫描海面，暴露海面目标 5 秒
     var scanSides = ['blue', 'red', 'green'];
     for (var rs = 0; rs < scanSides.length; rs++) {
@@ -1720,6 +1741,17 @@
   Game.prototype.findSafeSpawn = function (side) {
     var margin = 140;
     var mapSize = SL.CONFIG.mapSize;
+    // 舰炮轰鸣：AI 使用各自的固定重生点
+    if (this.naval && (side === 'red' || side === 'green') && T.spawns && T.spawns[side]) {
+      var fixed = T.spawns[side];
+      var fx = U.clamp(fixed.x + (Math.random() - 0.5) * 46, 40, mapSize - 40);
+      var fy = U.clamp(fixed.y + (Math.random() - 0.5) * 46, 40, mapSize - 40);
+      if (SL.Naval && SL.Naval.isWater(fx, fy)) {
+        var fl = SL.Naval.nearestLandPoint(fx, fy);
+        fx = fl.x; fy = fl.y;
+      }
+      return { x: fx, y: fy };
+    }
     // AI 连队重生：优先在地图边缘、且尽量远离玩家的位置
     if (side === 'red' || side === 'green') {
       var best = null, bestMin = -1;
@@ -4876,7 +4908,7 @@
       case 'airpatrol':
         if (!inside()) { res.msg = '请拖到地图上'; break; }
         this.spawnAirPatrol(tx, ty, 'blue');
-        res.ok = true; res.msg = '3 架战斗机已抵达，开始制空盘旋';
+        res.ok = true; res.msg = '3 架战斗机已起飞，抵达目标空域后开始制空';
         break;
       case 'enemy_ship':
         if (!this.testMode) { res.msg = '敌方战舰卡仅限训练场'; break; }
@@ -5415,12 +5447,24 @@
   Game.prototype.spawnAirPatrol = function (x, y, side) {
     side = side || 'blue';
     var cfg = SL.AIR_PATROL;
+    var ms = SL.CONFIG.mapSize;
+    var dl = x, dr = ms - x, dtp = y, db = ms - y;
+    var edge = Math.min(dl, dr, dtp, db);
+    var sx, sy, shd;
+    if (edge === dl) { sx = -100; sy = y; shd = 0; }
+    else if (edge === dr) { sx = ms + 100; sy = y; shd = Math.PI; }
+    else if (edge === dtp) { sx = x; sy = -100; shd = Math.PI / 2; }
+    else { sx = x; sy = ms + 100; shd = -Math.PI / 2; }
     for (var i = 0; i < cfg.count; i++) {
       var ang = (Math.PI * 2 / cfg.count) * i;
+      var spread = (i - (cfg.count - 1) / 2) * 46;
+      var px = sx, py = sy;
+      if (edge === dl || edge === dr) py += spread;
+      else px += spread;
       this.planes.push({
         kind: 'fighter', name: '战斗机', cx: x, cy: y, ang: ang,
-        orbitR: cfg.orbitRadius, x: x + Math.cos(ang) * cfg.orbitRadius,
-        y: y + Math.sin(ang) * cfg.orbitRadius, heading: ang + Math.PI / 2,
+        orbitR: cfg.orbitRadius, x: px, y: py, heading: shd,
+        arrived: false, ferrySpeed: 280,
         side: side, t: 0, dur: cfg.duration, gunCd: i * 0.25,
         interval: cfg.interval, damage: cfg.damage, range: cfg.radius,
         mode: 'orbit', targetPlane: null, formationSlot: i,
@@ -5429,11 +5473,30 @@
         kills: 0, score: 0
       });
     }
-    this.log('制空盘旋：3 架战斗机抵达目标空域', 'order');
+    this.log('制空盘旋：3 架战斗机已起飞，抵达后开始制空', 'order');
   };
 
   Game.prototype.updateFighter = function (p, dt) {
     var cfg = SL.AIR_PATROL;
+    // 从地图边缘飞入，抵达目标空域后才开始索敌
+    if (!p.arrived) {
+      var ex = p.cx - p.x, ey = p.cy - p.y;
+      var ed = Math.hypot(ex, ey);
+      p.heading = Math.atan2(ey, ex);
+      var estep = (p.ferrySpeed || 280) * dt;
+      if (ed <= estep + 2) {
+        p.arrived = true;
+        p.t = 0;
+        p.x = p.cx + Math.cos(p.ang) * p.orbitR;
+        p.y = p.cy + Math.sin(p.ang) * p.orbitR;
+        p.heading = p.ang + Math.PI / 2;
+        p.mode = 'orbit';
+      } else {
+        p.x += ex / ed * estep;
+        p.y += ey / ed * estep;
+      }
+      return true;
+    }
     if (p.t >= p.dur) return false;
     p.gunCd -= dt;
 
@@ -5441,7 +5504,7 @@
     if (p.targetPlane) {
       var tp = p.targetPlane;
       if (!tp || tp.hp <= 0 || this.planes.indexOf(tp) < 0 ||
-        U.dist(tp.x, tp.y, p.cx, p.cy) > cfg.radius) {
+        U.dist(tp.x, tp.y, p.cx, p.cy) > cfg.radius + (cfg.searchBonus || 300)) {
         p.targetPlane = null;
         p.mode = 'orbit';
       }
@@ -5452,7 +5515,7 @@
         var e = this.planes[i];
         if (e === p || e.side === p.side || e.hp <= 0) continue;
         var d = U.dist(p.cx, p.cy, e.x, e.y);
-        if (d > cfg.radius || d >= bestD) continue;
+        if (d > cfg.radius + (cfg.searchBonus || 300) || d >= bestD) continue;
         best = e; bestD = d;
       }
       if (best) {
@@ -6117,11 +6180,19 @@
         list.push(zn);
       }
     }
+    var valid = [];
     for (var k = 0; k < list.length; k++) {
       var z = list[k];
       if (!z || z.destroyed || z.owner === u.side) continue;
       var d = U.dist(u.x, u.y, z.x, z.y);
+      valid.push({ z: z, d: d });
       if (d < bd) { bd = d; best = z; }
+    }
+    // 小股部队去另一个目标点，避免全军挤在同一条路线上
+    if (u.navalRole && valid.length > 1) {
+      valid.sort(function (a, b) { return a.d - b.d; });
+      var pick = 1 + (u.id % Math.min(3, valid.length - 1));
+      return valid[pick].z;
     }
     return best;
   };
@@ -6163,8 +6234,8 @@
       return;
     }
 
-    // 舰炮轰鸣：部分 AI 单位优先争夺通讯塔与雷达站
-    if (this.naval && u.side !== 'blue' && u.navalRole && !u.aggressive) {
+    // 舰炮轰鸣：小股部队优先争夺另一个目标点，主力继续压黄圈
+    if (this.naval && u.side !== 'blue' && u.navalRole) {
       var site = this.navalAITarget(u);
       if (site) {
         var sd = U.dist(u.x, u.y, site.x, site.y);
