@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢线1944</title>
 <link rel="icon" type="image/png" href="favicon.png">
-<link rel="stylesheet" href="css/style.css?v=0.12.11">
+<link rel="stylesheet" href="css/style.css?v=0.12.12">
 </head>
 <body>
 <div id="app">
@@ -281,19 +281,56 @@
           <button id="mm-settings" type="button" class="mm-btn">游戏设置 <span>›</span></button>
           <button id="mm-leaderboard" type="button" class="mm-btn">排行榜 <small>近期战绩</small></button>
         </div>
-        <p class="main-menu-version">v0.12.11 · 钢线 1944</p>
+        <p class="main-menu-version">v0.12.12 · 钢线 1944</p>
       </div>
       <div class="main-menu-emblem" aria-hidden="true">
         <div class="emblem-ring">
-          <div class="emblem-cross"></div>
-          <div class="emblem-reticle" id="emblem-reticle"></div>
-          <div class="emblem-azimuth">
-            <span style="--a:0deg">000</span>
-            <span style="--a:90deg">090</span>
-            <span style="--a:180deg">180</span>
-            <span style="--a:270deg">270</span>
-          </div>
-          <div class="emblem-core"><b>SL</b><span>1944</span></div>
+          <svg class="emblem-sight" viewBox="0 0 300 300" aria-hidden="true">
+            <circle cx="150" cy="150" r="143" class="sight-rim"/>
+            <circle cx="150" cy="150" r="132" class="sight-rim inner"/>
+            <path d="M136 10 H164 L150 38 Z" class="sight-pointer"/>
+            <g class="sight-dots mg-scale">
+              <circle cx="79.3" cy="79.3" r="3.2"/>
+              <circle cx="69.1" cy="91.2" r="3.2"/>
+              <circle cx="60.9" cy="104.6" r="3.2"/>
+              <circle cx="54.9" cy="119.1" r="3.2"/>
+              <circle cx="51.2" cy="134.1" r="3.2"/>
+              <circle cx="50" cy="150" r="3.2"/>
+              <circle cx="51.2" cy="165.9" r="3.2"/>
+              <circle cx="54.9" cy="180.9" r="3.2"/>
+              <circle cx="60.9" cy="195.4" r="3.2"/>
+              <circle cx="69.1" cy="208.8" r="3.2"/>
+              <circle cx="79.3" cy="220.7" r="3.2"/>
+            </g>
+            <g class="sight-dots main-scale">
+              <circle cx="166.7" cy="55.4" r="3.1"/>
+              <circle cx="182.8" cy="59.8" r="3.1"/>
+              <circle cx="198" cy="66.9" r="3.1"/>
+              <circle cx="211.7" cy="76.5" r="3.1"/>
+              <circle cx="223.5" cy="88.3" r="3.1"/>
+              <circle cx="233.1" cy="102" r="3.1"/>
+              <circle cx="240.2" cy="117.2" r="3.1"/>
+              <circle cx="244.5" cy="133.3" r="3.1"/>
+              <circle cx="246" cy="150" r="3.1"/>
+              <circle cx="244.5" cy="166.7" r="3.1"/>
+              <circle cx="240.2" cy="182.8" r="3.1"/>
+              <circle cx="233.1" cy="198" r="3.1"/>
+              <circle cx="223.5" cy="211.7" r="3.1"/>
+              <circle cx="211.7" cy="223.5" r="3.1"/>
+              <circle cx="198" cy="233.1" r="3.1"/>
+              <circle cx="182.8" cy="240.2" r="3.1"/>
+              <circle cx="166.7" cy="244.5" r="3.1"/>
+            </g>
+            <g class="sight-chevrons">
+              <path d="M102 158 l8 -8 l8 8 M118 158 l8 -8 l8 8 M134 158 l8 -8 l8 8"/>
+              <path d="M150 158 l8 -8 l8 8 M166 158 l8 -8 l8 8 M182 158 l8 -8 l8 8"/>
+            </g>
+            <path d="M150 142 L140 164 H160 Z" class="sight-aim"/>
+            <path d="M96 158 H138 M162 158 H204" class="sight-line"/>
+            <path d="M150 164 V270" class="sight-line"/>
+            <circle cx="150" cy="213" r="4.2" class="sight-dot"/>
+            <circle cx="150" cy="241" r="4.2" class="sight-dot"/>
+          </svg>
         </div>
         <div class="emblem-plaque">
           <span>STEEL LINE</span>
@@ -615,15 +652,15 @@
   <div id="context-lost" class="hidden">显卡渲染上下文丢失 · 正在恢复…</div>
 </div>
 
-<script src="js/util.js?v=0.12.11"></script>
-<script src="js/config.js?v=0.12.11"></script>
-<script src="js/audio.js?v=0.12.11"></script>
-<script src="js/maps.js?v=0.12.11"></script>
-<script src="js/terrain.js?v=0.12.11"></script>
-<script src="js/naval.js?v=0.12.11"></script>
-<script src="js/game.js?v=0.12.11"></script>
-<script src="js/render.js?v=0.12.11"></script>
-<script src="js/ui.js?v=0.12.11"></script>
-<script src="js/main.js?v=0.12.11"></script>
+<script src="js/util.js?v=0.12.12"></script>
+<script src="js/config.js?v=0.12.12"></script>
+<script src="js/audio.js?v=0.12.12"></script>
+<script src="js/maps.js?v=0.12.12"></script>
+<script src="js/terrain.js?v=0.12.12"></script>
+<script src="js/naval.js?v=0.12.12"></script>
+<script src="js/game.js?v=0.12.12"></script>
+<script src="js/render.js?v=0.12.12"></script>
+<script src="js/ui.js?v=0.12.12"></script>
+<script src="js/main.js?v=0.12.12"></script>
 </body>
 </html>
