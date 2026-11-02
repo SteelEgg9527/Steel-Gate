@@ -1510,6 +1510,8 @@ html, body {
   min-height: 500px;
 }
 .emblem-ring {
+  --sight-r: 122px;
+  --sight-label-r: 101px;
   position: relative;
   width: 270px;
   height: 270px;
@@ -1533,14 +1535,40 @@ html, body {
   background:
     linear-gradient(90deg, transparent calc(50% - 0.5px), rgba(187,214,193,0.45) calc(50% - 0.5px), rgba(187,214,193,0.45) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
     linear-gradient(0deg, transparent calc(50% - 0.5px), rgba(187,214,193,0.45) calc(50% - 0.5px), rgba(187,214,193,0.45) calc(50% + 0.5px), transparent calc(50% + 0.5px));
-  opacity: 0.7;
+  opacity: 0.62;
 }
-.emblem-scan {
+.emblem-reticle {
   position: absolute;
-  inset: 24px;
+  inset: 5px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(117,209,190,0.24), transparent 18%, transparent 100%);
-  animation: emblem-scan 7s linear infinite;
+  pointer-events: none;
+}
+.emblem-reticle i {
+  position: absolute;
+  left: calc(50% - 0.5px);
+  top: calc(50% - var(--sight-r));
+  width: 1px;
+  height: 7px;
+  transform-origin: 50% var(--sight-r);
+  transform: rotate(var(--a));
+  background: rgba(204,231,214,0.72);
+}
+.emblem-reticle i.major {
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 14px;
+  background: rgba(240,217,154,0.95);
+  box-shadow: 0 0 4px rgba(230,202,128,0.45);
+}
+.emblem-azimuth { position: absolute; inset: 0; pointer-events: none; }
+.emblem-azimuth span {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--sight-label-r))) rotate(calc(-1 * var(--a)));
+  transform-origin: 0 0;
+  color: rgba(181,201,177,0.70);
+  font: 600 7px var(--mono);
+  letter-spacing: 0.04em;
 }
 .emblem-core {
   position: absolute;
@@ -1578,7 +1606,6 @@ html, body {
 }
 .main-menu-footer a { color: #9dc1b8; text-decoration: none; border-bottom: 1px dotted rgba(157,193,184,0.45); }
 .main-menu-footer a:hover { color: #d6eee5; }
-@keyframes emblem-scan { to { transform: rotate(360deg); } }
 @media (max-width: 780px) {
   .main-menu { padding: 28px 22px 54px; }
   .main-menu-grid { grid-template-columns: 1fr; gap: 18px; width: 100%; }
@@ -1586,7 +1613,7 @@ html, body {
   .main-menu-buttons { margin: 24px auto 0; }
   .main-menu-heading { font-size: 32px; }
   .main-menu-emblem { min-height: 310px; }
-  .emblem-ring { width: 190px; height: 190px; }
+  .emblem-ring { width: 190px; height: 190px; --sight-r: 82px; --sight-label-r: 68px; }
   .emblem-core b { font-size: 40px; }
   .emblem-plaque { min-width: 220px; padding: 9px 18px 10px; }
   .emblem-plaque b { font-size: 19px; }

@@ -61,6 +61,7 @@
       });
       newGame(params.get('autostart') === '1');
       bindMainMenu();
+      buildGunSight();
       if (!started) showMainMenu(); else hideMainMenu();
       UI.setMapButtons(SL.Terrain.map.id, gameMode);
       renderModeButtons();
@@ -323,6 +324,18 @@
       R.centerOn(cx / n, cy / n);
     }
     R.clampCamStrict();
+  }
+
+  function buildGunSight() {
+    var box = document.getElementById('emblem-reticle');
+    if (!box || box.children.length) return;
+    for (var i = 0; i < 72; i++) {
+      var mark = document.createElement('i');
+      var deg = i * 5;
+      if (deg % 30 === 0) mark.className = 'major';
+      mark.style.setProperty('--a', deg + 'deg');
+      box.appendChild(mark);
+    }
   }
 
   function showMainMenu() {
