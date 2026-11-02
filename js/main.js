@@ -43,6 +43,7 @@
       SL.Terrain.build(seed);
       world = document.getElementById('world');
       R.init(world, document.getElementById('overlay'));
+      wrapHudForScale();
       UI.init({
         onStart: begin,
         onRestart: restart,
@@ -323,6 +324,24 @@
       R.centerOn(cx / n, cy / n);
     }
     R.clampCamStrict();
+  }
+
+  function wrapHudForScale() {
+    var app = document.getElementById('app');
+    if (!app || document.getElementById('hud-scale')) return;
+    var hud = document.createElement('div');
+    hud.id = 'hud-scale';
+    var ids = [
+      'topbar', 'yellow-hud', 'naval-hud', 'defense-hud', 'boss-hud',
+      'boss-kill-banner', 'perf-hud', 'draft-alert', 'range-tools',
+      'roster-panel', 'selpanel', 'minimap-panel', 'rightpanels',
+      'draft-queue-wrap', 'cardbar', 'toasts', 'hint', 'pause-badge'
+    ];
+    for (var i = 0; i < ids.length; i++) {
+      var node = document.getElementById(ids[i]);
+      if (node) hud.appendChild(node);
+    }
+    app.appendChild(hud);
   }
 
   function showMainMenu() {

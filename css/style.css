@@ -27,6 +27,19 @@ html, body {
 }
 
 #app { position: fixed; inset: 0; overflow: hidden; }
+#hud-scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(100% / var(--ui-scale, 1));
+  height: calc(100% / var(--ui-scale, 1));
+  transform: scale(var(--ui-scale, 1));
+  transform-origin: 0 0;
+  z-index: 7;
+  pointer-events: none;
+}
+#hud-scale > * { pointer-events: auto; }
+#hud-scale > #toasts, #hud-scale > #hint { pointer-events: none; }
 
 #world {
   position: absolute;
@@ -854,6 +867,8 @@ html, body {
 .settings-panel.hidden { display: none; }
 .settings-card {
   width: 340px; max-width: calc(100vw - 32px);
+  max-height: 92vh;
+  overflow-y: auto;
   background: rgba(12,16,13,0.98);
   border: 1px solid rgba(214,196,150,0.45);
   box-shadow: 0 22px 70px rgba(0,0,0,0.7);

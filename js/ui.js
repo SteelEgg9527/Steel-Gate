@@ -65,6 +65,9 @@
     el.setRangeAa = $('set-range-aa');
     el.setRangeFort = $('set-range-fort');
     el.setRangeKeep = $('set-range-keep');
+    el.setUiAuto = $('set-ui-auto');
+    el.setUiScale = $('set-ui-scale');
+    el.setUiScaleVal = $('set-ui-scale-val');
     el.setAudioMaster = $('set-audio-master');
     el.setAudioArtillery = $('set-audio-artillery');
     el.setAudioExplosion = $('set-audio-explosion');
@@ -223,19 +226,39 @@
     function loadSettings() {
       var defaults = {
         shipRanges: { enabled: true, main: true, secondary: true, aa: true, keep: false, fort: true },
-        audio: { master: 1, artillery: 1, explosion: 1, ui: 1 }
+        audio: { master: 1, artillery: 1, explosion: 1, ui: 1 },
+        ui: { auto: true, scale: 1 }
       };
       var saved = null;
       try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); } catch (e) {}
       SL.SETTINGS = SL.SETTINGS || defaults;
+      SL.SETTINGS.ui = SL.SETTINGS.ui || { auto: true, scale: 1 };
       if (saved) {
         if (saved.shipRanges) for (var k in defaults.shipRanges) SL.SETTINGS.shipRanges[k] = saved.shipRanges[k] != null ? saved.shipRanges[k] : defaults.shipRanges[k];
         if (saved.audio) for (var a in defaults.audio) SL.SETTINGS.audio[a] = saved.audio[a] != null ? saved.audio[a] : defaults.audio[a];
+        if (saved.ui) {
+          SL.SETTINGS.ui.auto = saved.ui.auto !== false;
+          SL.SETTINGS.ui.scale = saved.ui.scale != null ? saved.ui.scale : 1;
+        }
       }
       if (SL.Audio && SL.Audio.setVolumes) SL.Audio.setVolumes(SL.SETTINGS.audio);
     }
     function saveSettings() {
       try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(SL.SETTINGS)); } catch (e) {}
+    }
+    function computedUIScale() {
+      var ui = SL.SETTINGS.ui || { auto: true, scale: 1 };
+      if (!ui.auto) return U.clamp(ui.scale || 1, 0.7, 1.3);
+      var fit = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+      return U.clamp(fit, 0.75, 1);
+    }
+    function applyUIScale() {
+      var ui = SL.SETTINGS.ui || { auto: true, scale: 1 };
+      var scale = computedUIScale();
+      document.documentElement.style.setProperty('--ui-scale', scale);
+      if (el.setUiAuto) el.setUiAuto.checked = !!ui.auto;
+      if (el.setUiScale) el.setUiScale.value = Math.round(scale * 100);
+      if (el.setUiScaleVal) el.setUiScaleVal.textContent = Math.round(scale * 100) + '%';
     }
     function syncSettingsUI() {
       var r = SL.SETTINGS.shipRanges, a = SL.SETTINGS.audio;
@@ -249,6 +272,7 @@
       if (el.setAudioArtillery) el.setAudioArtillery.value = a.artillery == null ? 1 : a.artillery;
       if (el.setAudioExplosion) el.setAudioExplosion.value = a.explosion == null ? 1 : a.explosion;
       if (el.setAudioUi) el.setAudioUi.value = a.ui == null ? 1 : a.ui;
+      applyUIScale();
     }
     function openSettings() {
       if (!el.settingsPanel) return;
@@ -358,6 +382,22 @@
     if (el.setAudioArtillery) el.setAudioArtillery.addEventListener('input', audioSettingsChanged);
     if (el.setAudioExplosion) el.setAudioExplosion.addEventListener('input', audioSettingsChanged);
     if (el.setAudioUi) el.setAudioUi.addEventListener('input', audioSettingsChanged);
+    if (el.setUiAuto) el.setUiAuto.addEventListener('change', function () {
+      SL.SETTINGS.ui.auto = el.setUiAuto.checked;
+      if (!SL.SETTINGS.ui.auto) SL.SETTINGS.ui.scale = (parseFloat(el.setUiScale.value) || 100) / 100;
+      applyUIScale();
+      saveSettings();
+    });
+    if (el.setUiScale) el.setUiScale.addEventListener('input', function () {
+      SL.SETTINGS.ui.auto = false;
+      SL.SETTINGS.ui.scale = (parseFloat(el.setUiScale.value) || 100) / 100;
+      if (el.setUiAuto) el.setUiAuto.checked = false;
+      applyUIScale();
+      saveSettings();
+    });
+    window.addEventListener('resize', function () {
+      if (SL.SETTINGS.ui && SL.SETTINGS.ui.auto) applyUIScale();
+    });
     // 主界面和局内共用同一份设置；其他标签页修改时也同步
     window.addEventListener('storage', function (ev) {
       if (ev.key !== SETTINGS_KEY) return;
