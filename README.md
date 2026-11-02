@@ -69,4 +69,4 @@ https://github.com/SteelEgg9527/Steel-Line-1944/issues
 
 钢蛋
 
-**v0.12.26**
+**v0.12.27**
