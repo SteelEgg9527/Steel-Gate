@@ -1241,7 +1241,7 @@ html, body {
   left: 16px;
   top: 76px;
   width: 220px;
-  max-height: 40vh;
+  max-height: 56vh;
   padding: 8px 8px 10px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1266,6 +1266,8 @@ html, body {
   gap: 6px;
   overflow-y: auto;
   margin-top: 6px;
+  flex: 0 1 auto;
+  min-height: 0;
 }
 #roster-list::-webkit-scrollbar { width: 5px; }
 #roster-list::-webkit-scrollbar-thumb { background: rgba(196,178,134,0.25); }
@@ -1285,6 +1287,81 @@ html, body {
 .roster-row .rt { color: #b9cfe0; font-weight: 700; text-align: center; font-size: 14px; }
 .roster-row.sel .rt { color: #f4d684; }
 #roster-empty { padding: 10px 4px; color: var(--dim, #9b957f); font-size: 11px; width: 100%; }
+#control-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+#control-groups::-webkit-scrollbar { width: 5px; }
+#control-groups::-webkit-scrollbar-thumb { background: rgba(196,178,134,0.25); }
+.control-group {
+  display: flex;
+  align-items: stretch;
+  height: 28px;
+  border: 1px solid rgba(196,178,134,0.30);
+  background: rgba(31,29,20,0.88);
+}
+.control-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 5px;
+  border: 0;
+  background: transparent;
+  color: #d8cda9;
+  font: 600 9px var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.control-main:hover { background: rgba(196,178,134,0.10); }
+.control-num {
+  flex: none;
+  width: 15px; height: 17px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(213,194,144,0.45);
+  color: #f0d89a;
+  font: 700 9px var(--mono);
+}
+.control-units {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #9fb4ab;
+  font: 500 8px var(--mono);
+  letter-spacing: 0.04em;
+}
+.control-count { flex: none; color: #7f8b7e; font: 600 8px var(--mono); }
+.control-save, .control-del {
+  flex: none;
+  width: 23px;
+  border: 0;
+  border-left: 1px solid rgba(196,178,134,0.20);
+  background: rgba(20,25,19,0.55);
+  color: #b9c9ae;
+  font: 700 13px var(--mono);
+  cursor: pointer;
+}
+.control-save:hover { background: rgba(88,114,87,0.45); color: #e3f0cf; }
+.control-del:hover { background: rgba(110,48,40,0.55); color: #f0a08a; }
+#control-add {
+  flex: none;
+  width: 100%;
+  height: 25px;
+  margin-top: 5px;
+  border: 1px dashed rgba(196,178,134,0.42);
+  background: rgba(22,28,21,0.68);
+  color: #c8bd9c;
+  font: 700 16px/1 var(--mono);
+  cursor: pointer;
+}
+#control-add:hover { border-color: #e0c274; color: #f3dfa4; background: rgba(60,54,32,0.72); }
 
 .draft-queue-wrap {
   position: fixed;

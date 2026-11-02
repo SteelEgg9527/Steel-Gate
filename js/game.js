@@ -53,6 +53,8 @@
     this.wrecks = [];
     this.selected = [];
     this.selectedShip = null;
+    this.controlGroups = [];
+    this.nextControlGroupId = 1;
     this.time = 0;
     this.state = 'playing';
     this.demo = !!opts.demo;
@@ -1271,6 +1273,8 @@
       } : null,
       teams: teams, stats: this.stats, drafts: this.drafts,
       nextCardId: this.nextCardId,
+      controlGroups: this.controlGroups || [],
+      nextControlGroupId: this.nextControlGroupId || 1,
       zones: T.zones.map(function (z) {
         return {
           id: z.id, owner: z.owner, cap: z.cap, capSide: z.capSide,
@@ -1364,6 +1368,8 @@
     this.time = data.time || 0;
     this.ended = false; this.winner = null; this.state = 'playing';
     this.selected = [];
+    this.controlGroups = data.controlGroups || [];
+    this.nextControlGroupId = data.nextControlGroupId || 1;
     this.units.length = 0;
     this.planes.length = 0; this.shells.length = 0; this.effects.length = 0;
     this.strikes.length = 0; this.supplies.length = 0; this.recons.length = 0;
@@ -1958,6 +1964,45 @@
     this.selectedShip = null;
     for (var i = 0; i < this.units.length; i++) this.units[i].selected = false;
     for (var k = 0; k < this.selected.length; k++) this.selected[k].selected = true;
+  };
+
+  Game.prototype.addControlGroup = function (units) {
+    var valid = (units || []).filter(function (u) { return u && u.alive && u.side === 'blue'; });
+    if (!valid.length) return null;
+    if (!this.controlGroups) this.controlGroups = [];
+    var group = { id: this.nextControlGroupId++, unitIds: valid.map(function (u) { return u.id; }) };
+    this.controlGroups.push(group);
+    return group;
+  };
+
+  Game.prototype.updateControlGroup = function (id, units) {
+    var group = null;
+    for (var i = 0; i < (this.controlGroups || []).length; i++) {
+      if (this.controlGroups[i].id === id) { group = this.controlGroups[i]; break; }
+    }
+    if (!group) return null;
+    var valid = (units || []).filter(function (u) { return u && u.alive && u.side === 'blue'; });
+    if (!valid.length) return null;
+    group.unitIds = valid.map(function (u) { return u.id; });
+    return group;
+  };
+
+  Game.prototype.removeControlGroup = function (id) {
+    var list = this.controlGroups || [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id !== id) continue;
+      list.splice(i, 1);
+      return true;
+    }
+    return false;
+  };
+
+  Game.prototype.controlGroupUnits = function (group) {
+    if (!group) return [];
+    var ids = group.unitIds || [];
+    return this.units.filter(function (u) {
+      return u.alive && u.side === 'blue' && ids.indexOf(u.id) >= 0;
+    });
   };
 
   Game.prototype.clearOrders = function (units) {

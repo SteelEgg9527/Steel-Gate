@@ -22,7 +22,7 @@
   var detailType = '';
   var fortReplaceCard = null;
   var fortReplaceZone = null;
-  var uiCache = { counts: {}, scores: {}, co: '', clock: '', selCount: -1, scaleW: -1, scaleText: -1, handSig: '', lbSig: '', bossSig: '', bossKillSig: '', itemSig: '', buyDraft: '', draftOpen: false, renderErr: '' };
+  var uiCache = { counts: {}, scores: {}, co: '', clock: '', selCount: -1, scaleW: -1, scaleText: -1, handSig: '', lbSig: '', bossSig: '', bossKillSig: '', itemSig: '', buyDraft: '', draftOpen: false, renderErr: '', controlSig: '' };
 
   function $(id) { return document.getElementById(id); }
 
@@ -171,6 +171,8 @@
     el.draftAlertText = $('draft-alert-text');
     el.rosterList = $('roster-list');
     el.rosterCount = $('roster-count');
+    el.controlGroups = $('control-groups');
+    el.controlAdd = $('control-add');
     el.rangeTools = $('range-tools');
     el.rangeFogBtn = $('range-fog-btn');
     el.rangeConsole = $('range-console');
@@ -388,6 +390,7 @@
     if (el.quickEquip) el.quickEquip.addEventListener('click', function () { UI.quickEquip(); });
     if (el.quickFort) el.quickFort.addEventListener('click', function () { UI.quickFort(); });
     if (el.quickDeploy) el.quickDeploy.addEventListener('click', function () { UI.quickDeploy(); });
+    if (el.controlAdd) el.controlAdd.addEventListener('click', function () { UI.addControlGroup(); });
     if (el.fireModeBtn) el.fireModeBtn.addEventListener('click', function () { UI.cycleFireMode(); });
     if (el.grenadeModeBtn) el.grenadeModeBtn.addEventListener('click', function () { UI.cycleGrenadeMode(); });
     if (el.btnFireSupport) el.btnFireSupport.addEventListener('click', function () { UI.beginCommand('fireSupport'); });
@@ -478,6 +481,7 @@
     rosterTick = 0;
     el.list.innerHTML = '';
     if (el.rosterList) el.rosterList.innerHTML = '';
+    if (el.controlGroups) el.controlGroups.innerHTML = '';
     if (el.rosterCount) el.rosterCount.textContent = '0';
     if (el.draftQueue) el.draftQueue.classList.add('hidden');
     if (el.draftQuick) el.draftQuick.classList.add('hidden');
@@ -496,7 +500,7 @@
     el.toasts.innerHTML = '';
     el.killfeed.innerHTML = '';
     el.lbRows.innerHTML = '';
-    uiCache = { counts: {}, scores: {}, co: '', clock: '', selCount: -1, scaleW: -1, scaleText: -1, handSig: '', lbSig: '', bossSig: '', bossKillSig: '', itemSig: '', buyDraft: '', draftOpen: false, renderErr: '' };
+    uiCache = { counts: {}, scores: {}, co: '', clock: '', selCount: -1, scaleW: -1, scaleText: -1, handSig: '', lbSig: '', bossSig: '', bossKillSig: '', itemSig: '', buyDraft: '', draftOpen: false, renderErr: '', controlSig: '' };
     hideDraft();
     UI.showBriefing(false);
     UI.setPaused(false);
@@ -877,6 +881,87 @@
       el.rosterList.appendChild(row);
     });
   }
+
+  function renderControlGroups(g) {
+    if (!el.controlGroups) return;
+    var groups = g.controlGroups || [];
+    var sig = groups.map(function (grp) {
+      var units = g.controlGroupUnits ? g.controlGroupUnits(grp) : [];
+      return grp.id + ':' + (grp.unitIds || []).join(',') + ':' + units.length;
+    }).join('|');
+    if (sig === uiCache.controlSig) return;
+    uiCache.controlSig = sig;
+    el.controlGroups.innerHTML = '';
+    var abbr = {
+      infantry: '步', armored: '装', tank: '坦', heavy_tank: '重',
+      at_gun: '反', aa: '防', artillery: '炮', heavy_arty: '炮',
+      rocket_arty: '火', command: '指', engineer_vehicle: '工'
+    };
+    groups.forEach(function (grp, idx) {
+      var units = g.controlGroupUnits ? g.controlGroupUnits(grp) : [];
+      var box = document.createElement('div');
+      box.className = 'control-group';
+      var main = document.createElement('button');
+      main.type = 'button';
+      main.className = 'control-main';
+      main.title = units.length ? units.map(function (u) { return u.name; }).join('、') : '该编组暂无存活单位';
+      main.innerHTML = '<span class="control-num">' + (idx + 1) + '</span>' +
+        '<span class="control-units">' + (units.length ? units.slice(0, 8).map(function (u) { return abbr[u.type] || '?'; }).join(' ') : '空') + '</span>' +
+        '<span class="control-count">' + units.length + '</span>';
+      main.addEventListener('click', function () {
+        var picked = game.controlGroupUnits(grp);
+        if (!picked.length) { UI.pushToast('该编组已无存活单位', 'info'); return; }
+        game.setSelection(picked);
+        var cx = 0, cy = 0;
+        picked.forEach(function (u) { cx += u.x; cy += u.y; });
+        R.centerOn(cx / picked.length, cy / picked.length);
+      });
+      var save = document.createElement('button');
+      save.type = 'button';
+      save.className = 'control-save';
+      save.textContent = '←';
+      save.title = '将当前选中的部队存入该编组';
+      save.addEventListener('click', function () { UI.saveControlGroup(grp.id); });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'control-del';
+      del.textContent = '×';
+      del.title = '删除该编组';
+      del.addEventListener('click', function () { UI.deleteControlGroup(grp.id); });
+      box.appendChild(main); box.appendChild(save); box.appendChild(del);
+      el.controlGroups.appendChild(box);
+    });
+  }
+
+  UI.addControlGroup = function () {
+    if (!game) return;
+    var picked = game.selected.filter(function (u) { return u.alive && u.side === 'blue'; });
+    if (!picked.length) { UI.pushToast('请先选中要编组的部队', 'info'); return; }
+    var grp = game.addControlGroup(picked);
+    if (!grp) return;
+    uiCache.controlSig = null;
+    renderControlGroups(game);
+    UI.pushToast('已创建编组 ' + game.controlGroups.length + ' · ' + picked.length + ' 个单位', 'win');
+  };
+
+  UI.saveControlGroup = function (id) {
+    if (!game) return;
+    var picked = game.selected.filter(function (u) { return u.alive && u.side === 'blue'; });
+    if (!picked.length) { UI.pushToast('请先选中要存入的部队', 'info'); return; }
+    var grp = game.updateControlGroup(id, picked);
+    if (!grp) { UI.pushToast('编组不存在', 'loss'); return; }
+    uiCache.controlSig = null;
+    renderControlGroups(game);
+    UI.pushToast('编组已更新 · ' + picked.length + ' 个单位', 'win');
+  };
+
+  UI.deleteControlGroup = function (id) {
+    if (!game) return;
+    if (!game.removeControlGroup(id)) return;
+    uiCache.controlSig = null;
+    renderControlGroups(game);
+    UI.pushToast('编组已删除', 'info');
+  };
 
   UI.setPaused = function (paused) {
     if (el.pauseBadge) el.pauseBadge.classList.toggle('hidden', !paused);
@@ -1314,6 +1399,7 @@
     if (rosterTick > 0.25) {
       rosterTick = 0;
       renderRoster(g);
+    renderControlGroups(g);
     }
 
     // 积分榜
