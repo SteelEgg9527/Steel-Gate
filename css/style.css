@@ -1004,7 +1004,10 @@ html, body {
   border: 1px solid rgba(130,176,158,0.55);
   background: rgba(30,48,40,0.92);
   color: #b9dfcf;
-  font: 600 7px var(--font-ui);
+  font-family: var(--font-ui, "Noto Sans SC", "Microsoft YaHei", sans-serif);
+  font-size: 7px;
+  font-weight: 600;
+  line-height: 1.1;
   letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
