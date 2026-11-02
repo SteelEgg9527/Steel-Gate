@@ -46,6 +46,9 @@
     sprintMin: 8,           // 低于该体力无法起跑
     coverDRCap: 0.65,       // 减伤上限
     coverEvadeCap: 0.55,    // 闪避上限
+  splashFalloff: 0.80,    // 普通溅射伤害距离衰减
+  shipSplashFalloff: 0.72,// 对舰溅射伤害距离衰减
+  bombSplashFalloff: 0.80,// 航弹溅射伤害距离衰减
     elevationRangeBonus: 0.25, // 高地射程加成上限
     elevationBase: 100,     // 高于该海拔开始获得射程加成
     elevationSpan: 70
@@ -345,7 +348,7 @@
       extraBombCount: 6, extraBombDuration: 10,
       extraBombRadius: 75, extraBombInterval: 1.8,
       extraBombCoreRadius: 25, extraBombCoreFrac: 0.2, extraBombOuterFrac: 0.1,
-      extraBombFortDmg: 600, extraBombSupplyDmg: 1000
+      extraBombFortDmg: 400, extraBombSupplyDmg: 1000
     },
     superTank: {
       name: '超级重坦', hp: 3000, range: 400, mgRange: 400, speed: 6.5,
@@ -396,7 +399,7 @@
 
   /* ---------------- 舰炮轰鸣 ---------------- */
   SL.NAVAL = {
-    shipCost: 2000,
+    shipCost: 2500,
     shipCostStep: 1.5,
     planeCost: 0,
     bombardCost: 0,
@@ -436,14 +439,14 @@
       },
       aa37: {
         name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
-        maxSpread: 220, splash: 40, dmg: 35, ap: 0.8, shots: 1200,
-        interval: 1.8, turnRate: 0.50, arc: Math.PI, side: 'split',
+        maxSpread: 300, splash: 40, dmg: 25, ap: 0.8, shots: 1200,
+        interval: 2.0, turnRate: 0.50, arc: Math.PI, side: 'split',
         color: '#b7c6ad'
       },
       aa20: {
         name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
-        maxSpread: 170, splash: 24, dmg: 14, ap: 0.4, shots: 2400,
-        interval: 0.45, turnRate: 0.80, arc: Math.PI, side: 'split',
+        maxSpread: 240, splash: 24, dmg: 9, ap: 0.4, shots: 2400,
+        interval: 0.55, turnRate: 0.80, arc: Math.PI, side: 'split',
         color: '#aebfae'
       }
     },
@@ -472,7 +475,7 @@
   SL.NAVAL_CARDS = {
     ship_support: {
       key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
-      use: 'point', cost: 2000,
+      use: 'point', cost: 2500,
       desc: '在海域边缘召唤欧根亲王号；每次购买涨价 50%'
     },
     ship_prewarn: {
@@ -554,16 +557,16 @@
 
   /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），分数仍按目标等级 */
   SL.REWARD = {
-    infantry: { xp: 150, score: 10 },
-    armored: { xp: 200, score: 20 },
-    tank: { xp: 250, score: 35 },
-    artillery: { xp: 200, score: 25 },
-    ship: { xp: 5000, score: 2500 }
+    infantry: { xp: 225, score: 15 },
+    armored: { xp: 300, score: 30 },
+    tank: { xp: 375, score: 50 },
+    artillery: { xp: 300, score: 38 },
+    ship: { xp: 6000, score: 3000 }
   };
 
   SL.XP = {
-    first: 150,        // 升到 2 级所需
-    step: 100,         // 每级递增
+    first: 120,        // 升到 2 级所需
+    step: 70,          // 每级递增
     wipe: 200,         // 灭队奖励经验
     respawnDelay: 6,   // 全灭后重生延迟（秒）
     handMax: 10,
@@ -847,7 +850,7 @@
   SL.AIRSTRIKE = {
     damage: 300,             // 对单位基础伤害
     radius: 125,             // 伤害半径（直径 250）
-    fortDamage: 650,         // 对工事伤害
+    fortDamage: 400,         // 对工事伤害
     supplyDamage: 300        // 对补给箱伤害
   };
   /* 侦察机侦察区参数 */
@@ -881,7 +884,7 @@
     groupBase: 2,
     groupTier: 300,
     maxGroup: 10,
-    antiShipRadius: 42,
+    antiShipRadius: 24,
     antiShipDamageMul: 2.4,
     antiShipCountBonus: 2
   };

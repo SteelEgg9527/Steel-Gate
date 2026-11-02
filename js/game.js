@@ -79,6 +79,7 @@
     this.meleeBossCount = 0;
     this.meleeBoss50k = false;
     this.meleeBoss90k = false;
+    this.meleeBossTier = 0;
     this.bossGroupSeq = 0;
     this.fortBag = [];      // 工事包轮换袋：每 4 包必出一次 88 炮
     this.fortNo88 = 0;       // 连续未出 88 炮的工事包数量（保底用）
@@ -103,15 +104,17 @@
     this.shipRecords = [];
     this.playerShipSummoned = false;
     this.shipSupportOwned = false;
-    this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2000;
+    this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2500;
     this.radarScanNext = { blue: 30, red: 30, green: 30 };
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
+    this.navalShipLastSeen = { red: null, green: null };
     this.radarScanWas = { blue: false, red: false, green: false };
     this.aiShipUsed = { red: false, green: false };
     this.aiShipRespawn = { red: false, green: false };
-    this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2000, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2000 };
+    this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2500, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2500 };
     this.aiShipTimer = { red: 5, green: 8 };
     this.aiReinforceAt = { red: 0, green: 0 };
+    this.aiReinforceAtGlobal = 10;
     this.aiNavalReplenishTimer = (SL.AI_NAVAL_REPLENISH && SL.AI_NAVAL_REPLENISH.first) || 16;
     this.shipCards = [];
     this.seaplanes = [];
@@ -250,23 +253,35 @@
   Game.prototype.spawnShip = function (side, yHint) {
     if (!this.naval) return null;
     if (this.shipOf(side)) return null;
-    var y = yHint;
-    if (y == null) {
-      var sum = 0, n = 0;
-      for (var i = 0; i < this.units.length; i++) {
-        var u = this.units[i];
-        if (u.alive && u.side === side) { sum += u.y; n++; }
-      }
-      y = n ? sum / n : T.size * 0.5;
+    var sumX = 0, sumY = 0, n = 0;
+    for (var i = 0; i < this.units.length; i++) {
+      var uu = this.units[i];
+      if (uu.alive && uu.side === side) { sumX += uu.x; sumY += uu.y; n++; }
     }
-    y = U.clamp(y, 260, T.size - 260);
-    var xOff = side === 'red' ? 70 : (side === 'green' ? 140 : 0);
-    var entryX = T.size - 320 - xOff;
-    var ship = SL.Naval.createShip(this, side, T.size - 26 - xOff, y);
-    ship.entryX = entryX;
-    ship.entryY = y;
+    var anchor = n ? { x: sumX / n, y: sumY / n } : ((T.spawns && T.spawns[side]) || { x: T.size / 2, y: T.size / 2 });
+    if (yHint != null) anchor.y = yHint;
+    var anchors = [
+      { x: T.size - 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: Math.PI },
+      { x: 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: 0 },
+      { x: U.clamp(anchor.x, 260, T.size - 260), y: 30, inward: Math.PI / 2 },
+      { x: U.clamp(anchor.x, 260, T.size - 260), y: T.size - 30, inward: -Math.PI / 2 }
+    ];
+    var best = null, bd = Infinity;
+    for (var ai = 0; ai < anchors.length; ai++) {
+      var ac = anchors[ai];
+      if (!SL.Naval.isWater(ac.x, ac.y)) continue;
+      var ad = U.dist(ac.x, ac.y, anchor.x, anchor.y);
+      if (ad < bd) { bd = ad; best = ac; }
+    }
+    if (!best) {
+      var wp = SL.Naval.nearestWaterPoint(anchor.x, anchor.y);
+      best = { x: wp.x, y: wp.y, inward: Math.atan2(anchor.y - wp.y, anchor.x - wp.x) + Math.PI };
+    }
+    var ship = SL.Naval.createShip(this, side, best.x, best.y);
+    ship.entryX = U.clamp(best.x + Math.cos(best.inward) * 180, 30, T.size - 30);
+    ship.entryY = U.clamp(best.y + Math.sin(best.inward) * 180, 30, T.size - 30);
     ship.entering = true;
-    ship.heading = Math.PI;
+    ship.heading = best.inward;
     ship.speed = 0;
     if (side === 'blue') { this.playerShipSummoned = true; this.shipSupportOwned = true; }
     this.log(SL.SIDES[side].name + ' 战列舰进入海域：' + ship.name, side === 'blue' ? 'win' : 'loss');
@@ -348,7 +363,6 @@
 
   Game.prototype.updateNaval = function (dt) {
     if (!this.naval) return;
-    this.updateAINavalReplenish(dt);
     // 雷达每 30 秒扫描海面，暴露海面目标 5 秒
     var scanSides = ['blue', 'red', 'green'];
     for (var rs = 0; rs < scanSides.length; rs++) {
@@ -365,13 +379,25 @@
         this.log(SL.SIDES[rside].name + ' 雷达对海搜索：发现海面目标', rside === 'blue' ? 'order' : 'loss');
       }
     }
+    // 记录玩家战舰最后被 AI 发现的位置，供岸基火力盲射
+    var seenShip = this.shipOf('blue');
+    if (seenShip) {
+      var aiSides = ['red', 'green'];
+      for (var ss = 0; ss < aiSides.length; ss++) {
+        var asi = aiSides[ss];
+        if (this.unitVisibleTo(asi, seenShip) || this.radarScanActive(asi) ||
+            (seenShip.exposedUntil && seenShip.exposedUntil > this.time)) {
+          this.navalShipLastSeen[asi] = { x: seenShip.x, y: seenShip.y, t: this.time };
+        }
+      }
+    }
     // AI 海军：拥有通讯塔并支付足够分数即可召唤战舰
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
       var aside = SL.SIDE_ORDER[ai];
       if (aside === 'blue') continue;
       if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
       if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
-        var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2000);
+        var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2500);
         if ((this.teams[aside].score || 0) < aiCost) continue;
         this.teams[aside].score -= aiCost;
         this.aiShipCost[aside] = Math.round(aiCost * (SL.NAVAL.shipCostStep || 1.5));
@@ -386,6 +412,23 @@
       if (!s.alive) { this.battleships.splice(i, 1); continue; }
       SL.Naval.updateShip(this, s, dt);
       if (s.side === 'blue') continue;
+      // AI 战舰先向己方陆地主力/重生点附近海域靠拢，再执行战术
+      if (!s.aiRallied) {
+        var ax = 0, ay = 0, an = 0;
+        for (var ri = 0; ri < this.units.length; ri++) {
+          var ru = this.units[ri];
+          if (ru.alive && ru.side === s.side) { ax += ru.x; ay += ru.y; an++; }
+        }
+        var rAnchor = an ? { x: ax / an, y: ay / an } : ((T.spawns && T.spawns[s.side]) || { x: T.size / 2, y: T.size / 2 });
+        var rWater = SL.Naval.nearestWaterPoint(rAnchor.x, rAnchor.y);
+        s.dest = { x: rWater.x, y: rWater.y };
+        if (U.dist(s.x, s.y, rWater.x, rWater.y) < 150 ||
+            U.dist(s.x, s.y, rAnchor.x, rAnchor.y) < 680) {
+          s.aiRallied = true;
+          s.dest = null;
+        }
+        continue;
+      }
       // AI 舰炮：周期性对己方侦察到的目标进行火力打击
       s.seaplaneTimer = (s.seaplaneTimer || 0) - dt;
       var playerTarget = this.shipOf('blue');
@@ -408,6 +451,10 @@
         var target = null;
         var playerShip = this.shipOf('blue');
         if (playerShip && ((playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.radarScanActive(s.side) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
+        if (!target) {
+          var lastPos = this.navalShipLastSeen && this.navalShipLastSeen[s.side];
+          if (lastPos && this.time - lastPos.t <= 25 && U.dist(s.x, s.y, lastPos.x, lastPos.y) <= 3000) target = lastPos;
+        }
         if (!target) target = this.nearestSpottedEnemy(s, 3000);
         // 水上飞机发现目标后，进行 2~3 轮连续压制
         if (s.aiStrikeRounds > 0 && s.aiStrikeTarget) {
@@ -421,12 +468,6 @@
             s.bombardQueue = null;
           }
         }
-      }
-      // AI 战舰向近岸炮击阵位移动，进入 200m 内后停止并支援地面
-      if (!s.nearShore && !s.dest) {
-        var stationY = this.yellow ? this.yellow.y : T.size * 0.5;
-        var shore = SL.Naval.shoreAt(stationY);
-        s.dest = { x: Math.min(T.size - 80, shore + 120), y: stationY };
       }
     }
     // 水上飞机与补给舰
@@ -541,6 +582,10 @@
         if (!sh.alive || sh.side === gun.side) continue;
         var d = U.dist(gun.x, gun.y, sh.x, sh.y);
         if (d <= gun.range && d < bd) { bd = d; target = sh; }
+      }
+      if (!target) {
+        var gl = this.navalShipLastSeen && this.navalShipLastSeen[gun.side];
+        if (gl && this.time - gl.t <= 25 && U.dist(gun.x, gun.y, gl.x, gl.y) <= gun.range) target = gl;
       }
       if (!target) continue;
       gun.cd = gun.interval;
@@ -884,10 +929,12 @@
   };
 
   Game.prototype.defenseWaveCount = function (wave) {
-    if (wave <= 1) return SL.LAST_STAND.firstWave;
+    var player = this.aliveCount('blue') || 0;
+    var playerAdd = Math.floor(player * 0.5);
+    if (wave <= 1) return Math.min(SL.LAST_STAND.maxWaveUnits, SL.LAST_STAND.firstWave + playerAdd);
     var d = SL.LAST_STAND.difficulties[this.difficulty];
     return Math.min(SL.LAST_STAND.maxWaveUnits,
-      Math.round(SL.LAST_STAND.firstWave + (wave - 1) * d.waveAdd * d.waveScale));
+      Math.round(SL.LAST_STAND.firstWave + (wave - 1) * d.waveAdd * d.waveScale) + playerAdd);
   };
 
   Game.prototype.spawnDefenseWave = function (count, wave) {
@@ -1007,7 +1054,7 @@
       if (!e.alive || e.side === u.side) continue;
       var d = U.dist(e.x, e.y, x, y);
       if (d > radius) continue;
-      var falloff = 1 - 0.55 * (d / Math.max(1, radius));
+      var falloff = 1 - 0.8 * (d / Math.max(1, radius));
       this.damage(e, dmg * falloff, u, ap);
     }
     if (fortDmg) this.damageFortifications(x, y, fortDmg, radius);
@@ -1278,12 +1325,15 @@
       teams[side] = {
         xp: t.xp, level: t.level, nextXp: t.nextXp, score: t.score,
         scoreEarned: t.scoreEarned, kills: t.kills, respawnAt: t.respawnAt,
+        yellowXp: t.yellowXp,
         company: t.company, draftBuys: t.draftBuys, hand: t.hand
       };
     });
     return {
       v: 1, map: T.map.id, mode: this.mode, difficulty: this.difficulty,
       time: this.time, yellow: this.yellow,
+      meleeBoss50k: !!this.meleeBoss50k,
+      meleeBossTier: this.meleeBossTier || 0,
       defense: this.defense ? {
         hold: this.defense.hold,
         holdTarget: this.defense.holdTarget === Infinity ? 'Infinity' : this.defense.holdTarget,
@@ -1401,6 +1451,8 @@
     this.yellow = data.yellow || this.yellow;
     this.yellow.nextSpawn = Infinity;
     this.yellow.activeUntil = Infinity;
+    this.meleeBoss50k = !!data.meleeBoss50k;
+    this.meleeBossTier = data.meleeBossTier || 0;
     if (data.defense) {
       var d = {}; for (var k in data.defense) d[k] = data.defense[k];
       if (d.holdTarget === 'Infinity') d.holdTarget = Infinity;
@@ -1609,8 +1661,13 @@
   };
 
   Game.prototype.aiUnitCap = function () {
-    if (!this.isMeleeLike()) return 20;
-    return (SL.AI_UNIT_CAP && SL.AI_UNIT_CAP[this.difficulty]) || 20;
+    if (this.mode === 'lastStand') return 20;
+    var player = this.aliveCount('blue') || 0;
+    var mult = this.difficulty === 'easy' ? 1.8
+      : this.difficulty === 'hard' ? 3.2
+      : this.difficulty === 'endless' ? 4.0 : 2.5;
+    var total = Math.max(8, Math.ceil(player * mult));
+    return Math.max(4, Math.ceil(total / 2));
   };
 
   // 无限难度按时间分档：15 分钟前 2 件、15~30 分钟 4 件、30 分钟后 6 件
@@ -1810,12 +1867,14 @@
   };
 
   // AI 升级时的增援：随机一个单位，落在己方部队附近
-  Game.prototype.spawnReinforcement = function (side) {
+  Game.prototype.spawnReinforcement = function (side, force) {
     if (this.aliveCount(side) === 0) return null;   // 等待重生期间没有增援
-    if (this.aliveCount(side) >= this.aiUnitCap()) return null;
-    if (this.isMeleeLike() && this.time < (this.aiReinforceAt[side] || 0)) return null;
-    var gap = (SL.AI_REINFORCE_GAP && SL.AI_REINFORCE_GAP[this.difficulty]) || 35;
-    this.aiReinforceAt[side] = this.time + gap;
+    if (!force && this.aliveCount(side) >= this.aiUnitCap()) return null;
+    if (!force && this.isMeleeLike() && this.time < (this.aiReinforceAt[side] || 0)) return null;
+    if (!force) {
+      var gap = (SL.AI_REINFORCE_GAP && SL.AI_REINFORCE_GAP[this.difficulty]) || 35;
+      this.aiReinforceAt[side] = this.time + gap;
+    }
     var type = this.pickUnitType(true);
     var mates = this.units.filter(function (u) { return u.alive && u.side === side; });
     var mapSize = SL.CONFIG.mapSize;
@@ -2365,12 +2424,44 @@
     if (this.isMeleeLike()) this.checkMeleeBossTrigger();
   };
 
+  Game.prototype.spawnEndlessBossWave = function (tier) {
+    var sides = ['red', 'green'].filter(function (side) { return this.aliveCount(side) > 0; }, this);
+    if (!sides.length) return;
+    for (var b = 0; b < tier; b++) {
+      this.spawnBossForSide(sides[b % sides.length]);
+      this.meleeBossCount++;
+    }
+    var perSide = 4 + tier * 4;
+    for (var s = 0; s < sides.length; s++) {
+      var side = sides[s];
+      for (var i = 0; i < perSide; i++) this.spawnReinforcement(side, true);
+    }
+    var msg = '玩家黄圈经验达到 ' + (tier * 50000) + '：' + tier + ' 个 BOSS 与大规模进攻部队抵达';
+    this.log(msg, 'loss');
+    this.feed.push({
+      id: ++this.feedSeq, t: this.time, kind: 'level', ks: 'red', vs: 'blue',
+      xp: 0, score: 0, killer: '', victim: '', text: msg
+    });
+    this.meleeBossSummoned = true;
+  };
+
   Game.prototype.checkMeleeBossTrigger = function () {
     if (!this.isMeleeLike() || this.testMode || this.ended) return false;
     var mods = this.meleeMods();
     if (mods.id === 'easy') return false;
     var xp = this.teams.blue.yellowXp;
     var spawned = 0, lastSide = null;
+
+    if (mods.endless) {
+      var tier = Math.floor(xp / 50000);
+      if (tier <= (this.meleeBossTier || 0)) return false;
+      this.meleeBoss50k = true;
+      while ((this.meleeBossTier || 0) < tier) {
+        this.meleeBossTier = (this.meleeBossTier || 0) + 1;
+        this.spawnEndlessBossWave(this.meleeBossTier);
+      }
+      return true;
+    }
 
     function aliveChoices() {
       return ['red', 'green'].filter(function (side) { return this.aliveCount(side) > 0; }, this);
@@ -2930,7 +3021,7 @@
         if (z.destroyed) continue;
         var sd = U.dist(x, y, z.x, z.y);
         if (sd > z.r + radius) continue;
-        z.hp -= dmg * (1 - 0.5 * Math.min(1, sd / (z.r + radius)));
+        z.hp -= dmg * (1 - 0.75 * Math.min(1, sd / (z.r + radius)));
         if (z.hp <= 0) {
           z.hp = 0;
           z.destroyed = true;
@@ -2943,7 +3034,7 @@
       if (!z.fortified) continue;
       var d = U.dist(x, y, z.x, z.y);
       if (d > z.r + radius) continue;
-      var falloff = 1 - 0.5 * Math.min(1, d / (z.r + radius));
+      var falloff = 1 - 0.75 * Math.min(1, d / (z.r + radius));
       var applied = dmg * falloff * SL.FORT.dmgMult;
       var structs = this.zoneStructures(z);
       if (structs.length) {
@@ -3543,7 +3634,7 @@
       if (!b.alive) continue;
       var d = U.dist(x, y, b.x, b.y);
       if (d > radius) continue;
-      this.hitBarrier(b, dmg * (1 - 0.65 * (d / Math.max(1, radius))), source);
+      this.hitBarrier(b, dmg * (1 - 0.8 * (d / Math.max(1, radius))), source);
     }
   };
 
@@ -4325,7 +4416,7 @@
         if (!su.alive || su === target) continue;
         var sd = U.dist(su.x, su.y, target.x, target.y);
         if (sd > w.splash) continue;
-        var sfall = 1 - 0.6 * (sd / w.splash);
+        var sfall = 1 - 0.75 * (sd / w.splash);
         this.damage(su, w.dmg * 0.55 * sfall, u, w.ap);
       }
     }
@@ -5095,7 +5186,7 @@
       if (!u.alive) continue;
       var d = U.dist(u.x, u.y, x, y);
       if (d > radius) continue;
-      var falloff = 1 - 0.55 * (d / radius);
+      var falloff = 1 - 0.8 * (d / radius);
       this.damage(u, SL.AIRSTRIKE.damage * falloff * (u.def.armor ? 0.75 : 1), credit, 2);
     }
     // 空袭对舰船造成伤害
@@ -5105,7 +5196,7 @@
       var bd = U.dist(bs.x, bs.y, x, y);
       var shipR = radius + (bs.hitRadius || 60);
       if (bd > shipR) continue;
-      var bfall = 1 - 0.5 * Math.min(1, bd / shipR);
+      var bfall = 1 - 0.72 * Math.min(1, bd / shipR);
       var shipMul = antiShip ? ((SL.AI_AIR && SL.AI_AIR.antiShipDamageMul) || 2.4) : 1.35;
       this.damageShip(bs, SL.AIRSTRIKE.damage * shipMul * bfall, credit, antiShip ? 3.2 : 2.5);
     }
@@ -5297,7 +5388,7 @@
       if (!hbs.alive || hbs.side === side) continue;
       var hbd = U.dist(hbs.x, hbs.y, x, y);
       if (hbd > cfg.bombRadius + 60) continue;
-      var hbFall = 1 - 0.5 * Math.min(1, hbd / (cfg.bombRadius + 60));
+      var hbFall = 1 - 0.72 * Math.min(1, hbd / (cfg.bombRadius + 60));
       this.damageShip(hbs, hbs.maxHp * 0.3 * hbFall, credit, 3);
     }
     this.hellDestroyForts(x, y, cfg.bombRadius);
@@ -5952,7 +6043,7 @@
         if (!csh.alive || csh.side === s.side) continue;
         var cd = U.dist(csh.x, csh.y, s.x1, s.y1);
         if (cd > s.radius) continue;
-        this.damageShip(csh, s.dmg * (1 - 0.5 * cd / s.radius), s.source, s.ap || 4);
+        this.damageShip(csh, s.dmg * (1 - 0.72 * cd / s.radius), s.source, s.ap || 4);
       }
       return;
     }
@@ -5961,7 +6052,7 @@
       if (!u.alive) continue;
       var d = U.dist(u.x, u.y, s.x1, s.y1);
       if (d > s.radius) continue;
-      var falloff = 1 - 0.62 * (d / s.radius);
+      var falloff = 1 - 0.8 * (d / s.radius);
       var ap = s.ap || 1;
       var direct = d <= Math.min(12, s.radius * 0.3);
       var mult = u.def.armor ? (direct ? ap : 0.5 * ap) : 1;
@@ -5975,7 +6066,7 @@
       var sd = U.dist(sh.x, sh.y, s.x1, s.y1);
       if (sd > s.radius + 14) continue;
       var smult = sh.side === s.side ? (s.shipShell ? 0.12 : 0.5) : 1;
-      this.damageShip(sh, s.dmg * smult * (1 - 0.5 * sd / (s.radius + 14)), s.source, s.ap || 1);
+      this.damageShip(sh, s.dmg * smult * (1 - 0.72 * sd / (s.radius + 14)), s.source, s.ap || 1);
     }
     // 补给舰可被击毁
     for (var ss = this.supplyShips.length - 1; ss >= 0; ss--) {
@@ -6007,7 +6098,7 @@
         if (!u.alive || u.side === b.side) continue;
         var d = U.dist(u.x, u.y, b.x, b.y);
         if (d > b.radius) continue;
-        var fall = 1 - 0.5 * (d / b.radius);
+        var fall = 1 - 0.8 * (d / b.radius);
         this.damage(u, b.dmg * fall, b.source, 9);
       }
       this.damageFortifications(b.x, b.y, 250, b.radius);
@@ -6060,6 +6151,30 @@
     return best;
   };
 
+  Game.prototype.updateAIReinforcements = function () {
+    if (this.mode === 'lastStand') return; // 背水一战仍按波次强化
+    if (this.time < (this.aiReinforceAtGlobal || 0)) return;
+    this.aiReinforceAtGlobal = this.time + 10;
+    var sides = ['red', 'green'];
+    var budget = 10;
+    for (var i = 0; i < sides.length; i++) {
+      if (budget <= 0) break;
+      var side = sides[i];
+      if (this.aliveCount(side) === 0) continue;
+      var cap = this.aiUnitCap();
+      var room = Math.min(budget, cap - this.aliveCount(side));
+      if (room <= 0) continue;
+      var added = 0;
+      for (var k = 0; k < room; k++) {
+        var u = this.spawnReinforcement(side, true);
+        if (!u) break;
+        added++;
+      }
+      budget -= added;
+      if (added) this.log(SL.SIDES[side].name + ' 增援 ' + added + ' 个单位', 'info');
+    }
+  };
+
   Game.prototype.updateAI = function (dt) {
     this.aiTimer -= dt;
     if (this.aiTimer > 0) return;
@@ -6069,6 +6184,7 @@
       if (!u.alive || u.side === 'neutral') continue;
       if (SL.SIDES[u.side].ai || this.demo) this.aiUnit(u);
     }
+    this.updateAIReinforcements();
     this.updateAIAir();
   };
 
@@ -6201,12 +6317,23 @@
     // 正在拆除障碍时不要被下一次 AI 决策覆盖
     if (u.order && u.order.kind === 'attackBarrier' &&
       u.order.target && u.order.target.alive) return;
-    // 舰炮轰鸣：岸防火炮优先压制近岸支援中的战舰
-    if (this.naval && (u.type === 'artillery' || u.type === 'heavy_arty')) {
-      var enemyShip = this.navalPlayerShipExposed();
-      if (enemyShip && this.unitVisibleTo(u.side, enemyShip)) {
-        this.commandSuppress([u], enemyShip.x, enemyShip.y);
-        return;
+    // 舰炮轰鸣：用任何射程内的武器压制玩家战舰最后出现的位置
+    if (this.naval && u.side !== 'blue') {
+      var shipLast = this.navalShipLastSeen && this.navalShipLastSeen[u.side];
+      if (shipLast && this.time - shipLast.t <= 25) {
+        var shipD = U.dist(u.x, u.y, shipLast.x, shipLast.y);
+        var shipRange = u.maxRangeNow || u.def.range || 0;
+        if (shipD <= shipRange && shipD >= (u.def.minRange || 0)) {
+          if (u.type === 'rocket_arty' && (!u.order || u.order.kind !== 'rocketStrike')) {
+            u.order = { kind: 'rocketStrike', x: shipLast.x, y: shipLast.y };
+            u.target = null;
+          } else if (u.type !== 'rocket_arty') {
+            u.order = { kind: 'suppress', x: shipLast.x, y: shipLast.y, until: this.time + 15 };
+            u.target = null;
+            u.rocketQueue = [];
+          }
+          return;
+        }
       }
     }
     var aggro = this.isMeleeLike() ? this.meleeMods().aggro : 1;
@@ -6241,6 +6368,15 @@
         var sd = U.dist(u.x, u.y, site.x, site.y);
         if (sd > site.r * 0.7) u.order = { kind: 'attackMove', x: site.x, y: site.y };
         else u.order = null;
+        return;
+      }
+    }
+
+    // 沿途的可占领区：AI 会顺手占领路过的空阵地
+    if (u.side !== 'blue' && (!u.order || u.order.kind === 'attackMove' || u.order.kind === 'move')) {
+      var capZone = this.nearbyCaptureZone(u, 520);
+      if (capZone) {
+        u.order = { kind: 'attackMove', x: capZone.x, y: capZone.y };
         return;
       }
     }
@@ -6280,6 +6416,18 @@
         u.order = { kind: 'attackMove', x: u.objective.x, y: u.objective.y };
       }
     }
+  };
+
+  Game.prototype.nearbyCaptureZone = function (u, maxD) {
+    var best = null, bd = Infinity;
+    for (var i = 0; i < T.zones.length; i++) {
+      var z = T.zones[i];
+      if (!z || z.tempBush || z.owner === u.side || z.destroyed) continue;
+      var d = U.dist(u.x, u.y, z.x, z.y);
+      if (d > (maxD || 520) || d >= bd) continue;
+      best = z; bd = d;
+    }
+    return best;
   };
 
   Game.prototype.nearestFreeZone = function (u) {

@@ -253,6 +253,19 @@
     return !NAVAL.isWater(x, y);
   };
 
+  NAVAL.nearestWaterPoint = function (x, y) {
+    if (NAVAL.isWater(x, y)) return { x: x, y: y };
+    for (var r = 30; r <= 2400; r += 30) {
+      for (var a = 0; a < 24; a++) {
+        var ang = a / 24 * Math.PI * 2;
+        var nx = U.clamp(x + Math.cos(ang) * r, 30, T.size - 30);
+        var ny = U.clamp(y + Math.sin(ang) * r, 30, T.size - 30);
+        if (NAVAL.isWater(nx, ny)) return { x: nx, y: ny };
+      }
+    }
+    return { x: T.size - 26, y: U.clamp(y, 260, T.size - 260) };
+  };
+
   NAVAL.landPoint = function (margin) {
     margin = margin || 120;
     var size = T.size || 4000;

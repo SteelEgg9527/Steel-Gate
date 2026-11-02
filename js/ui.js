@@ -309,7 +309,7 @@
       }
       var head = document.createElement('div');
       head.className = 'recent-row recent-head';
-      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数'].forEach(function (t) {
+      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数', '黄圈'].forEach(function (t) {
         var c = document.createElement('span'); c.textContent = t; head.appendChild(c);
       });
       el.recentResultsList.appendChild(head);
@@ -328,8 +328,9 @@
         var tm = document.createElement('span'); tm.textContent = r.time || '—';
         var kl = document.createElement('span'); kl.textContent = (r.kills || 0) + ' / ' + (r.losses || 0);
         var sc = document.createElement('span'); sc.textContent = String(r.score || 0);
+        var yx = document.createElement('span'); yx.textContent = String(r.yellowXp || 0);
         row.appendChild(d); row.appendChild(mm); row.appendChild(oc);
-        row.appendChild(tm); row.appendChild(kl); row.appendChild(sc);
+        row.appendChild(tm); row.appendChild(kl); row.appendChild(sc); row.appendChild(yx);
         el.recentResultsList.appendChild(row);
       }
     }
@@ -1803,6 +1804,7 @@
       kills: (g.stats && g.stats.kills && g.stats.kills.blue) || 0,
       losses: (g.stats && g.stats.losses && g.stats.losses.blue) || 0,
       score: Math.floor((g.teams && g.teams.blue && g.teams.blue.scoreEarned) || 0),
+      yellowXp: Math.floor((g.teams && g.teams.blue && g.teams.blue.yellowXp) || 0),
       reason: g.endReason || ''
     };
     try {
@@ -1839,6 +1841,8 @@
     $('res-kills').textContent = (g.stats.kills && g.stats.kills.blue) || 0;
     $('res-losses').textContent = (g.stats.losses && g.stats.losses.blue) || 0;
     $('res-earned').textContent = (g.teams.blue && g.teams.blue.scoreEarned) || 0;
+    var resYellow = document.getElementById('res-yellow');
+    if (resYellow) resYellow.textContent = Math.floor((g.teams.blue && g.teams.blue.yellowXp) || 0);
     el.result.classList.remove('hidden');
   }
 
