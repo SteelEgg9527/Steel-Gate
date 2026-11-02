@@ -928,7 +928,7 @@
   T.regenerateNavalSites = function () {
     if (!T.naval || !T.navalMap) return;
     T.zones = T.zones.filter(function (z) { return !z.site; });
-    var sites = buildSites(T.navalMap);
+    var sites = T.navalMap.layout ? buildCustomSites(T.navalMap) : buildSites(T.navalMap);
     T.navalSites = sites;
     T.zones.push(sites.towers[0], sites.towers[1], sites.towers[2], sites.radar);
     if (sites.coastBases) {
