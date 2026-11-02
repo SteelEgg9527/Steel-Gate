@@ -105,6 +105,71 @@
       }
     },
     {
+      id: 'n5', name: '双岸湾', subtitle: '中央海湾 · 两侧登陆',
+      seed: 19450327, naval: true, size: 5000, sceneSize: 5000,
+      shore: shore([[2150, 1400], [1750, 1700], [1300, 2350], [1000, 3100], [750, 3750], [700, 4250], [600, 5000]]),
+      landPoly: [
+        [0, 0], [5000, 0], [5000, 5000], [3800, 5000],
+        [3950, 4500], [4050, 4100], [4150, 3500], [4100, 3000], [3900, 2400],
+        [3500, 1900], [3100, 1400], [2150, 1400],
+        [1750, 1700], [1300, 2350], [1000, 3100], [750, 3750], [700, 4250], [600, 5000],
+        [0, 5000]
+      ],
+      waterPoly: [
+        [2150, 1400], [1750, 1700], [1300, 2350], [1000, 3100], [750, 3750], [700, 4250], [600, 5000],
+        [3800, 5000], [3950, 4500], [4050, 4100], [4150, 3500], [4100, 3000], [3900, 2400],
+        [3500, 1900], [3100, 1400]
+      ],
+      spawns: { blue: { x: 250, y: 4800 }, red: { x: 2200, y: 300 }, green: { x: 4600, y: 4800 } },
+      layout: {
+        hills: [
+          { x: 700, y: 1500, r: 800, h: 50, name: '西岸高地' },
+          { x: 4300, y: 1200, r: 700, h: 45, name: '东岸丘陵' },
+          { x: 2600, y: 400, r: 700, h: 40, name: '北岸山脊' },
+          { x: 700, y: 4000, r: 700, h: 45, name: '南岸高地' },
+          { x: 4600, y: 4000, r: 600, h: 40, name: '东南丘陵' }
+        ],
+        towers: [
+          { x: 2675, y: 275, name: '通讯塔 A' },
+          { x: 1425, y: 1700, name: '通讯塔 B' },
+          { x: 3650, y: 1700, name: '通讯塔 C' }
+        ],
+        radar: { x: 2650, y: 1050 },
+        coastBases: [
+          { x: 2175, y: 1275 }, { x: 3075, y: 1250 },
+          { x: 4125, y: 2225 }, { x: 800, y: 2725 },
+          { x: 475, y: 4000 }, { x: 4050, y: 3200 },
+          { x: 4050, y: 3725 }, { x: 4050, y: 4275 }
+        ],
+        villages: [
+          { name: '北岸村', x: 1700, y: 375, r: 82 },
+          { name: '东岸村', x: 1800, y: 1000, r: 82 },
+          { name: '西岸村', x: 600, y: 1925, r: 82 }
+        ],
+        forests: [
+          { x: 1125, y: 250, r: 82 }, { x: 1100, y: 1075, r: 80 },
+          { x: 450, y: 1425, r: 76 }, { x: 225, y: 2375, r: 82 },
+          { x: 400, y: 3150, r: 80 }, { x: 4700, y: 1900, r: 78 },
+          { x: 4725, y: 3000, r: 76 }, { x: 4350, y: 4350, r: 80 },
+          { x: 4750, y: 4650, r: 74 }
+        ],
+        forts: [
+          { name: '西岸工事', x: 650, y: 800, r: 62 },
+          { name: '北岸工事', x: 2325, y: 650, r: 60 },
+          { name: '中央工事', x: 2950, y: 1000, r: 62 },
+          { name: '东岸工事', x: 3100, y: 575, r: 60 },
+          { name: '东北工事', x: 3400, y: 775, r: 60 },
+          { name: '远东工事', x: 4250, y: 800, r: 60 },
+          { name: '东岭工事', x: 4475, y: 1375, r: 60 }
+        ],
+        roads: [
+          [{ x: 0, y: 500 }, { x: 700, y: 700 }, { x: 1200, y: 1200 }, { x: 1200, y: 2200 }, { x: 900, y: 3000 }, { x: 500, y: 4000 }, { x: 400, y: 5000 }],
+          [{ x: 5000, y: 500 }, { x: 4300, y: 700 }, { x: 4100, y: 1500 }, { x: 3900, y: 2400 }, { x: 4000, y: 3400 }, { x: 4200, y: 4300 }, { x: 4500, y: 5000 }],
+          [{ x: 0, y: 300 }, { x: 1000, y: 350 }, { x: 2000, y: 400 }, { x: 3000, y: 500 }, { x: 4000, y: 600 }, { x: 5000, y: 500 }]
+        ]
+      }
+    },
+    {
       id: 'naval_range', name: '海岸训练场', subtitle: '带海域 · 舰炮与两栖测试',
       seed: 19440901, test: true, naval: true, size: 5000, sceneSize: 5000,
       shore: shore([[2550, 0], [2500, 1000], [2480, 2000], [2520, 3000], [2500, 4000], [2550, 5000]]),
@@ -152,11 +217,22 @@
     return shoreAt(y);
   };
 
+  function pointInPoly(x, y, poly) {
+    var inside = false;
+    for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i][0], yi = poly[i][1];
+      var xj = poly[j][0], yj = poly[j][1];
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+
   NAVAL.isWater = function (x, y) {
     if (!T.naval) return false;
     var off = sceneOffset();
     var sx = x + off.x, sy = y + off.y;
     if (sx < 0 || sy < 0 || sx > T.sceneSize || sy > T.sceneSize) return true;
+    if (T.navalMap && T.navalMap.waterPoly) return pointInPoly(sx, sy, T.navalMap.waterPoly);
     return sx > shoreSceneAt(sy);
   };
 
@@ -692,10 +768,19 @@
     var radar = place('radar', L.radar.x, L.radar.y, '雷达站', m.id + '_radar', -1);
     var coastBases = [];
     for (var ci = 0; ci < L.coastBases.length; ci++) {
-      var by = U.clamp(L.coastBases[ci], 320, T.size - 320);
-      var bx = shoreAt(by) - 108;
+      var cb = L.coastBases[ci];
+      var by, bx, cbName;
+      if (typeof cb === 'number') {
+        by = U.clamp(cb, 320, T.size - 320);
+        bx = shoreAt(by) - 108;
+        cbName = '海岸炮台 ' + (ci + 1);
+      } else {
+        by = cb.y;
+        bx = cb.x;
+        cbName = cb.name || ('海岸炮台 ' + (ci + 1));
+      }
       var cp = NAVAL.nearestLandPoint(bx, by);
-      coastBases.push(makeSite('coastbase', cp.x, cp.y, '海岸炮台 ' + (ci + 1), m.id + '_coast' + ci, ci));
+      coastBases.push(makeSite('coastbase', cp.x, cp.y, cbName, m.id + '_coast' + ci, ci));
     }
     return { towers: towers, radar: radar, coastBases: coastBases };
   }
@@ -957,6 +1042,12 @@
 
   function coastPath(m, close) {
     var p = new Path2D();
+    if (m.landPoly) {
+      p.moveTo(m.landPoly[0][0], m.landPoly[0][1]);
+      for (var li = 1; li < m.landPoly.length; li++) p.lineTo(m.landPoly[li][0], m.landPoly[li][1]);
+      if (close) p.closePath();
+      return p;
+    }
     p.moveTo(0, 0);
     for (var i = 0; i < m.shore.length; i++) p.lineTo(m.shore[i].x, m.shore[i].y);
     p.lineTo(0, T.sceneSize || 5000);
@@ -1028,7 +1119,7 @@
     }
     for (var ti2 = 0; ti2 < T.trees.length; ti2++) {
       var tr = T.trees[ti2];
-      if (tr.x > shoreSceneAt(tr.y) - 30) continue;
+      if (NAVAL.isWater(tr.x, tr.y)) continue;
       ctx.fillStyle = ti2 % 3 === 0 ? 'rgba(51,77,44,0.75)' : 'rgba(62,87,48,0.7)';
       ctx.beginPath();
       ctx.arc(tr.x, tr.y, 4.2 * tr.s, 0, Math.PI * 2);
@@ -1148,9 +1239,15 @@
     ctx.stroke();
     ctx.restore();
     ctx.beginPath();
-    for (var ci = 0; ci < m.shore.length; ci++) {
-      if (ci === 0) ctx.moveTo(m.shore[ci].x, m.shore[ci].y);
-      else ctx.lineTo(m.shore[ci].x, m.shore[ci].y);
+    if (m.waterPoly) {
+      ctx.moveTo(m.waterPoly[0][0], m.waterPoly[0][1]);
+      for (var wi = 1; wi < m.waterPoly.length; wi++) ctx.lineTo(m.waterPoly[wi][0], m.waterPoly[wi][1]);
+      ctx.closePath();
+    } else {
+      for (var ci = 0; ci < m.shore.length; ci++) {
+        if (ci === 0) ctx.moveTo(m.shore[ci].x, m.shore[ci].y);
+        else ctx.lineTo(m.shore[ci].x, m.shore[ci].y);
+      }
     }
     ctx.strokeStyle = 'rgba(238,220,170,0.9)';
     ctx.lineWidth = 5 * one;
@@ -1304,9 +1401,16 @@
     ctx.fillStyle = '#2b5260'; ctx.fillRect(0, 0, size, size);
     ctx.save();
     ctx.translate(-off.x * s, -off.y * s);
-    ctx.beginPath(); ctx.moveTo(0, 0);
-    for (var i = 0; i < m.shore.length; i++) ctx.lineTo(m.shore[i].x * s, m.shore[i].y * s);
-    ctx.lineTo(0, T.sceneSize * s); ctx.closePath();
+    ctx.beginPath();
+    if (m.landPoly) {
+      ctx.moveTo(m.landPoly[0][0] * s, m.landPoly[0][1] * s);
+      for (var li = 1; li < m.landPoly.length; li++) ctx.lineTo(m.landPoly[li][0] * s, m.landPoly[li][1] * s);
+      ctx.closePath();
+    } else {
+      ctx.moveTo(0, 0);
+      for (var i = 0; i < m.shore.length; i++) ctx.lineTo(m.shore[i].x * s, m.shore[i].y * s);
+      ctx.lineTo(0, T.sceneSize * s); ctx.closePath();
+    }
     ctx.fillStyle = '#bcb18e'; ctx.fill();
     ctx.strokeStyle = 'rgba(238,220,170,0.9)'; ctx.lineWidth = 1.4; ctx.stroke();
     // 高地
