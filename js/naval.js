@@ -49,6 +49,62 @@
       ]
     },
     {
+      id: 'n4', name: '维尔湾', subtitle: '内陆高地 · 海湾登陆',
+      seed: 19450118, naval: true, size: 5000, sceneSize: 5000,
+      shore: shore([[3300, 0], [3250, 500], [3100, 900], [2850, 1300], [2500, 1700], [2200, 2100], [2050, 2500], [2000, 2900], [2100, 3300], [1950, 3700], [1800, 4200], [1750, 4700], [1900, 5000]]),
+      spawns: { blue: { x: 525, y: 4750 }, red: { x: 300, y: 300 }, green: { x: 1950, y: 2050 } },
+      layout: {
+        hills: [
+          { x: 750, y: 650, r: 600, h: 70, name: '维尔山' },
+          { x: 500, y: 2200, r: 900, h: 55, name: '西部高地' },
+          { x: 1000, y: 3800, r: 850, h: 60, name: '南部山脊' },
+          { x: 1800, y: 1000, r: 550, h: 40, name: '北岸丘陵' },
+          { x: 1900, y: 2800, r: 500, h: 35, name: '中央缓坡' }
+        ],
+        towers: [
+          { x: 350, y: 2000, name: '通讯塔 A' },
+          { x: 975, y: 3000, name: '通讯塔 B' },
+          { x: 1875, y: 1950, name: '通讯塔 C' }
+        ],
+        radar: { x: 1200, y: 2050 },
+        coastBases: [500, 1100, 1700, 2300, 2900, 3500, 4100, 4700],
+        villages: [
+          { name: '贝桑村', x: 1175, y: 1475, r: 86 },
+          { name: '卡昂村', x: 1825, y: 1500, r: 84 },
+          { name: '圣洛村', x: 2300, y: 1750, r: 82 },
+          { name: '南湾村', x: 1000, y: 3800, r: 82 },
+          { name: '西岭村', x: 500, y: 900, r: 80 },
+          { name: '河谷村', x: 1600, y: 3000, r: 80 }
+        ],
+        forests: [
+          { x: 1250, y: 800, r: 90 },
+          { x: 250, y: 1300, r: 80 },
+          { x: 775, y: 1850, r: 72 },
+          { x: 2250, y: 1400, r: 80 },
+          { x: 1375, y: 3250, r: 90 },
+          { x: 175, y: 4150, r: 85 },
+          { x: 1275, y: 4300, r: 80 },
+          { x: 2300, y: 4200, r: 72 }
+        ],
+        forts: [
+          { name: '维尔山', x: 750, y: 650, r: 100 },
+          { name: '北岭工事', x: 1250, y: 350, r: 62 },
+          { name: '东岸工事', x: 1950, y: 850, r: 62 },
+          { name: '西林工事', x: 800, y: 1400, r: 62 },
+          { name: '中部工事', x: 2000, y: 2250, r: 60 },
+          { name: '西岸工事', x: 550, y: 2400, r: 62 },
+          { name: '河谷工事', x: 1475, y: 2500, r: 62 },
+          { name: '南岭工事', x: 550, y: 3250, r: 62 },
+          { name: '南岸工事', x: 1450, y: 3400, r: 60 }
+        ],
+        roads: [
+          [{ x: 2000, y: 0 }, { x: 1950, y: 600 }, { x: 1900, y: 1200 }, { x: 1750, y: 1800 }, { x: 1500, y: 2400 }, { x: 1200, y: 3000 }, { x: 1000, y: 3600 }, { x: 650, y: 4300 }, { x: 550, y: 5000 }],
+          [{ x: 0, y: 500 }, { x: 700, y: 750 }, { x: 1250, y: 1000 }, { x: 1800, y: 1300 }, { x: 2200, y: 1600 }],
+          [{ x: 0, y: 2500 }, { x: 700, y: 2400 }, { x: 1400, y: 2400 }, { x: 1900, y: 2600 }, { x: 2100, y: 3200 }]
+        ]
+      }
+    },
+    {
       id: 'naval_range', name: '海岸训练场', subtitle: '带海域 · 舰炮与两栖测试',
       seed: 19440901, test: true, naval: true, size: 5000, sceneSize: 5000,
       shore: shore([[2550, 0], [2500, 1000], [2480, 2000], [2520, 3000], [2500, 4000], [2550, 5000]]),
@@ -622,6 +678,91 @@
       }
     }
   }
+  function buildCustomSites(m) {
+    var L = m.layout;
+    function place(kind, x, y, name, id, idx) {
+      var p = NAVAL.nearestLandPoint(x, y);
+      return makeSite(kind, p.x, p.y, name, id, idx);
+    }
+    var towers = [];
+    for (var i = 0; i < L.towers.length; i++) {
+      var tw = L.towers[i];
+      towers.push(place('comm', tw.x, tw.y, tw.name, m.id + '_comm' + i, i));
+    }
+    var radar = place('radar', L.radar.x, L.radar.y, '雷达站', m.id + '_radar', -1);
+    var coastBases = [];
+    for (var ci = 0; ci < L.coastBases.length; ci++) {
+      var by = U.clamp(L.coastBases[ci], 320, T.size - 320);
+      var bx = shoreAt(by) - 108;
+      var cp = NAVAL.nearestLandPoint(bx, by);
+      coastBases.push(makeSite('coastbase', cp.x, cp.y, '海岸炮台 ' + (ci + 1), m.id + '_coast' + ci, ci));
+    }
+    return { towers: towers, radar: radar, coastBases: coastBases };
+  }
+
+  function buildCustomFeatures(m) {
+    var L = m.layout;
+    var rnd = U.mulberry32((m.seed || 1) + 17);
+    T.hills = L.hills.map(function (h) { return { x: h.x, y: h.y, r: h.r, h: h.h, name: h.name || '' }; });
+    T.forests = L.forests.map(function (f) { return { x: f.x, y: f.y, r: f.r }; });
+    T.forestZones = L.forests.map(function (f) { return { x: f.x, y: f.y, r: Math.max(70, f.r * 0.9) }; });
+    T.villages = L.villages.map(function (v, i) {
+      return { id: 'v' + i, name: v.name, x: v.x, y: v.y, r: v.r, town: v.name };
+    });
+    T.forts = L.forts.map(function (f) { return { name: f.name, x: f.x, y: f.y, r: f.r, generated: false }; });
+    T.roads = (L.roads || []).map(function (road) {
+      return road.map(function (p) { return { x: p.x, y: p.y }; });
+    });
+    T.road = T.roads[0] || [];
+    T.streams = [];
+    T.stream = [];
+    T.tracks = [];
+    T.track = [];
+    T.streamName = '';
+    T.farms = [];
+    T.bridges = [];
+    T.buildings = [];
+    T.trees = [];
+    T.fortDecor = [];
+    T.village = { x: T.villages[0].x, y: T.villages[0].y, name: T.villages[0].name };
+
+    for (var vi = 0; vi < T.villages.length; vi++) {
+      var v = T.villages[vi];
+      for (var b = 0; b < 9; b++) {
+        var ba = rnd() * Math.PI * 2, br = 22 + rnd() * (v.r * 0.75);
+        var bx = v.x + Math.cos(ba) * br, by = v.y + Math.sin(ba) * br;
+        if (NAVAL.isWater(bx, by)) continue;
+        T.buildings.push({
+          x: bx, y: by, w: 12 + rnd() * 12, h: 9 + rnd() * 8,
+          ang: rnd() * Math.PI, roof: rnd() < 0.7, villageId: v.id
+        });
+      }
+    }
+    for (var fi = 0; fi < T.forts.length; fi++) {
+      var ft = T.forts[fi];
+      for (var fb = 0; fb < 2; fb++) {
+        var fa = rnd() * Math.PI * 2, fr = 30 + rnd() * 58;
+        var fx = ft.x + Math.cos(fa) * fr, fy = ft.y + Math.sin(fa) * fr;
+        if (NAVAL.isWater(fx, fy)) continue;
+        T.buildings.push({ x: fx, y: fy, w: 12 + rnd() * 10, h: 9 + rnd() * 7, ang: rnd() * Math.PI, roof: true });
+      }
+      for (var fd = 0; fd < 7; fd++) {
+        var da = (fd / 7) * Math.PI * 2, dr = ft.r + 9 + rnd() * 12;
+        T.fortDecor.push({
+          x: ft.x + Math.cos(da) * dr, y: ft.y + Math.sin(da) * dr,
+          ang: da + rnd() * 0.2, kind: fd % 2 === 0 ? 'bunker' : 'sandbag'
+        });
+      }
+    }
+    for (var ti = 0; ti < T.forests.length; ti++) {
+      var fo = T.forests[ti];
+      for (var tr = 0; tr < 22; tr++) {
+        var ta = rnd() * Math.PI * 2, td = Math.sqrt(rnd()) * fo.r * 0.92;
+        T.trees.push({ x: fo.x + Math.cos(ta) * td, y: fo.y + Math.sin(ta) * td, s: 0.7 + rnd() * 0.7 });
+      }
+    }
+  }
+
   function buildNaval(seed) {
     var m = T.navalMap;
     T.map = m;
@@ -655,10 +796,17 @@
     T.zoneError = null;
     T.treeError = null;
 
-    var sites = buildSites(m);
-    T.navalSites = sites;
-    generateFeatureData(m, sites);
-    relayoutCaptureZones(sites);
+    var sites;
+    if (m.layout) {
+      sites = buildCustomSites(m);
+      T.navalSites = sites;
+      buildCustomFeatures(m);
+    } else {
+      sites = buildSites(m);
+      T.navalSites = sites;
+      generateFeatureData(m, sites);
+      relayoutCaptureZones(sites);
+    }
 
     function makeZone(id, name, kind, x, y, r) {
       return {
