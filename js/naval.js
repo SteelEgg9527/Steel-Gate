@@ -760,6 +760,23 @@
       var p = NAVAL.nearestLandPoint(x, y);
       return makeSite(kind, p.x, p.y, name, id, idx);
     }
+    function placeCoastal(x, y, name, id, idx) {
+      var p = NAVAL.nearestLandPoint(x, y);
+      var dir = p.x < T.size / 2 ? -1 : 1;
+      // 海岸炮台圆必须完整落在陆地上，不能一半压进海里
+      for (var guard = 0; guard < 120; guard++) {
+        var clear = true;
+        for (var a = 0; a < 16; a++) {
+          var ang = a / 16 * Math.PI * 2;
+          if (NAVAL.isWater(p.x + Math.cos(ang) * 78, p.y + Math.sin(ang) * 78)) {
+            clear = false; break;
+          }
+        }
+        if (clear) break;
+        p.x = U.clamp(p.x + dir * 8, 40, T.size - 40);
+      }
+      return makeSite('coastbase', p.x, p.y, name, id, idx);
+    }
     var towers = [];
     for (var i = 0; i < L.towers.length; i++) {
       var tw = L.towers[i];
@@ -779,8 +796,7 @@
         bx = cb.x;
         cbName = cb.name || ('海岸炮台 ' + (ci + 1));
       }
-      var cp = NAVAL.nearestLandPoint(bx, by);
-      coastBases.push(makeSite('coastbase', cp.x, cp.y, cbName, m.id + '_coast' + ci, ci));
+      coastBases.push(placeCoastal(bx, by, cbName, m.id + '_coast' + ci, ci));
     }
     return { towers: towers, radar: radar, coastBases: coastBases };
   }
