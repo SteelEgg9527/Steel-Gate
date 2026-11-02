@@ -5022,7 +5022,7 @@
       var rp = {
         kind: 'recon', cx: tx, cy: ty, x: rsx, y: rsy, ang: -Math.PI / 2,
         rad: SL.RECON_PLANE.orbitRadius, t: 0, dur: SL.RECON_PLANE.duration, side: side,
-        speed: SL.PLANE.reconSpeed, arrived: false, heading: Math.atan2(ty - rsy, tx - rsx),
+        speed: SL.PLANE.reconSpeed, ferrySpeed: 280, arrived: false, heading: Math.atan2(ty - rsy, tx - rsx),
         hp: SL.PLANE.reconHp, maxHp: SL.PLANE.reconHp, hitFlash: 0,
         evade: SL.PLANE.reconEvade
       };
@@ -5546,7 +5546,7 @@
           var rdx = p.cx - p.x, rdy = p.cy - p.y;
           var rd = U.len(rdx, rdy);
           p.heading = Math.atan2(rdy, rdx);
-          var rstep = p.speed * dt;
+          var rstep = (p.ferrySpeed || 280) * dt;
           if (rd <= rstep + 2) {
             p.x = p.cx; p.y = p.cy;
             p.arrived = true;
