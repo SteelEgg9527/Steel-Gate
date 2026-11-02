@@ -170,6 +170,54 @@
       }
     },
     {
+      id: 'n6', name: '海心岛', subtitle: '全岛环绕 · 中央高地',
+      seed: 19450508, naval: true, size: 5000, sceneSize: 5000,
+      island: true,
+      shore: shore([[2100, 550], [1650, 1055], [1300, 1405], [850, 1755], [600, 2105], [450, 2505], [350, 3005], [425, 3560], [600, 4010], [900, 4310], [1400, 4510], [1800, 4610], [2250, 4690], [2600, 4510], [2900, 4610], [3100, 4485], [3400, 4510], [3800, 4360], [4150, 4110], [4400, 3760], [4500, 3405], [4350, 3105], [3950, 2805], [3650, 2605], [3500, 2405], [3450, 2000], [3500, 1500], [3525, 1100], [3400, 750], [3100, 600], [2650, 450], [2400, 425]]),
+      landPoly: [
+        [2400, 425], [2650, 450], [3100, 600], [3400, 750], [3525, 1100],
+        [3500, 1500], [3450, 2000], [3500, 2405], [3650, 2605], [3950, 2805],
+        [4350, 3105], [4500, 3405], [4400, 3760], [4150, 4110], [3800, 4360],
+        [3400, 4510], [3100, 4485], [2900, 4610], [2600, 4510], [2250, 4690],
+        [1800, 4610], [1400, 4510], [900, 4310], [600, 4010], [425, 3560],
+        [350, 3005], [450, 2505], [600, 2105], [850, 1755], [1300, 1405],
+        [1650, 1055], [1950, 805], [2150, 550], [2100, 550]
+      ],
+      spawns: { blue: { x: 875, y: 3950 }, red: { x: 2500, y: 550 }, green: { x: 4200, y: 3800 } },
+      layout: {
+        island: true,
+        hills: [
+          { x: 2300, y: 2400, r: 1200, h: 50, name: '海心山' },
+          { x: 2350, y: 2300, r: 850, h: 40, name: '内环高地' },
+          { x: 2400, y: 2600, r: 550, h: 30, name: '中央山脊' }
+        ],
+        towers: [
+          { x: 2250, y: 1550, name: '通讯塔 A' },
+          { x: 1750, y: 3150, name: '通讯塔 B' },
+          { x: 3200, y: 2800, name: '通讯塔 C' }
+        ],
+        radar: { x: 2300, y: 2400 },
+        coastBases: [
+          { x: 2100, y: 750 }, { x: 1500, y: 1200 },
+          { x: 3450, y: 1200 }, { x: 900, y: 2100 },
+          { x: 800, y: 2900 }, { x: 3800, y: 2875 },
+          { x: 2750, y: 3900 }, { x: 3700, y: 4250 }
+        ],
+        villages: [],
+        forests: [
+          { x: 1525, y: 1550, r: 84 }, { x: 2850, y: 1550, r: 84 },
+          { x: 2100, y: 1950, r: 78 }, { x: 3075, y: 2200, r: 84 },
+          { x: 1675, y: 2375, r: 80 }, { x: 1300, y: 2850, r: 82 },
+          { x: 2525, y: 2800, r: 78 }, { x: 3300, y: 3350, r: 84 },
+          { x: 2150, y: 3600, r: 82 }
+        ],
+        forts: [
+          { name: '中央阵地', x: 2625, y: 3275, r: 82 }
+        ],
+        roads: []
+      }
+    },
+    {
       id: 'naval_range', name: '海岸训练场', subtitle: '带海域 · 舰炮与两栖测试',
       seed: 19440901, test: true, naval: true, size: 5000, sceneSize: 5000,
       shore: shore([[2550, 0], [2500, 1000], [2480, 2000], [2520, 3000], [2500, 4000], [2550, 5000]]),
@@ -233,6 +281,7 @@
     var sx = x + off.x, sy = y + off.y;
     if (sx < 0 || sy < 0 || sx > T.sceneSize || sy > T.sceneSize) return true;
     if (T.navalMap && T.navalMap.waterPoly) return pointInPoly(sx, sy, T.navalMap.waterPoly);
+    if (T.navalMap && T.navalMap.landPoly) return !pointInPoly(sx, sy, T.navalMap.landPoly);
     return sx > shoreSceneAt(sy);
   };
 
@@ -762,7 +811,7 @@
     }
     function placeCoastal(x, y, name, id, idx) {
       var p = NAVAL.nearestLandPoint(x, y);
-      var dir = p.x < T.size / 2 ? -1 : 1;
+      var dir = L.island ? (p.x < T.size / 2 ? 1 : -1) : (p.x < T.size / 2 ? -1 : 1);
       // 海岸炮台圆必须完整落在陆地上，不能一半压进海里
       for (var guard = 0; guard < 120; guard++) {
         var clear = true;
@@ -825,7 +874,9 @@
     T.buildings = [];
     T.trees = [];
     T.fortDecor = [];
-    T.village = { x: T.villages[0].x, y: T.villages[0].y, name: T.villages[0].name };
+    T.village = T.villages.length
+      ? { x: T.villages[0].x, y: T.villages[0].y, name: T.villages[0].name }
+      : { x: 2300, y: 2400, name: '海心岛' };
 
     for (var vi = 0; vi < T.villages.length; vi++) {
       var v = T.villages[vi];
@@ -1255,7 +1306,11 @@
     ctx.stroke();
     ctx.restore();
     ctx.beginPath();
-    if (m.waterPoly) {
+    if (m.island && m.landPoly) {
+      ctx.moveTo(m.landPoly[0][0], m.landPoly[0][1]);
+      for (var li = 1; li < m.landPoly.length; li++) ctx.lineTo(m.landPoly[li][0], m.landPoly[li][1]);
+      ctx.closePath();
+    } else if (m.waterPoly) {
       ctx.moveTo(m.waterPoly[0][0], m.waterPoly[0][1]);
       for (var wi = 1; wi < m.waterPoly.length; wi++) ctx.lineTo(m.waterPoly[wi][0], m.waterPoly[wi][1]);
       ctx.closePath();
