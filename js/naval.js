@@ -1348,44 +1348,55 @@ return null;
     ctx.save();
     var bw = T.size, bh = T.size;
     var tick = 500, fs = Math.max(0.8, one);
-    ctx.strokeStyle = 'rgba(24,26,20,0.92)';
-    ctx.fillStyle = 'rgba(24,26,20,0.92)';
-    ctx.lineWidth = 1 * Math.max(0.8, fs);
-    ctx.font = '600 ' + Math.round(8 * fs) + 'px ' + SL.FONT_MONO;
+    // 深色海面和浅色陆地都能看清：先画深色描边，再画浅色线/字
+    ctx.lineWidth = 3 * Math.max(0.8, fs);
+    ctx.strokeStyle = 'rgba(12,16,14,0.78)';
     ctx.strokeRect(0.5, 0.5, bw - 1, bh - 1);
-    // 上下
-    for (var rx = 0; rx <= bw; rx += tick) {
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
-      ctx.beginPath(); ctx.moveTo(rx, bh); ctx.lineTo(rx, bh - 12 * fs); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx, 12 * fs); ctx.stroke();
-      ctx.fillText(String(rx), rx, bh - 15 * fs);
-      ctx.textBaseline = 'top';
-      ctx.fillText(String(rx), rx, 15 * fs);
+    ctx.lineWidth = 1 * Math.max(0.8, fs);
+    ctx.strokeStyle = 'rgba(239,228,194,0.92)';
+    ctx.strokeRect(0.5, 0.5, bw - 1, bh - 1);
+    ctx.font = '600 ' + Math.round(8 * fs) + 'px ' + SL.FONT_MONO;
+    function edgeText(text, x, y, align, baseline) {
+      ctx.textAlign = align;
+      ctx.textBaseline = baseline;
+      ctx.lineWidth = 3 * Math.max(0.8, fs);
+      ctx.strokeStyle = 'rgba(10,14,12,0.86)';
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = 'rgba(242,234,208,0.98)';
+      ctx.fillText(text, x, y);
     }
-    // 左右
+    function edgeTick(x1, y1, x2, y2) {
+      ctx.lineWidth = 3 * Math.max(0.8, fs);
+      ctx.strokeStyle = 'rgba(10,14,12,0.6)';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      ctx.lineWidth = 1 * Math.max(0.8, fs);
+      ctx.strokeStyle = 'rgba(241,228,192,0.9)';
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    for (var rx = 0; rx <= bw; rx += tick) {
+      edgeTick(rx, bh, rx, bh - 12 * fs);
+      edgeTick(rx, 0, rx, 12 * fs);
+      edgeText(String(rx), rx, bh - 15 * fs, 'center', 'bottom');
+      edgeText(String(rx), rx, 15 * fs, 'center', 'top');
+    }
     for (var ry = 0; ry <= bh; ry += tick) {
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'left';
-      ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(12 * fs, ry); ctx.stroke();
-      ctx.fillText(String(ry), 16 * fs, ry);
-      ctx.textAlign = 'right';
-      ctx.beginPath(); ctx.moveTo(bw, ry); ctx.lineTo(bw - 12 * fs, ry); ctx.stroke();
-      ctx.fillText(String(ry), bw - 16 * fs, ry);
+      edgeTick(0, ry, 12 * fs, ry);
+      edgeTick(bw, ry, bw - 12 * fs, ry);
+      edgeText(String(ry), 16 * fs, ry, 'left', 'middle');
+      edgeText(String(ry), bw - 16 * fs, ry, 'right', 'middle');
     }
     // 100m 次刻度，不标数字
-    ctx.strokeStyle = 'rgba(24,26,20,0.45)';
-    ctx.lineWidth = 0.7 * fs;
     for (var mx = 0; mx <= bw; mx += 100) {
       if (mx % tick === 0) continue;
-      ctx.beginPath(); ctx.moveTo(mx, bh); ctx.lineTo(mx, bh - 5 * fs); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, 5 * fs); ctx.stroke();
+      edgeTick(mx, bh, mx, bh - 5 * fs);
+      edgeTick(mx, 0, mx, 5 * fs);
     }
     for (var my = 0; my <= bh; my += 100) {
       if (my % tick === 0) continue;
-      ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(5 * fs, my); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bw, my); ctx.lineTo(bw - 5 * fs, my); ctx.stroke();
+      edgeTick(0, my, 5 * fs, my);
+      edgeTick(bw, my, bw - 5 * fs, my);
     }
+    ctx.restore();
     ctx.restore();
   };
 
