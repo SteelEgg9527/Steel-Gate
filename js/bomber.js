@@ -9,7 +9,7 @@
     takeoffTime: 60,
     fuelTime: 480,
     baseReturnTime: 60,
-    maxPlanes: 3,
+    maxPlanes: 5,
     maxBombsPerPlane: 20,
     maxLoadLb: 6000,
     b17: {
@@ -27,19 +27,19 @@
     bombs: {
       lb500: {
         key: 'lb500', lb: 500, name: '500lb 航弹', short: '500lb', group: 4,
-        damage: 500, radius: 100, fortDamage: 200, interval: 0.72, color: '#e0b46e'
+        damage: 500, radius: 100, fortDamage: 200, interval: 0.85, color: '#e0b46e'
       },
       lb1000: {
         key: 'lb1000', lb: 1000, name: '1000lb 航弹', short: '1000lb', group: 2,
-        damage: 900, radius: 125, fortDamage: 340, interval: 1.05, color: '#dca45c'
+        damage: 900, radius: 125, fortDamage: 340, interval: 1.2, color: '#dca45c'
       },
       lb2000: {
         key: 'lb2000', lb: 2000, name: '2000lb 航弹', short: '2000lb', group: 1,
-        damage: 1550, radius: 150, fortDamage: 500, interval: 1.55, color: '#d18b4f'
+        damage: 1550, radius: 150, fortDamage: 500, interval: 1.8, color: '#d18b4f'
       },
       incendiary: {
         key: 'incendiary', lb: 300, name: '300lb 燃烧弹', short: '300lb', group: 4,
-        damage: 220, radius: 50, fortDamage: 100, interval: 0.5,
+        damage: 220, radius: 50, fortDamage: 100, interval: 0.58,
         burn: 60, burnDps: 45, color: '#e08a4b'
       }
     },
@@ -91,7 +91,7 @@
         arriveAt: 0,
         baseAt: 0,
         elapsed: 0,
-        formation: [null, null, null],
+        formation: [null, null, null, null, null],
         hangarPlanes: [],
         hangarBombs: [],
         groupX: 0, groupY: 0, heading: -Math.PI / 2, bank: 0,
@@ -131,7 +131,9 @@
     return [
       { forward: 0, lateral: 0 },
       { forward: -56, lateral: -66 },
-      { forward: -56, lateral: 66 }
+      { forward: -56, lateral: 66 },
+      { forward: -112, lateral: -132 },
+      { forward: -112, lateral: 132 }
     ];
   }
 
@@ -348,8 +350,8 @@
     b.bombMode = b.bombMode || 'single';
     if (b.bombMode === 'single') {
       var idx = b.nextPlane || 0;
-      for (var k = 0; k < 3; k++) {
-        var pi = (idx + k) % 3;
+      for (var k = 0; k < b.formation.length; k++) {
+        var pi = (idx + k) % b.formation.length;
         var p = b.formation[pi];
         if (p && p.bombs.length) { b.nextPlane = pi; break; }
       }
@@ -418,7 +420,6 @@
     if (d.burn) {
       g.bomberFires.push({ x: x, y: y, r: d.radius, until: g.time + d.burn, next: 0, dps: d.burnDps, side: 'blue' });
     }
-    g.fxText(x, y - 16, d.short + ' 命中', '#ffd18a');
   }
 
   function updateFires(g, dt) {
@@ -704,7 +705,7 @@
     if (refs.configScore) refs.configScore.textContent = '可用积分 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
     if (refs.slots) {
       var html = '';
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < b.formation.length; i++) {
         var p = b.formation[i];
         html += '<div class="bomber-slot" data-slot="' + i + '">' +
           '<div class="bomber-slot-no">' + (i + 1) + '</div>';
