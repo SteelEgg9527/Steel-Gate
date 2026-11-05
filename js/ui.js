@@ -1,4 +1,4 @@
-/* 钢线 1944 — HUD / 小地图 / 单位详情 */
+/* 钢铁之门 — HUD / 小地图 / 单位详情 */
 (function () {
   'use strict';
   var SL = window.SL, U = SL.U, R = SL.Render;

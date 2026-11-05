@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 舰炮轰鸣：4km 海陆地图、海岸线与战略目标 */
+/* 钢铁之门 —— 舰炮轰鸣：4km 海陆地图、海岸线与战略目标 */
 (function () {
   'use strict';
   var SL = window.SL, U = SL.U, T = SL.Terrain;

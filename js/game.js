@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 单位、战斗、视野、掩体、占领与 AI */
+/* 钢铁之门 —— 单位、战斗、视野、掩体、占领与 AI */
 (function () {
   'use strict';
   var SL = window.SL, U = SL.U, T = SL.Terrain, CB = SL.COMBAT;

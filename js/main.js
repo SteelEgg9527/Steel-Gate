@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 入口、镜头、输入、主循环 */
+/* 钢铁之门 —— 入口、镜头、输入、主循环 */
 (function () {
   'use strict';
   var SL = window.SL, U = SL.U, R = SL.Render, UI = SL.UI;

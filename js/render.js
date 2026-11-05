@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 渲染：地图、军标、迷雾、特效 */
+/* 钢铁之门 —— 渲染：地图、军标、迷雾、特效 */
 (function () {
   'use strict';
   var SL = window.SL, U = SL.U, T = SL.Terrain, C = SL.COLORS;

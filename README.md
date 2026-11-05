@@ -1,4 +1,4 @@
-# 钢线 1944 · STEEL LINE
+# 钢铁之门 · STEEL GATE
 
 一款直接运行在浏览器里的二战 RTS。
 
@@ -69,4 +69,4 @@ https://github.com/SteelEgg9527/Steel-Line-1944/issues
 
 钢蛋
 
-**v0.12.29**
+**v0.12.30**

@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 基础工具库 */
+/* 钢铁之门 —— 基础工具库 */
 (function () {
   'use strict';
   var SL = (window.SL = window.SL || {});

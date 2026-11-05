@@ -1,4 +1,4 @@
-/* 钢线 1944 —— 三张 2km × 2km 战场布局 */
+/* 钢铁之门 —— 三张 2km × 2km 战场布局 */
 (function () {
   'use strict';
   var SL = window.SL;

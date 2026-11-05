@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 560" role="img" aria-labelledby="title desc">
-<title id="title">钢线 1944 — 标志组合</title>
-<desc id="desc">主菜单瞄具标志与 STEEL LINE / 钢线 1944 铭牌组合。文字使用字体渲染，建议同时使用 PNG 版本。</desc>
+<title id="title">钢铁之门 — 标志组合</title>
+<desc id="desc">主菜单瞄具标志与 STEEL GATE / 钢铁之门 铭牌组合。文字使用字体渲染，建议同时使用 PNG 版本。</desc>
 <g transform="translate(110 16)">
-  <title id="title">钢线 1944 — 瞄具标志</title>
+  <title id="title">钢铁之门 — 瞄具标志</title>
   <desc id="desc">主菜单当前使用的虎式瞄具风格圆形标志，无内部文字。</desc>
   <defs>
     <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
@@ -70,7 +70,7 @@
 </g>
 <g transform="translate(260 340)">
   <path d="M-180 0 H180 L168 88 H-168 Z" fill="#141915" fill-opacity="0.96" stroke="#d5c290" stroke-width="1.5"/>
-  <text x="0" y="32" text-anchor="middle" font-family="Consolas, monospace" font-size="11" letter-spacing="6" fill="#8fa597">STEEL LINE</text>
-  <text x="0" y="70" text-anchor="middle" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="600" letter-spacing="8" fill="#f1e6c8">钢线 1944</text>
+  <text x="0" y="32" text-anchor="middle" font-family="Consolas, monospace" font-size="11" letter-spacing="6" fill="#8fa597">STEEL GATE</text>
+  <text x="0" y="70" text-anchor="middle" font-family="Microsoft YaHei, Noto Sans SC, sans-serif" font-size="31" font-weight="600" letter-spacing="8" fill="#f1e6c8">钢铁之门</text>
 </g>
 </svg>

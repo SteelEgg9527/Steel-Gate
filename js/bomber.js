@@ -1,4 +1,4 @@
-/* 钢线 1944 —— B-17 轰炸机系统 */
+/* 钢铁之门 —— B-17 轰炸机系统 */
 (function () {
   'use strict';
   var SL = (window.SL = window.SL || {});
