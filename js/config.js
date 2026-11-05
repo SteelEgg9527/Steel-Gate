@@ -865,15 +865,15 @@
     count: 3,                // 战斗机数量
     hp: 180,                 // 单机血量
     evade: 0.50,             // 单机闪避率
-    radius: 800,             // 标识制空圈半径（直径 1600m）
-  searchBonus: 300,        // 实际追击范围比标识圈多 300m
-    orbitRadius: 250,        // 盘旋半径（直径 500m）
+    radius: 300,             // 标注/对地制空圈半径（直径 600m）
+    searchBonus: 300,        // 实际追击敌机范围比标注圈多 300m（直径 1200m，不显示）
+    orbitRadius: 300,        // 战斗机盘旋轨迹半径，和标注圈一致
     duration: 40,            // 持续 40 秒
     orbitSpeed: 0.9,         // 盘旋角速度
     chaseSpeed: 180,         // 追击敌机时的飞行速度
     tailDistance: 100,       // 追击时保持在敌机后方的距离
     jitter: 8,               // 跟随位置的轻微随机浮动幅度
-    groundRange: 800,        // 无对空目标时扫射地面目标的距离
+    groundRange: 300,        // 无对空目标时扫射地面目标的距离（标注圈内）
     groundDamage: 15,        // 对地扫射伤害
     groundInterval: 0.6,     // 对地扫射间隔
     interval: 1.1,           // 对空射击间隔
@@ -917,7 +917,7 @@
     airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：半径 125m 伤害圈，高额杀伤' },
     artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：重炮支援 15s 30 发，直径 300m' },
     recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：侦察机从边缘进入，抵达后盘旋 20 秒，侦察直径 500m' },
-    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机盘旋 40 秒，在直径 1600m 空域索敌并追击' },
+    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机沿直径 600m 圈盘旋 40 秒，对地攻击 600m；追击敌机范围 1200m，不显示' },
     fortpack: { key: 'fortpack', name: '工事装备包', icon: '堡', color: '#7c5a32', use: 'open', desc: '升级选中后立即开出一张工事卡' },
     bunker: { key: 'bunker', name: '机枪碉堡', icon: '堡', color: '#7c5a32', use: 'point', desc: '拖到强化工事区：300m 机枪火力 + 额外减伤' },
     mortar_nest: { key: 'mortar_nest', name: '迫击炮阵地', icon: '迫', color: '#6e6a3a', use: 'point', desc: '拖到强化工事区：3 门迫击炮陆续射击，射程 500m，散布 50m' },

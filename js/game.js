@@ -5617,7 +5617,7 @@
     if (p.targetPlane) {
       var tp = p.targetPlane;
       if (!tp || tp.hp <= 0 || this.planes.indexOf(tp) < 0 ||
-        U.dist(tp.x, tp.y, p.x, p.y) > (tp.kind === 'b17' ? 1800 : cfg.radius + (cfg.searchBonus || 300))) {
+        U.dist(tp.x, tp.y, p.x, p.y) > (cfg.radius + (cfg.searchBonus || 300))) {
         p.targetPlane = null;
         p.mode = 'orbit';
       }
@@ -5627,7 +5627,7 @@
       for (var i = 0; i < this.planes.length; i++) {
         var e = this.planes[i];
         if (e === p || e.side === p.side || e.hp <= 0) continue;
-        var seekR = e.kind === 'b17' ? 1800 : cfg.radius + (cfg.searchBonus || 300);
+        var seekR = cfg.radius + (cfg.searchBonus || 300);
         var d = U.dist(p.x, p.y, e.x, e.y);
         if (d > seekR || d >= bestD) continue;
         best = e; bestD = d;
@@ -5673,7 +5673,7 @@
         var bestGround = null, bestGD = Infinity;
         for (var gi = 0; gi < this.units.length; gi++) {
           var gu = this.units[gi];
-          if (!gu.alive || gu.side === p.side) continue;
+          if (!gu.alive || gu.side === p.side || !this.unitVisibleTo(p.side, gu)) continue;
           if (gu.type !== 'infantry' && gu.type !== 'armored' &&
             gu.type !== 'artillery' && gu.type !== 'heavy_arty' && gu.type !== 'rocket_arty') continue;
           var gd = U.dist(p.x, p.y, gu.x, gu.y);
@@ -6356,12 +6356,20 @@
       if (losses < 4 || this.time < (this.aiRaidCd[side] || 0)) continue;
       this.aiRaidCd[side] = this.time + 120;
       this.aiPlaneLosses = this.aiPlaneLosses.filter(function (e) { return e.side !== side; });
-      var tx = 0, ty = 0, tn = 0;
+      var tx = 0, ty = 0, tn = 0, detected = false;
+      // 只使用真正被 AI 发现/侦察到的玩家单位位置，禁止借迷雾直接瞄准全军
       for (var b = 0; b < this.units.length; b++) {
         var bu = this.units[b];
-        if (bu.alive && bu.side === 'blue') { tx += bu.x; ty += bu.y; tn++; }
+        if (!bu.alive || bu.side !== 'blue') continue;
+        if (!this.unitVisibleTo(side, bu)) continue;
+        detected = true;
+        tx += bu.x; ty += bu.y; tn++;
       }
-      if (tn) { tx /= tn; ty /= tn; } else if (this.yellow) { tx = this.yellow.x; ty = this.yellow.y; }
+      if (tn) { tx /= tn; ty /= tn; }
+      if (!detected) {
+        if (this.yellow) { tx = this.yellow.x; ty = this.yellow.y; }
+        else continue;
+      }
       var count = Math.min(14, 6 + Math.floor(this.time / 300));
       if (this.planes.length + count + 3 > 38) continue;
       this.spawnAirGroup(side, tx + (Math.random() - 0.5) * 100, ty + (Math.random() - 0.5) * 100,
