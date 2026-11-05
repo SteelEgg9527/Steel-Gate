@@ -439,14 +439,14 @@
       },
       aa37: {
         name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
-        maxSpread: 160, splash: 46, dmg: 35, ap: 0.8, shots: 1200,
+        maxSpread: 85, splash: 46, dmg: 35, ap: 0.8, shots: 1200,
         interval: 0.6, turnRate: 0.95, arc: 1.35, side: 'split',
         aimTime: 0.32,
         color: '#b7c6ad'
       },
       aa20: {
         name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
-        maxSpread: 110, splash: 30, dmg: 14, ap: 0.4, shots: 2400,
+        maxSpread: 55, splash: 30, dmg: 14, ap: 0.4, shots: 2400,
         interval: 0.22, turnRate: 1.15, arc: 1.2, side: 'split',
         aimTime: 0.2,
         color: '#aebfae'

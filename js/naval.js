@@ -1671,6 +1671,15 @@ return null;
     return Math.abs(angleDiff(rel, center)) <= t.classDef.arc / 2;
   }
 
+    function aaCanEngage(ship, t, plane, c) {
+    var d = U.dist(ship.x, ship.y, plane.x, plane.y);
+    if (d > c.rangeAir) return false;
+    // 舰船上空/近距空域：所有防空炮都可对空，不受背后死角限制
+    if (d <= (c.overheadRadius || 190)) return true;
+    // 远距离目标仍必须位于本炮塔射界内，不能打舰船背后远目标
+    return allowedArc(ship, t, Math.atan2(plane.y - ship.y, plane.x - ship.x));
+  }
+
   // 炮塔在自身射界内转动；目标位于死角/另一侧时，从射界内绕行，不穿越死角
   function rotateTurretToward(ship, t, bearing, dt) {
     var center = t.arcCenter, half = t.classDef.arc / 2;
@@ -1880,8 +1889,7 @@ return null;
       if (t.cls === 'aa37' || t.cls === 'aa20') {
         // 每座防空炮独立索敌、独立转向、独立瞄准；不整舰齐射
         var currentAA = t.aaTarget;
-        if (currentAA && (currentAA.hp <= 0 || currentAA.side === ship.side ||
-          U.dist(ship.x, ship.y, currentAA.x, currentAA.y) > c.rangeAir * 1.05)) {
+        if (currentAA && (currentAA.hp <= 0 || currentAA.side === ship.side || !aaCanEngage(ship, t, currentAA, c))) {
           currentAA = null; t.aaTarget = null; t.aaAim = 0;
         }
         if (!currentAA) {
@@ -1890,7 +1898,7 @@ return null;
             var pl = game.planes[pi];
             if (!pl || pl.side === ship.side || pl.hp <= 0) continue;
             var pd0 = U.dist(ship.x, ship.y, pl.x, pl.y);
-            if (pd0 > c.rangeAir) continue;
+            if (!aaCanEngage(ship, t, pl, c)) continue;
             var score = pd0;
             for (var oi = 0; oi < ship.turrets.length; oi++) {
               var ot = ship.turrets[oi];
