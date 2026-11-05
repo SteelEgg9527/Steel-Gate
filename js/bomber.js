@@ -456,8 +456,16 @@
     var d = B.bombs[type];
     var f = { x: Math.cos(p.heading), y: Math.sin(p.heading) };
     var s = { x: -f.y, y: f.x };
-    var long = (Math.random() - 0.5) * 100;
-    var lat = (Math.random() - 0.5) * 300;
+    // 对海轰炸散布更大：落点附近有敌舰时放大横向/纵向误差
+    var shipBias = 1;
+    if (g.battleships && g.battleships.length) {
+      for (var sb = 0; sb < g.battleships.length; sb++) {
+        var bsh = g.battleships[sb];
+        if (bsh && bsh.alive && bsh.side !== 'blue' && U.dist(p.x, p.y, bsh.x, bsh.y) <= 1200) { shipBias = 1.7; break; }
+      }
+    }
+    var long = (Math.random() - 0.5) * 100 * shipBias;
+    var lat = (Math.random() - 0.5) * 300 * shipBias;
     var tx = p.x + f.x * long + s.x * lat;
     var ty = p.y + f.y * long + s.y * lat;
     tx = U.clamp(tx, 5, SL.CONFIG.mapSize - 5);

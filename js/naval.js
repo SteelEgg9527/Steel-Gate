@@ -1042,6 +1042,8 @@ return null;
 
   T.buildZone = function () {
     if (!T.naval) return Base.buildZone.call(T);
+    // 野战工事/临时灌木不属于固定地图，开局必须清除
+    T.zones = T.zones.filter(function (z) { return !z.built && !String(z.id || '').startsWith('field_'); });
     for (var i = 0; i < T.zones.length; i++) resetZone(T.zones[i]);
   };
 
@@ -1701,32 +1703,13 @@ return null;
     var from = turretWorld(ship, t);
     // 机关炮 / 防空炮为直射弹道：命中即结算，只显示曳光，不生成抛物线炮弹
     if (t.cls === 'aa37' || t.cls === 'aa20') {
+      // 防空炮：明显散布 + 近炸引信式溅射，不采用“命中/未命中”二值判定
       var aaAng = Math.random() * Math.PI * 2;
-      var aaRad = (c.maxSpread || 0) * 0.6 * Math.sqrt(Math.random());
-      var ahx = tx + Math.cos(aaAng) * aaRad;
-      var ahy = ty + Math.sin(aaAng) * aaRad;
+      var aaRad = Math.max(55, c.maxSpread || 55) * Math.sqrt(Math.random());
+      var ahx = U.clamp(tx + Math.cos(aaAng) * aaRad, 20, SL.CONFIG.mapSize - 20);
+      var ahy = U.clamp(ty + Math.sin(aaAng) * aaRad, 20, SL.CONFIG.mapSize - 20);
       game.effects.push({ kind: 'tracer', x1: from.x, y1: from.y, x2: ahx, y2: ahy, t: 0, dur: 0.1, side: ship.side });
-      var aaHit = Math.random() < U.clamp(1 - (c.maxSpread || 0) / 600, 0.28, 0.95);
-      if (aaHit) {
-        if (target && target.def && target.alive) {
-          game.damage(target, c.dmg, ship, c.ap);
-        } else if (target && target.base) {
-          target.hp -= c.dmg;
-          game.damageFortifications(tx, ty, c.dmg, c.splash);
-        } else if (target && (target.siteKind || target.structures || target.kind === 'fort' || target.kind === 'village' || target.kind === 'forest')) {
-          game.damageFortifications(tx, ty, c.dmg, c.splash);
-        } else {
-          // 压制点没有具体单位时，对落点附近的敌军造成一次直射溅射
-          for (var du = 0; du < game.units.length; du++) {
-            var tu = game.units[du];
-            if (!tu.alive || tu.side === ship.side) continue;
-            if (U.dist(tu.x, tu.y, tx, ty) <= c.splash) {
-              game.damage(tu, c.dmg * 0.65, ship, c.ap);
-            }
-          }
-          game.damageFortifications(tx, ty, c.dmg, c.splash);
-        }
-      }
+      game.flakBurst(ahx, ahy, Math.max(42, (c.splash || 24) * 1.8), c.dmg, ship, ship.side);
     } else {
       var sv = { caliber: t.cls === 'main' ? 203 : 105, size: 1, trail: 8 };
       if (t.cls === 'main') { sv.size = 2.8; sv.trail = 16; }

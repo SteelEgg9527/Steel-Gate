@@ -550,6 +550,28 @@
         ctx.fillStyle = o.sprint ? '#f0c07a' : '#d8e4cf';
         ctx.fillText(dm + ' m' + (o.sprint ? '  »' : ''), mx, my);
         ctx.restore();
+      } else if (e.kind === 'flak') {
+        sx = proj.x(e.x); sy = proj.y(e.y);
+        var fr = Math.max(8, e.r * cam.zoom);
+        ctx.save();
+        ctx.globalAlpha = (1 - k) * 0.9;
+        for (var fk = 0; fk < 5; fk++) {
+          var fa = (e.seed || 0) + fk * 1.57;
+          var fd = fr * (0.15 + (fk % 3) * 0.22) * (0.7 + k * 0.8);
+          var frad = fr * (0.16 + (1 - k) * 0.12);
+          var fcx = sx + Math.cos(fa) * fd, fcy = sy + Math.sin(fa) * fd;
+          var fg = ctx.createRadialGradient(fcx, fcy, 0, fcx, fcy, frad);
+          fg.addColorStop(0, 'rgba(255,220,150,' + (0.5 * (1 - k)) + ')');
+          fg.addColorStop(0.45, 'rgba(95,88,74,' + (0.32 * (1 - k)) + ')');
+          fg.addColorStop(1, 'rgba(60,58,48,0)');
+          ctx.fillStyle = fg;
+          ctx.beginPath(); ctx.arc(fcx, fcy, frad, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = (1 - k) * 0.65;
+        ctx.strokeStyle = 'rgba(255,214,140,0.95)';
+        ctx.lineWidth = 1.6 * (1 - k) + 0.5;
+        ctx.beginPath(); ctx.arc(sx, sy, fr * (0.35 + k * 0.75), 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
       } else if (e.kind === 'dust') {
         sx = proj.x(e.x); sy = proj.y(e.y);
         var dr = e.size * (1 + k * 2.4);
@@ -1638,6 +1660,28 @@
           ctx.arc(sx, sy, rr * 0.8 + 4, 0, Math.PI * 2);
           ctx.fill();
         }
+        ctx.restore();
+      } else if (e.kind === 'flak') {
+        sx = proj.x(e.x); sy = proj.y(e.y);
+        var fr = Math.max(8, e.r * cam.zoom);
+        ctx.save();
+        ctx.globalAlpha = (1 - k) * 0.9;
+        for (var fk = 0; fk < 5; fk++) {
+          var fa = (e.seed || 0) + fk * 1.57;
+          var fd = fr * (0.15 + (fk % 3) * 0.22) * (0.7 + k * 0.8);
+          var frad = fr * (0.16 + (1 - k) * 0.12);
+          var fcx = sx + Math.cos(fa) * fd, fcy = sy + Math.sin(fa) * fd;
+          var fg = ctx.createRadialGradient(fcx, fcy, 0, fcx, fcy, frad);
+          fg.addColorStop(0, 'rgba(255,220,150,' + (0.5 * (1 - k)) + ')');
+          fg.addColorStop(0.45, 'rgba(95,88,74,' + (0.32 * (1 - k)) + ')');
+          fg.addColorStop(1, 'rgba(60,58,48,0)');
+          ctx.fillStyle = fg;
+          ctx.beginPath(); ctx.arc(fcx, fcy, frad, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = (1 - k) * 0.65;
+        ctx.strokeStyle = 'rgba(255,214,140,0.95)';
+        ctx.lineWidth = 1.6 * (1 - k) + 0.5;
+        ctx.beginPath(); ctx.arc(sx, sy, fr * (0.35 + k * 0.75), 0, Math.PI * 2); ctx.stroke();
         ctx.restore();
       } else if (e.kind === 'dust') {
         sx = proj.x(e.x); sy = proj.y(e.y);

@@ -586,7 +586,10 @@
         var sh = this.battleships[j];
         if (!sh.alive || sh.side === gun.side) continue;
         var d = U.dist(gun.x, gun.y, sh.x, sh.y);
-        if (d <= gun.range && d < bd) { bd = d; target = sh; }
+        if (d > gun.range) continue;
+        // 岸防炮不能读取玩家未发现的舰船位置；只接受本方视野、雷达或暴露目标
+        if (!this.canSee(gun.side, sh.x, sh.y) && !(sh.exposedUntil && sh.exposedUntil > this.time)) continue;
+        if (d < bd) { bd = d; target = sh; }
       }
       if (!target) {
         var gl = this.navalShipLastSeen && this.navalShipLastSeen[gun.side];
@@ -2808,9 +2811,10 @@
             st.ammo--;
             if (SL.Audio) SL.Audio.shot({ dmg: 90, label: '88' }, { type: 'structure' }, false, z.x, z.y);
             st.cd = SL.FORT.flakAirInterval;
-            this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: plane.x, y2: plane.y, t: 0, dur: 0.1, side: side, heavy: true });
-            var pacc = 0.9 - 0.2 * U.clamp(pd / SL.FORT.flakAirRange, 0, 1);
-            if (Math.random() <= pacc) this.damagePlane(plane, SL.FORT.flakAirDmg, source);
+            var fax = plane.x + (Math.random() - 0.5) * 86;
+            var fay = plane.y + (Math.random() - 0.5) * 86;
+            this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: fax, y2: fay, t: 0, dur: 0.1, side: side, heavy: true });
+            this.flakBurst(fax, fay, 80, SL.FORT.flakAirDmg, source, side);
             continue;
           }
         }
@@ -2850,9 +2854,10 @@
           if (Math.random() <= aacc) this.damage(target, SL.FORT.atNestDmg, source, SL.FORT.atNestAP);
         } else if (st.type === 'flak88') {
           st.cd = SL.FORT.flakGroundInterval;
-          var facc = 0.85 - 0.3 * U.clamp(td / range, 0, 1);
-          this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: target.x, y2: target.y, t: 0, dur: 0.1, side: side, heavy: true });
-          if (Math.random() <= facc) this.damage(target, SL.FORT.flakGroundDmg, source, 1.2);
+          var fgx = target.x + (Math.random() - 0.5) * 74;
+          var fgy = target.y + (Math.random() - 0.5) * 74;
+          this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: fgx, y2: fgy, t: 0, dur: 0.1, side: side, heavy: true });
+          this.flakBurst(fgx, fgy, 58, SL.FORT.flakGroundDmg * 0.7, source, side);
         } else if (st.type === 'bunker') {
           st.cd = SL.FORT.bunkerInterval;
           var bacc = 0.8 - 0.25 * U.clamp(td / range, 0, 1);
@@ -3216,15 +3221,13 @@
           var pa = U.angle(u.x, u.y, plane.x, plane.y);
           u.turret = pa;
           u.facing = pa;
+          var aax = plane.x + (Math.random() - 0.5) * 70;
+          var aay = plane.y + (Math.random() - 0.5) * 70;
           this.effects.push({
-            kind: 'tracer', x1: u.x, y1: u.y, x2: plane.x, y2: plane.y,
+            kind: 'tracer', x1: u.x, y1: u.y, x2: aax, y2: aay,
             t: 0, dur: 0.08, side: u.side, heavy: false
           });
-          var aaDist = U.dist(u.x, u.y, plane.x, plane.y);
-          var aaAcc = 0.95 - 0.2 * U.clamp(aaDist / (u.def.aaRange || 600), 0, 1);
-          if (Math.random() <= aaAcc) {
-            this.damagePlane(plane, u.def.airDmg || 8, u);
-          }
+          this.flakBurst(aax, aay, 42, (u.def.airDmg || 8) * 1.8, u, u.side);
         }
         return;
       }
@@ -4034,6 +4037,39 @@
     if (this.reconSees(side, u.x, u.y)) return true;
     if (u.concealed) return false;
     return this.canSee(side, u.x, u.y);
+  };
+
+  Game.prototype.flakBurst = function (x, y, radius, damage, source, side) {
+    var ownSide = side || (source && source.side) || 'blue';
+    radius = Math.max(18, radius || 40);
+    this.effects.push({
+      kind: 'flak', x: x, y: y, t: 0, dur: 0.55,
+      r: radius, side: ownSide, seed: Math.random() * 1000
+    });
+    for (var i = 0; i < this.planes.length; i++) {
+      var pl = this.planes[i];
+      if (!pl || pl.hp <= 0 || pl.side === ownSide) continue;
+      var d = U.dist(pl.x, pl.y, x, y);
+      if (d > radius) continue;
+      var f = 1 - 0.72 * (d / radius);
+      this.damagePlane(pl, damage * f, source);
+    }
+    for (var j = 0; j < this.units.length; j++) {
+      var u = this.units[j];
+      if (!u.alive || u.side === ownSide) continue;
+      var ud = U.dist(u.x, u.y, x, y);
+      if (ud > radius) continue;
+      var uf = (1 - 0.75 * (ud / radius)) * 0.42;
+      this.damage(u, damage * uf, source, 0.4);
+    }
+    for (var b = 0; b < this.battleships.length; b++) {
+      var sh = this.battleships[b];
+      if (!sh.alive || sh.side === ownSide) continue;
+      var sd = U.dist(sh.x, sh.y, x, y);
+      if (sd > radius + (sh.hitRadius || 40)) continue;
+      this.damageShip(sh, damage * 0.18 * (1 - 0.6 * Math.min(1, sd / radius)), source, 1);
+    }
+    if (this.damageFortifications) this.damageFortifications(x, y, damage * 0.35, radius);
   };
 
   Game.prototype.enemyWithin = function (u, radius) {
