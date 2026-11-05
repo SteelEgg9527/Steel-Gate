@@ -1387,6 +1387,7 @@
     } else {
       updateBars();
     }
+    layoutRosterAboveSelection();
     var selN = g.selected.length + (g.selectedShip ? 1 : 0) + (g.selectedBomber ? 1 : 0);
     if (uiCache.selCount !== selN) {
       uiCache.selCount = selN;
@@ -1503,6 +1504,18 @@
   };
 
   /* ---------------- 选择与详情 ---------------- */
+
+  function layoutRosterAboveSelection() {
+    var sel = document.getElementById('selpanel');
+    var roster = document.getElementById('roster-panel');
+    if (!sel || !roster) return;
+    var h = sel.offsetHeight || 0;
+    roster.style.left = '16px';
+    roster.style.right = 'auto';
+    roster.style.top = 'auto';
+    roster.style.bottom = (h + 22) + 'px';
+    roster.style.width = '336px';
+  }
 
   function rebuildSelection(g) {
     var i;

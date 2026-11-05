@@ -2214,3 +2214,13 @@ html, body {
 }
 #ship-system #navy-cards { height: 96px !important; min-height: 96px !important; }
 
+
+/* roster panel above selected unit panel */
+#roster-panel {
+  left: 16px !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: 250px;
+  width: 336px !important;
+  max-height: 34vh;
+}
