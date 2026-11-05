@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>钢铁之门</title>
-<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" type="image/png" href="favicon.png?v=0.12.30">
 <link rel="stylesheet" href="css/style.css?v=0.12.30">
 </head>
 <body>
@@ -387,9 +387,10 @@
       <div class="main-menu-emblem" aria-hidden="true">
         <div class="emblem-ring">
           <svg class="emblem-sight" viewBox="0 0 300 300" aria-hidden="true">
+            <circle cx="150" cy="150" r="135" class="sight-rim"/>
             <circle cx="150" cy="150" r="143" class="sight-rim"/>
             <circle cx="150" cy="150" r="132" class="sight-rim inner"/>
-            <path d="M136 10 H164 L150 38 Z" class="sight-pointer"/>
+            <path d="M136 10 H164 L150 38 Z" class="sight-pointer" transform="matrix(0.99041129,0,0,1.4719658,1.4383068,-0.58983265)"/>
             <g class="sight-dots mg-scale">
               <circle cx="79.3" cy="79.3" r="3.2"/>
               <circle cx="69.1" cy="91.2" r="3.2"/>
@@ -423,12 +424,15 @@
               <circle cx="166.7" cy="244.5" r="3.1"/>
             </g>
             <g class="sight-chevrons">
-              <path d="M102 158 l8 -8 l8 8 M118 158 l8 -8 l8 8 M134 158 l8 -8 l8 8"/>
-              <path d="M150 158 l8 -8 l8 8 M166 158 l8 -8 l8 8 M182 158 l8 -8 l8 8"/>
+              <path d="M129.58 157.21 l3.71 -6.06 l3.57 6.2"/>
+              <path d="M113.63 157.28 l3.71 -6.06 l3.57 6.2"/>
+              <path d="M99.23 157.18 l3.71 -6.06 l3.57 6.2"/>
+              <path d="M162.85 157.23 l3.71 -6.06 l3.57 6.2"/>
+              <path d="M179.15 157.52 l3.71 -6.06 l3.57 6.2"/>
+              <path d="M194.56 157.43 l3.71 -6.06 l3.57 6.2"/>
             </g>
-            <path d="M150 142 L140 164 H160 Z" class="sight-aim"/>
-            <path d="M96 158 H138 M162 158 H204" class="sight-line"/>
-            <path d="M150 164 V270" class="sight-line"/>
+            <path d="M150 142 L140 164 H160 Z" class="sight-aim" transform="matrix(0.65786213,0,0,0.51961549,50.962609,77.471436)"/>
+            <path d="M150 186.87 V292" class="sight-line"/>
             <circle cx="150" cy="213" r="4.2" class="sight-dot"/>
             <circle cx="150" cy="241" r="4.2" class="sight-dot"/>
           </svg>
