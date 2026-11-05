@@ -1887,26 +1887,27 @@ return null;
       }
       // 防空炮优先对空：即使地面有目标，也先打进入射界的敌机
       if (t.cls === 'aa37' || t.cls === 'aa20') {
-        // 每座防空炮独立索敌、独立转向、独立瞄准；不整舰齐射
+        // 每座防空炮独立索敌；按炮塔槽位轮转分配全部来袭目标
+        var aaCands = [];
+        for (var pi = 0; pi < game.planes.length; pi++) {
+          var pl = game.planes[pi];
+          if (!pl || pl.side === ship.side || pl.hp <= 0) continue;
+          if (!aaCanEngage(ship, t, pl, c)) continue;
+          aaCands.push({ plane: pl, key: String(pi) });
+        }
+        var aaSig = aaCands.map(function (q) { return q.key; }).join(',');
         var currentAA = t.aaTarget;
-        if (currentAA && (currentAA.hp <= 0 || currentAA.side === ship.side || !aaCanEngage(ship, t, currentAA, c))) {
+        if (currentAA && (currentAA.hp <= 0 || currentAA.side === ship.side ||
+          !aaCanEngage(ship, t, currentAA, c) || t.aaSig !== aaSig)) {
           currentAA = null; t.aaTarget = null; t.aaAim = 0;
         }
-        if (!currentAA) {
-          var bestScore = Infinity, bestCand = null;
-          for (var pi = 0; pi < game.planes.length; pi++) {
-            var pl = game.planes[pi];
-            if (!pl || pl.side === ship.side || pl.hp <= 0) continue;
-            var pd0 = U.dist(ship.x, ship.y, pl.x, pl.y);
-            if (!aaCanEngage(ship, t, pl, c)) continue;
-            var score = pd0;
-            for (var oi = 0; oi < ship.turrets.length; oi++) {
-              var ot = ship.turrets[oi];
-              if (ot !== t && (ot.cls === 'aa37' || ot.cls === 'aa20') && ot.aaTarget === pl) score += 260;
-            }
-            if (score < bestScore) { bestScore = score; bestCand = pl; }
-          }
-          currentAA = bestCand; t.aaTarget = currentAA; t.aaAim = 0;
+        if (!currentAA && aaCands.length) {
+          // 不同炮塔从不同目标开始，16 座炮塔可以同时锁定多架来袭飞机
+          var pick = aaCands[i % aaCands.length];
+          currentAA = pick.plane;
+          t.aaTarget = currentAA;
+          t.aaSig = aaSig;
+          t.aaAim = 0;
         }
         if (currentAA) {
           var abr = Math.atan2(currentAA.y - ship.y, currentAA.x - ship.x);
