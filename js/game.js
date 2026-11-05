@@ -4062,6 +4062,14 @@
       var uf = (1 - 0.75 * (ud / radius)) * 0.42;
       this.damage(u, damage * uf, source, 0.4);
     }
+    for (var sp = this.seaplanes.length - 1; sp >= 0; sp--) {
+      var sea = this.seaplanes[sp];
+      if (!sea || sea.side === ownSide || (sea.hp || 100) <= 0) continue;
+      var sd0 = U.dist(sea.x, sea.y, x, y);
+      if (sd0 > radius) continue;
+      sea.hp = (sea.hp || 100) - damage * (1 - 0.7 * (sd0 / radius));
+      if (sea.hp <= 0) this.seaplanes.splice(sp, 1);
+    }
     for (var b = 0; b < this.battleships.length; b++) {
       var sh = this.battleships[b];
       if (!sh.alive || sh.side === ownSide) continue;

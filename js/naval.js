@@ -1578,6 +1578,7 @@ return null;
       side: spec.side || 0,
       arcCenter: spec.arcCenter != null ? spec.arcCenter : (spec.side ? spec.side * Math.PI / 2 : 0),
       angle: spec.arcCenter != null ? spec.arcCenter : (spec.side ? spec.side * Math.PI / 2 : 0),
+    aaTarget: null, aaAim: 0,
       targetAngle: 0,
       hp: c.hp, maxHp: c.hp, destroyed: false,
       ammo: c.shots || 100, maxAmmo: c.shots || 100,
@@ -1877,52 +1878,46 @@ return null;
       }
       // 防空炮优先对空：即使地面有目标，也先打进入射界的敌机
       if (t.cls === 'aa37' || t.cls === 'aa20') {
-        var bestPlane = null, bestPd = c.rangeAir;
-        for (var pi = 0; pi < game.planes.length; pi++) {
-          var pl = game.planes[pi];
-          if (!pl || pl.side === ship.side || pl.hp <= 0) continue;
-          var pd = U.dist(ship.x, ship.y, pl.x, pl.y);
-          if (pd < bestPd) { bestPd = pd; bestPlane = pl; }
+        // 每座防空炮独立索敌、独立转向、独立瞄准；不整舰齐射
+        var currentAA = t.aaTarget;
+        if (currentAA && (currentAA.hp <= 0 || currentAA.side === ship.side ||
+          U.dist(ship.x, ship.y, currentAA.x, currentAA.y) > c.rangeAir * 1.05)) {
+          currentAA = null; t.aaTarget = null; t.aaAim = 0;
         }
-        if (bestPlane) {
-          var pbr = Math.atan2(bestPlane.y - ship.y, bestPlane.x - ship.x);
-          if (allowedArc(ship, t, pbr)) {
-            var pRel = angleDiff(pbr, ship.heading);
-            var pDesired = t.arcCenter + U.clamp(angleDiff(pRel, t.arcCenter), -t.classDef.arc / 2, t.classDef.arc / 2);
-            t.angle += U.clamp(angleDiff(pDesired, t.angle), -c.turnRate * dt, c.turnRate * dt);
-            t.targetAngle = pDesired;
-            if (t.cd <= 0 && t.ammo > 0) {
-              t.ammo--;
-              t.cd = c.interval;
-              game.effects.push({ kind: 'tracer', x1: turretWorld(ship, t).x, y1: turretWorld(ship, t).y, x2: bestPlane.x, y2: bestPlane.y, t: 0, dur: 0.1, side: ship.side });
-              game.damagePlane(bestPlane, c.dmg, ship);
+        if (!currentAA) {
+          var bestScore = Infinity, bestCand = null;
+          for (var pi = 0; pi < game.planes.length; pi++) {
+            var pl = game.planes[pi];
+            if (!pl || pl.side === ship.side || pl.hp <= 0) continue;
+            var pd0 = U.dist(ship.x, ship.y, pl.x, pl.y);
+            if (pd0 > c.rangeAir) continue;
+            var score = pd0;
+            for (var oi = 0; oi < ship.turrets.length; oi++) {
+              var ot = ship.turrets[oi];
+              if (ot !== t && (ot.cls === 'aa37' || ot.cls === 'aa20') && ot.aaTarget === pl) score += 260;
             }
+            if (score < bestScore) { bestScore = score; bestCand = pl; }
+          }
+          currentAA = bestCand; t.aaTarget = currentAA; t.aaAim = 0;
+        }
+        if (currentAA) {
+          var abr = Math.atan2(currentAA.y - ship.y, currentAA.x - ship.x);
+          var adist = U.dist(ship.x, ship.y, currentAA.x, currentAA.y);
+          // 正上方目标：水平方位不稳定时直接保持当前炮塔角，仍可射击
+          if (adist > 26) {
+            t.angle += U.clamp(angleDiff(abr, t.angle), -c.turnRate * dt, c.turnRate * dt);
+          }
+          t.targetAngle = t.angle;
+          var aimErr = adist <= 26 ? 0 : Math.abs(angleDiff(abr, t.angle));
+          if (aimErr < 0.16) t.aaAim += dt;
+          else t.aaAim = Math.max(0, t.aaAim - dt * 0.5);
+          if (t.cd <= 0 && t.ammo > 0 && (aimErr < 0.11 || adist <= 34) &&
+            t.aaAim >= (c.aimTime || 0.25) && game.time >= (ship.nextFireAt || 0)) {
+            fireShipShell(game, ship, t, currentAA.x, currentAA.y, adist, currentAA);
+            ship.nextFireAt = game.time + 0.06;
           }
           continue;
         }
-        // 敌方水上飞机也是防空目标
-        var engagedSeaplane = false;
-        for (var si = 0; si < game.seaplanes.length; si++) {
-          var sp = game.seaplanes[si];
-          if (!sp || sp.side === ship.side || (sp.hp || 100) <= 0) continue;
-          var spd = U.dist(ship.x, ship.y, sp.x, sp.y);
-          if (spd > c.rangeAir) continue;
-          var sbr = Math.atan2(sp.y - ship.y, sp.x - ship.x);
-          if (!allowedArc(ship, t, sbr)) continue;
-          engagedSeaplane = true;
-          var sRel = angleDiff(sbr, ship.heading);
-          var sDesired = t.arcCenter + U.clamp(angleDiff(sRel, t.arcCenter), -t.classDef.arc / 2, t.classDef.arc / 2);
-          t.angle += U.clamp(angleDiff(sDesired, t.angle), -c.turnRate * dt, c.turnRate * dt);
-          t.targetAngle = sDesired;
-          if (t.cd <= 0 && t.ammo > 0) {
-            t.ammo--; t.cd = c.interval;
-            game.effects.push({ kind: 'tracer', x1: turretWorld(ship, t).x, y1: turretWorld(ship, t).y, x2: sp.x, y2: sp.y, t: 0, dur: 0.1, side: ship.side });
-            sp.hp = (sp.hp || 100) - c.dmg;
-            if (sp.hp <= 0) game.seaplanes.splice(si, 1);
-          }
-          break;
-        }
-        if (engagedSeaplane) continue;
       }
       if (!target) continue;
       var br = Math.atan2(ty - ship.y, tx - ship.x);
