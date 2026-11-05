@@ -132,10 +132,10 @@
   function formationSlots() {
     return [
       { forward: 0, lateral: 0 },
-      { forward: -56, lateral: -66 },
-      { forward: -56, lateral: 66 },
-      { forward: -112, lateral: -132 },
-      { forward: -112, lateral: 132 }
+      { forward: -75, lateral: -105 },
+      { forward: -75, lateral: 105 },
+      { forward: -150, lateral: -210 },
+      { forward: -150, lateral: 210 }
     ];
   }
 
@@ -176,16 +176,28 @@
       var diff = desired - (p.heading || 0);
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      var max = B.b17.turnRate * dt * 1.15;
+      var max = B.b17.turnRate * dt * 2.2;
       var step = U.clamp(diff, -max, max);
       p.heading += step;
       p.bank = U.clamp(step / Math.max(0.001, max) * 0.7, -0.7, 0.7);
       var dist = Math.hypot(dx, dy);
       var speed = B.b17.speed * (p.speedJitter || 1);
-      if (dist > 260) speed *= 1.08;
-      else if (dist < 45) speed *= 0.92;
+      if (dist > 300) speed *= 1.35;
+      else if (dist > 120) speed *= 1.18;
+      else if (dist < 45) speed *= 0.9;
       p.x += Math.cos(p.heading) * speed * dt;
       p.y += Math.sin(p.heading) * speed * dt;
+      // 机间保持距离，避免选中圈重叠
+      for (var j = 0; j < b.formation.length; j++) {
+        var q = b.formation[j];
+        if (!q || q === p || !q.deployed) continue;
+        var qx = p.x - q.x, qy = p.y - q.y;
+        var qd = Math.hypot(qx, qy);
+        if (qd > 0.001 && qd < 62) {
+          p.x += qx / qd * (62 - qd) * 0.5;
+          p.y += qy / qd * (62 - qd) * 0.5;
+        }
+      }
       idx++;
     }
   }
@@ -230,9 +242,13 @@
     return arr.join(' · ');
   }
 
-  function bombIconHTML(type) {
+  function bombIconHTML(type, planeId, index) {
     var d = B.bombs[type] || {};
-    return '<span class="air-bomb" title="' + d.name + '">' + ICON_BOMB + '<i>' + (d.short || type) + '</i></span>';
+    var attrs = '';
+    if (planeId != null && index != null) {
+      attrs = ' draggable="true" data-drag-kind="equippedbomb" data-plane-id="' + planeId + '" data-bomb-index="' + index + '" data-bomb-type="' + type + '"';
+    }
+    return '<span class="air-bomb"' + attrs + ' title="' + d.name + '">' + ICON_BOMB + '<i>' + (d.short || type) + '</i></span>';
   }
 
   function planeHTML(p, extra) {
@@ -694,7 +710,7 @@
     if (!d) return;
     if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('积分不足，需要 ' + B.bombGroupCost, 'loss'); return; }
     g.teams.blue.score -= B.bombGroupCost;
-    b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: d.group });
+    b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: d.group, paid: B.bombGroupCost });
     toast('已购买 ' + d.name + '（' + d.group + '枚）', 'win');
     renderConfig(g);
     refresh(g);
@@ -734,13 +750,62 @@
     for (var i = 0; i < b.hangarBombs.length; i++) {
       if (b.hangarBombs[i].id === id) {
         var bg = b.hangarBombs.splice(i, 1)[0];
-        g.teams.blue.score = (g.teams.blue.score || 0) + B.bombGroupCost;
-        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + B.bombGroupCost + ' 分', 'win');
+        var paid = bg.paid || B.bombGroupCost;
+        g.teams.blue.score = (g.teams.blue.score || 0) + paid;
+        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 分', 'win');
         renderConfig(g); refresh(g);
         return true;
       }
     }
     return false;
+  }
+
+  function equippedBombUnitValue(type) {
+    var d = B.bombs[type];
+    return d && d.group ? Math.round(B.bombGroupCost / d.group) : 0;
+  }
+
+  function sellEquippedBomb(g, planeId, index) {
+    var b = ensure(g);
+    if (!b || b.state !== 'base') return false;
+    var p = null;
+    for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
+    if (!p || index < 0 || index >= p.bombs.length) return false;
+    var type = p.bombs.splice(index, 1)[0];
+    var value = equippedBombUnitValue(type);
+    g.teams.blue.score = (g.teams.blue.score || 0) + value;
+    p.loadout = p.bombs.slice();
+    toast('已出售 ' + (B.bombs[type] ? B.bombs[type].short : '航弹') + '，返还 ' + value + ' 分', 'win');
+    renderConfig(g); refresh(g);
+    return true;
+  }
+
+  function moveEquippedBombToHangar(g, planeId, index) {
+    var b = ensure(g);
+    if (!b || b.state !== 'base') return false;
+    var p = null;
+    for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
+    if (!p || index < 0 || index >= p.bombs.length) return false;
+    var type = p.bombs.splice(index, 1)[0];
+    b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: 1, paid: equippedBombUnitValue(type) });
+    p.loadout = p.bombs.slice();
+    toast('航弹已放回机库', 'order');
+    renderConfig(g); refresh(g);
+    return true;
+  }
+
+  function reorderEquippedBomb(g, planeId, from, to) {
+    var b = ensure(g);
+    if (!b || b.state !== 'base') return false;
+    var p = null;
+    for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
+    if (!p || from < 0 || from >= p.bombs.length) return false;
+    var type = p.bombs.splice(from, 1)[0];
+    if (to < 0 || to > p.bombs.length) to = p.bombs.length;
+    p.bombs.splice(to, 0, type);
+    p.loadout = p.bombs.slice();
+    renderConfig(g); refresh(g);
+    return true;
   }
 
   function addBombGroupToPlane(g, plane, type) {
@@ -788,7 +853,7 @@
         if (p) {
           html += '<div class="bomber-slot-plane">' + ICON_PLANE +
             '<div><b>' + p.name + '</b><small>耐久 ' + Math.ceil(p.hp) + ' / ' + p.maxHp + ' · 挂载 ' + loadWeight(p) + '/6000lb</small>' +
-            '<div class="bomber-hardpoints">' + (p.bombs.length ? p.bombs.map(function (t) { return bombIconHTML(t); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
+            '<div class="bomber-hardpoints">' + (p.bombs.length ? p.bombs.map(function (t, bi) { return bombIconHTML(t, p.id, bi); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
             '<small class="drop-order">投弹顺序：从左到右</small></div></div>';
         } else {
           html += '<div class="bomber-slot-empty">拖动飞机到此编组</div>';
@@ -1002,14 +1067,16 @@
     document.addEventListener('dragstart', function (ev) {
       var card = ev.target && ev.target.closest ? ev.target.closest('[data-drag-kind]') : null;
       if (!card) return;
-      dragging = { kind: card.getAttribute('data-drag-kind'), id: card.getAttribute('data-drag-id'), type: card.getAttribute('data-bomb-type') };
+      dragging = { kind: card.getAttribute('data-drag-kind'), id: card.getAttribute('data-drag-id'), type: card.getAttribute('data-bomb-type'), planeId: card.getAttribute('data-plane-id'), index: card.getAttribute('data-bomb-index') };
       try { ev.dataTransfer.setData('text/plain', JSON.stringify(dragging)); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {}
     });
     document.addEventListener('dragend', function () { dragging = null; });
     document.addEventListener('dragover', function (ev) {
       var slot = ev.target && ev.target.closest ? ev.target.closest('.bomber-slot') : null;
       var shop = ev.target && ev.target.closest ? ev.target.closest('.bomber-buy') : null;
-      if (!slot && !shop) return;
+      var hangar = ev.target && ev.target.closest ? ev.target.closest('#bomber-hangar, .bomber-pane.hangar') : null;
+      var hard = ev.target && ev.target.closest ? ev.target.closest('.bomber-hardpoints, .air-bomb[data-drag-kind="equippedbomb"]') : null;
+      if (!slot && !shop && !hangar && !hard) return;
       ev.preventDefault();
       if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
     });
@@ -1026,6 +1093,29 @@
       if (shop && payload.kind === 'bomb') {
         ev.preventDefault();
         refundHangarBomb(g, payload.id);
+        dragging = null;
+        return;
+      }
+      if (shop && payload.kind === 'equippedbomb') {
+        ev.preventDefault();
+        sellEquippedBomb(g, payload.planeId, parseInt(payload.index, 10));
+        dragging = null;
+        return;
+      }
+      var hangar = ev.target && ev.target.closest ? ev.target.closest('#bomber-hangar, .bomber-pane.hangar') : null;
+      if (hangar && payload.kind === 'equippedbomb') {
+        ev.preventDefault();
+        moveEquippedBombToHangar(g, payload.planeId, parseInt(payload.index, 10));
+        dragging = null;
+        return;
+      }
+      var hard = ev.target && ev.target.closest ? ev.target.closest('.bomber-hardpoints, .air-bomb[data-drag-kind="equippedbomb"]') : null;
+      if (hard && payload.kind === 'equippedbomb') {
+        ev.preventDefault();
+        var icon = hard.closest ? hard.closest('.air-bomb[data-drag-kind="equippedbomb"]') : null;
+        if (icon && icon.getAttribute('data-plane-id') !== payload.planeId) { toast('只能在本机挂载内调整顺序', 'loss'); dragging = null; return; }
+        var targetIndex = icon ? parseInt(icon.getAttribute('data-bomb-index'), 10) : 999;
+        reorderEquippedBomb(g, payload.planeId, parseInt(payload.index, 10), targetIndex);
         dragging = null;
         return;
       }

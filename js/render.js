@@ -2050,7 +2050,17 @@
       if (p.kind === 'b17' && SL.Bomber) {
         var b17Selected = !!(game.selectedBomber && game.selectedBomber.formation.indexOf(p) >= 0);
         SL.Bomber.drawPlane(ctx, p, sx, sy, cam, b17Selected);
-        var bbw = 46;
+        if (b17Selected) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(238,211,137,0.92)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 28 * cam.zoom, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        var bbw = 32;
         ctx.fillStyle = 'rgba(14,16,12,0.72)';
         ctx.fillRect(sx - bbw / 2, sy + 36, bbw, 3);
         ctx.fillStyle = '#d8b25e';
