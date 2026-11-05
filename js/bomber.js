@@ -159,16 +159,25 @@
     }
   }
 
+  function firstBomber(b) {
+    for (var i = 0; i < b.formation.length; i++) {
+      if (b.formation[i] && b.formation[i].deployed) return b.formation[i];
+    }
+    return null;
+  }
+
   function updateFormation(g, b, dt) {
     var slots = formationSlots();
     var fx = Math.cos(b.heading), fy = Math.sin(b.heading);
     var sx = -fy, sy = fx;
-    var idx = 0;
+    var active = 0;
     for (var i = 0; i < b.formation.length; i++) {
       var p = b.formation[i];
       if (!p || !p.deployed) continue;
-      var s = slots[Math.min(idx, slots.length - 1)];
-      var drift = Math.sin((g.time || 0) * 1.1 + (p.jitter || 0)) * 5;
+      // 长机保持自己的轨迹，僚机只跟随长机形成的 V 形槽位
+      if (active === 0) { active++; continue; }
+      var s = slots[Math.min(active, slots.length - 1)];
+      var drift = Math.sin((g.time || 0) * 1.0 + (p.jitter || 0)) * 4;
       var tx = b.groupX + fx * s.forward + sx * (s.lateral + drift);
       var ty = b.groupY + fy * s.forward + sy * (s.lateral + drift);
       var dx = tx - p.x, dy = ty - p.y;
@@ -176,29 +185,29 @@
       var diff = desired - (p.heading || 0);
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      var max = B.b17.turnRate * dt * 2.2;
+      var max = B.b17.turnRate * dt * 2.4;
       var step = U.clamp(diff, -max, max);
       p.heading += step;
-      p.bank = U.clamp(step / Math.max(0.001, max) * 0.7, -0.7, 0.7);
+      p.bank = U.clamp(step / Math.max(0.001, max) * 0.6, -0.6, 0.6);
       var dist = Math.hypot(dx, dy);
       var speed = B.b17.speed * (p.speedJitter || 1);
-      if (dist > 300) speed *= 1.35;
-      else if (dist > 120) speed *= 1.18;
-      else if (dist < 45) speed *= 0.9;
+      if (dist > 260) speed *= 1.38;
+      else if (dist > 110) speed *= 1.2;
+      else if (dist < 38) speed *= 0.9;
       p.x += Math.cos(p.heading) * speed * dt;
       p.y += Math.sin(p.heading) * speed * dt;
-      // 机间保持距离，避免选中圈重叠
+      // 保持机间距离，避免选中圈重叠
       for (var j = 0; j < b.formation.length; j++) {
         var q = b.formation[j];
         if (!q || q === p || !q.deployed) continue;
         var qx = p.x - q.x, qy = p.y - q.y;
         var qd = Math.hypot(qx, qy);
-        if (qd > 0.001 && qd < 62) {
-          p.x += qx / qd * (62 - qd) * 0.5;
-          p.y += qy / qd * (62 - qd) * 0.5;
+        if (qd > 0.001 && qd < 60) {
+          p.x += qx / qd * (60 - qd) * 0.4;
+          p.y += qy / qd * (60 - qd) * 0.4;
         }
       }
-      idx++;
+      active++;
     }
   }
 
@@ -569,26 +578,33 @@
   }
 
   function updateMovement(g, b, dt) {
+    var lead = firstBomber(b);
+    if (!lead) return;
     if (b.state === 'over') {
-      var dx = b.orbitX - b.groupX, dy = b.orbitY - b.groupY;
+      var dx = b.orbitX - lead.x, dy = b.orbitY - lead.y;
       var d = Math.hypot(dx, dy) || 1;
       var desired;
       if (d > B.b17.orbitRadius + 80) {
         desired = Math.atan2(dy, dx);
       } else {
-        var ang = Math.atan2(b.groupY - b.orbitY, b.groupX - b.orbitX);
+        var ang = Math.atan2(lead.y - b.orbitY, lead.x - b.orbitX);
         desired = ang + Math.PI / 2;
         if (d < B.b17.orbitRadius - 90) desired = Math.atan2(dy, dx);
       }
-      turnToward(b, desired, dt);
+      turnToward(lead, desired, dt);
     } else if (b.state === 'returning') {
-      var re = b.returnEdge || nearestEdge(b.groupX, b.groupY);
-      turnToward(b, re.heading, dt);
+      var re = b.returnEdge || nearestEdge(lead.x, lead.y);
+      turnToward(lead, re.heading, dt);
     } else {
       return;
     }
-    b.groupX += Math.cos(b.heading) * B.b17.speed * dt;
-    b.groupY += Math.sin(b.heading) * B.b17.speed * dt;
+    var speed = B.b17.speed * (lead.speedJitter || 1);
+    lead.x += Math.cos(lead.heading) * speed * dt;
+    lead.y += Math.sin(lead.heading) * speed * dt;
+    b.groupX = lead.x;
+    b.groupY = lead.y;
+    b.heading = lead.heading;
+    b.bank = lead.bank;
     updateFormation(g, b, dt);
   }
 
