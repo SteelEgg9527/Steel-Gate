@@ -59,11 +59,11 @@
 
 GitHub：
 
-https://github.com/SteelEgg9527/Steel-Line-1944
+https://github.com/SteelEgg9527/Steel-Gate
 
 问题反馈：
 
-https://github.com/SteelEgg9527/Steel-Line-1944/issues
+https://github.com/SteelEgg9527/Steel-Gate/issues
 
 ## 作者
 
