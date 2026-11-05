@@ -873,7 +873,9 @@
     T.zoneError = null;
     T.treeError = null;
     var one = 1 / zoom;
-    var X0 = ORIGIN, Y0 = ORIGIN, E = EXTENT;
+    var mapSize = T.size || SIZE;
+    var X0 = (T.origin == null ? ORIGIN : T.origin), Y0 = X0;
+    var E = T.extent || (mapSize - X0 * 2);
 
     // 所有地形内容都裁剪在战场范围内，河流/道路不会再画到地图外
     ctx.save();
@@ -890,20 +892,24 @@
 
     if (forestCanvas) ctx.drawImage(forestCanvas, X0, Y0, E, E);
 
-    // 方里网
-    var g0 = Math.ceil(ORIGIN / 100) * 100;
+    // 方里网：100m 细线，500m 粗线；粗线与边缘标尺对齐
+    var g0 = Math.ceil(X0 / 100) * 100;
     var gp = new Path2D();
-    for (var gx = g0; gx <= X0 + E; gx += 100) {
-      gp.moveTo(gx, Y0);
-      gp.lineTo(gx, Y0 + E);
+    var gpMajor = new Path2D();
+    for (var gx = g0; gx <= X0 + E + 0.1; gx += 100) {
+      gp.moveTo(gx, Y0); gp.lineTo(gx, Y0 + E);
+      if (Math.abs(gx % 500) < 0.1) { gpMajor.moveTo(gx, Y0); gpMajor.lineTo(gx, Y0 + E); }
     }
-    for (var gy = g0; gy <= Y0 + E; gy += 100) {
-      gp.moveTo(X0, gy);
-      gp.lineTo(X0 + E, gy);
+    for (var gy = g0; gy <= Y0 + E + 0.1; gy += 100) {
+      gp.moveTo(X0, gy); gp.lineTo(X0 + E, gy);
+      if (Math.abs(gy % 500) < 0.1) { gpMajor.moveTo(X0, gy); gpMajor.lineTo(X0 + E, gy); }
     }
     ctx.strokeStyle = C.grid;
-    ctx.lineWidth = 0.6 * one;
+    ctx.lineWidth = 0.55 * one;
     ctx.stroke(gp);
+    ctx.strokeStyle = 'rgba(68,64,48,0.26)';
+    ctx.lineWidth = 1.05 * one;
+    ctx.stroke(gpMajor);
 
     // 等高线
     var showFine = zoom >= 0.55;
@@ -1000,17 +1006,17 @@
 
     ctx.strokeStyle = 'rgba(52,50,40,0.8)';
     ctx.lineWidth = 2.2 * one;
-    ctx.strokeRect(0, 0, SIZE, SIZE);
+    ctx.strokeRect(X0, Y0, E, E);
     ctx.strokeStyle = 'rgba(52,50,40,0.35)';
     ctx.lineWidth = 0.8 * one;
-    ctx.strokeRect(5, 5, SIZE - 10, SIZE - 10);
+    ctx.strokeRect(X0 + 5, Y0 + 5, E - 10, E - 10);
 
     // 作战区角标
     if (zoom > 0.7) {
       ctx.strokeStyle = 'rgba(52,50,40,0.85)';
       ctx.lineWidth = 1.6 * one;
       var L = 16;
-      var corners = [[0, 0, 1, 1], [SIZE, 0, -1, 1], [0, SIZE, 1, -1], [SIZE, SIZE, -1, -1]];
+      var corners = [[X0, Y0, 1, 1], [X0 + E, Y0, -1, 1], [X0, Y0 + E, 1, -1], [X0 + E, Y0 + E, -1, -1]];
       ctx.beginPath();
       for (var c = 0; c < corners.length; c++) {
         var cc = corners[c];
@@ -1086,18 +1092,32 @@
       ctx.textAlign = 'center';
     }
 
-    // 图廓坐标（仅作战区边缘）
+    // 图廓坐标与刻度：上、下、左、右四边全部绘制，和 500m 粗网格对齐
     ctx.font = '9px ' + SL.FONT_MONO;
-    for (var g = 200; g < SIZE; g += 200) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (var g = 500; g < mapSize; g += 500) {
       var px = proj.x(g);
-      if (px > 20 && px < proj.w - 20) {
-        drawSheetText(ctx, String(g), px, proj.y(0) + 12, 'rgba(60,58,48,0.6)');
-        drawSheetText(ctx, String(g), px, proj.y(SIZE) - 12, 'rgba(60,58,48,0.6)');
-      }
       var py = proj.y(g);
-      if (py > 20 && py < proj.h - 20) {
-        drawSheetText(ctx, String(g), proj.x(0) + 14, py, 'rgba(60,58,48,0.6)');
-        drawSheetText(ctx, String(g), proj.x(SIZE) - 14, py, 'rgba(60,58,48,0.6)');
+      if (px > 24 && px < proj.w - 24) {
+        ctx.strokeStyle = 'rgba(52,50,40,0.45)';
+        ctx.lineWidth = 1 * one;
+        ctx.beginPath();
+        ctx.moveTo(px, proj.y(Y0) - 7 * one); ctx.lineTo(px, proj.y(Y0));
+        ctx.moveTo(px, proj.y(Y0 + E)); ctx.lineTo(px, proj.y(Y0 + E) + 7 * one);
+        ctx.stroke();
+        drawSheetText(ctx, String(g), px, proj.y(Y0) + 12, 'rgba(60,58,48,0.72)');
+        drawSheetText(ctx, String(g), px, proj.y(Y0 + E) - 12, 'rgba(60,58,48,0.72)');
+      }
+      if (py > 24 && py < proj.h - 24) {
+        ctx.strokeStyle = 'rgba(52,50,40,0.45)';
+        ctx.lineWidth = 1 * one;
+        ctx.beginPath();
+        ctx.moveTo(proj.x(X0) - 7 * one, py); ctx.lineTo(proj.x(X0), py);
+        ctx.moveTo(proj.x(X0 + E), py); ctx.lineTo(proj.x(X0 + E) + 7 * one, py);
+        ctx.stroke();
+        drawSheetText(ctx, String(g), proj.x(X0) + 15, py, 'rgba(60,58,48,0.72)');
+        drawSheetText(ctx, String(g), proj.x(X0 + E) - 15, py, 'rgba(60,58,48,0.72)');
       }
     }
   };
@@ -1111,12 +1131,12 @@
   }
 
   T.thumbnail = function (ctx, size) {
-    var s = size / SIZE;
+    var s = size / (T.size || SIZE);
     ctx.save();
     ctx.scale(s, s);
     T.drawGround(ctx, s, { simple: true });
     ctx.restore();
   };
 
-  T.bounds = { minX: 0, minY: 0, maxX: SIZE, maxY: SIZE };
+  T.bounds = { minX: T.origin || 0, minY: T.origin || 0, maxX: T.size || SIZE, maxY: T.size || SIZE };
 })(window);

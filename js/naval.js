@@ -458,21 +458,24 @@
       T.hills.push({ x: hp.x, y: hp.y, r: 170 + rnd() * 260, h: 20 + rnd() * 36 });
     }
 
-    // 森林与树
+    // 森林与树：整片林地必须完整落在陆地上
     for (var fi = 0; fi < 15; fi++) {
       var fp = randomSceneLandPoint(rnd, 300);
       var fr = 90 + rnd() * 130;
-      T.forests.push({ x: fp.x, y: fp.y, r: fr });
+      var lf = safeForest({ x: fp.x - off.x, y: fp.y - off.y, r: fr });
+      if (!lf) {
+        var fp2 = randomSceneLandPoint(rnd, 420);
+        lf = safeForest({ x: fp2.x - off.x, y: fp2.y - off.y, r: 70 + rnd() * 80 });
+      }
+      if (!lf) continue;
+      T.forests.push(lf);
+      T.forestZones.push({ x: lf.x, y: lf.y, r: lf.r });
       var tn = 14 + Math.floor(rnd() * 18);
       for (var ti = 0; ti < tn; ti++) {
-        var ta = rnd() * Math.PI * 2, tr = Math.sqrt(rnd()) * fr * 0.92;
-        T.trees.push({ x: fp.x + Math.cos(ta) * tr, y: fp.y + Math.sin(ta) * tr, s: 0.7 + rnd() * 0.7 });
+        var ta = rnd() * Math.PI * 2, tr = Math.sqrt(rnd()) * lf.r * 0.92;
+        T.trees.push({ x: lf.x + Math.cos(ta) * tr, y: lf.y + Math.sin(ta) * tr, s: 0.7 + rnd() * 0.7 });
       }
     }
-    // 选取两片大森林作为可占领林地
-    T.forests.slice().sort(function (a, b) { return b.r - a.r; }).slice(0, 2).forEach(function (f) {
-      T.forestZones.push({ x: f.x, y: f.y, r: Math.max(70, f.r * 0.72) });
-    });
 
     // 村庄：每张地图 7 个左右，沿内陆分布，避开彼此和出生点
     var names = m.villageNames || ['圣洛村', '贝桑港', '卡昂村', '维尔农', '奥马哈村', '瑟堡镇', '巴约村', '库唐斯'];
@@ -611,16 +614,7 @@
       if (sites.radar) allSites.push(sites.radar);
       if (sites.coastBases) for (var ci = 0; ci < sites.coastBases.length; ci++) allSites.push(sites.coastBases[ci]);
     }
-    function circleLand(x, y, r) {
-      if (!NAVAL.isLand(x, y)) return false;
-      for (var a = 0; a < 8; a++) {
-        var ang = a / 8 * Math.PI * 2;
-        if (NAVAL.isWater(x + Math.cos(ang) * r * 0.95, y + Math.sin(ang) * r * 0.95)) return false;
-      }
-      if (x + r > NAVAL.shoreAt(y) - 35 || x - r < 25 || y - r < 25 || y + r > T.size - 25) return false;
-      return true;
-    }
-    function siteClear(x, y, r, gap) {
+  function siteClear(x, y, r, gap) {
       for (var i = 0; i < allSites.length; i++) {
         var s = allSites[i];
         if (U.dist(x, y, s.x, s.y) < r + s.r + (gap == null ? 100 : gap)) return false;
@@ -747,7 +741,7 @@
 
     // 林地圈少量保留，且不得与城镇/工事重叠
     var generatedForests = [];
-    for (var fi = 0; fi < T.forestZones.length && generatedForests.length < 2; fi++) {
+    for (var fi = 0; fi < T.forestZones.length; fi++) {
       var fz = T.forestZones[fi];
       if (!circleLand(fz.x, fz.y, fz.r)) continue;
       var badF = false;
@@ -827,12 +821,42 @@
     return { towers: towers, radar: radar, coastBases: coastBases };
   }
 
+function circleLand(x, y, r) {
+var size = T.size || 5000;
+if (x - r < 25 || y - r < 25 || x + r > size - 25 || y + r > size - 25) return false;
+if (!NAVAL.isLand(x, y)) return false;
+for (var a = 0; a < 16; a++) {
+  var ang = a / 16 * Math.PI * 2;
+  if (NAVAL.isWater(x + Math.cos(ang) * r * 0.96, y + Math.sin(ang) * r * 0.96)) return false;
+}
+return true;
+  }
+
+  function safeForest(f) {
+var p = NAVAL.nearestLandPoint(f.x, f.y);
+var r = f.r;
+for (var k = 0; k < 14; k++) {
+  if (circleLand(p.x, p.y, r)) return { x: p.x, y: p.y, r: r };
+  r *= 0.82;
+  if (r < 58) break;
+  if (k % 2 === 1) p = NAVAL.nearestLandPoint(p.x + (k % 4 === 1 ? 55 : -55), p.y + (k % 6 === 1 ? 55 : -55));
+}
+return null;
+  }
+
   function buildCustomFeatures(m) {
     var L = m.layout;
     var rnd = U.mulberry32((m.seed || 1) + 17);
     T.hills = L.hills.map(function (h) { return { x: h.x, y: h.y, r: h.r, h: h.h, name: h.name || '' }; });
-    T.forests = L.forests.map(function (f) { return { x: f.x, y: f.y, r: f.r }; });
-    T.forestZones = L.forests.map(function (f) { return { x: f.x, y: f.y, r: Math.max(70, f.r * 0.9) }; });
+    T.forests = [];
+    T.forestZones = [];
+    var layoutForests = L.forests || [];
+    for (var lfi = 0; lfi < layoutForests.length; lfi++) {
+      var lf = safeForest(layoutForests[lfi]);
+      if (!lf) continue;
+      T.forests.push(lf);
+      T.forestZones.push({ x: lf.x, y: lf.y, r: lf.r });
+    }
     T.villages = L.villages.map(function (v, i) {
       return { id: 'v' + i, name: v.name, x: v.x, y: v.y, r: v.r, town: v.name };
     });
@@ -1240,15 +1264,7 @@
     for (var ly = 100; ly < size; ly += 220) {
       ctx.fillRect(0, ly, size, 4);
     }
-    // 简单等高线/田块
-    ctx.strokeStyle = 'rgba(104,96,64,0.22)';
-    ctx.lineWidth = 0.8 * one;
-    for (var gx = 0; gx <= size; gx += 250) {
-      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, size); ctx.stroke();
-    }
-    for (var gy = 0; gy <= size; gy += 250) {
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(size, gy); ctx.stroke();
-    }
+    // 田块纹理由下方田块填充绘制，不再叠加与标尺错位的 250m 线
     // 简单田块 / 林地 / 道路，避免 4km 陆地过于空
     var rnd = U.mulberry32(m.seed || 1944);
     for (var fi = 0; fi < 22; fi++) {
@@ -1263,16 +1279,7 @@
       ctx.lineWidth = 0.8 * one;
       ctx.strokeRect(fx, fy, fw, fh);
     }
-    for (var wi = 0; wi < 9; wi++) {
-      var wy = 300 + rnd() * (size - 600);
-      var we = shoreSceneAt(wy) - 260;
-      if (we < 420) continue;
-      var wx = 280 + rnd() * (we - 420);
-      var wr = 70 + rnd() * 90;
-      ctx.beginPath(); ctx.arc(wx, wy, wr, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(62,88,54,0.22)'; ctx.fill();
-      ctx.strokeStyle = 'rgba(66,90,58,0.28)'; ctx.stroke();
-    }
+    // 不再绘制不在 T.forests / T.forestZones 中的装饰性绿色圆形，避免假林地
     ctx.strokeStyle = 'rgba(126,112,78,0.36)';
     ctx.lineWidth = 3 * one;
     ctx.beginPath();
@@ -1304,7 +1311,7 @@
     ctx.lineWidth = 1.2 * one;
     ctx.stroke();
 
-    // 方里网
+    // 方里网：100m 细线，500m 粗线；500m 粗线与边缘标尺严格对齐
     ctx.strokeStyle = 'rgba(69,82,64,0.15)';
     ctx.lineWidth = 0.55 * one;
     for (var xg = 0; xg <= size; xg += 100) {
@@ -1312,6 +1319,14 @@
     }
     for (var yg = 0; yg <= size; yg += 100) {
       ctx.beginPath(); ctx.moveTo(0, yg); ctx.lineTo(size, yg); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(52,58,42,0.30)';
+    ctx.lineWidth = 1.1 * one;
+    for (var xg2 = 0; xg2 <= size; xg2 += 500) {
+      ctx.beginPath(); ctx.moveTo(xg2, 0); ctx.lineTo(xg2, size); ctx.stroke();
+    }
+    for (var yg2 = 0; yg2 <= size; yg2 += 500) {
+      ctx.beginPath(); ctx.moveTo(0, yg2); ctx.lineTo(size, yg2); ctx.stroke();
     }
 
     // 海岸名称
@@ -1329,26 +1344,47 @@
     // 村庄、林地、堡垒占领圈
     T.drawZones(ctx, zoom);
 
-    // 战场内边缘长度尺：只保留黑色细线和数字
+    // 四边长度尺：上、下、左、右全部绘制，主刻度 500m 与粗网格对齐
     ctx.save();
     var bw = T.size, bh = T.size;
-    var tick = 200, fs = Math.max(0.8, one);
+    var tick = 500, fs = Math.max(0.8, one);
     ctx.strokeStyle = 'rgba(24,26,20,0.92)';
     ctx.fillStyle = 'rgba(24,26,20,0.92)';
     ctx.lineWidth = 1 * Math.max(0.8, fs);
     ctx.font = '600 ' + Math.round(8 * fs) + 'px ' + SL.FONT_MONO;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
     ctx.strokeRect(0.5, 0.5, bw - 1, bh - 1);
+    // 上下
     for (var rx = 0; rx <= bw; rx += tick) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
       ctx.beginPath(); ctx.moveTo(rx, bh); ctx.lineTo(rx, bh - 12 * fs); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(rx, 0); ctx.lineTo(rx, 12 * fs); ctx.stroke();
       ctx.fillText(String(rx), rx, bh - 15 * fs);
+      ctx.textBaseline = 'top';
+      ctx.fillText(String(rx), rx, 15 * fs);
     }
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
+    // 左右
     for (var ry = 0; ry <= bh; ry += tick) {
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'left';
       ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(12 * fs, ry); ctx.stroke();
       ctx.fillText(String(ry), 16 * fs, ry);
+      ctx.textAlign = 'right';
+      ctx.beginPath(); ctx.moveTo(bw, ry); ctx.lineTo(bw - 12 * fs, ry); ctx.stroke();
+      ctx.fillText(String(ry), bw - 16 * fs, ry);
+    }
+    // 100m 次刻度，不标数字
+    ctx.strokeStyle = 'rgba(24,26,20,0.45)';
+    ctx.lineWidth = 0.7 * fs;
+    for (var mx = 0; mx <= bw; mx += 100) {
+      if (mx % tick === 0) continue;
+      ctx.beginPath(); ctx.moveTo(mx, bh); ctx.lineTo(mx, bh - 5 * fs); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, 5 * fs); ctx.stroke();
+    }
+    for (var my = 0; my <= bh; my += 100) {
+      if (my % tick === 0) continue;
+      ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(5 * fs, my); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bw, my); ctx.lineTo(bw - 5 * fs, my); ctx.stroke();
     }
     ctx.restore();
   };
