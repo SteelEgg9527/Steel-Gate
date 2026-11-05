@@ -23,7 +23,7 @@
     A.volumes.artillery = vals.artillery == null ? A.volumes.artillery : vals.artillery;
     A.volumes.explosion = vals.explosion == null ? A.volumes.explosion : vals.explosion;
     A.volumes.ui = vals.ui == null ? A.volumes.ui : vals.ui;
-    if (master) { try { master.gain.setTargetAtTime(A.muted ? 0 : 0.34 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {} }
+    if (master) { try { master.gain.setTargetAtTime(A.muted ? 0 : 1.15 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {} }
   };
 
   function ensure() {
@@ -36,8 +36,15 @@
     try {
       ctx = new C();
       master = ctx.createGain();
-      master.gain.value = A.muted ? 0 : 0.34 * A.volume('master');
-      master.connect(ctx.destination);
+      master.gain.value = A.muted ? 0 : 1.15 * A.volume('master');
+      var limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -10;
+      limiter.knee.value = 12;
+      limiter.ratio.value = 10;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.25;
+      master.connect(limiter);
+      limiter.connect(ctx.destination);
       var len = Math.floor(ctx.sampleRate * 0.7);
       noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       var data = noiseBuf.getChannelData(0);
@@ -227,7 +234,7 @@
       A.click();
     }
     if (master) {
-      try { master.gain.setTargetAtTime(A.muted ? 0 : 0.34 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {}
+      try { master.gain.setTargetAtTime(A.muted ? 0 : 1.15 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {}
     }
     return A.muted;
   };
