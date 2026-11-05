@@ -27,26 +27,26 @@
     bombs: {
       lb500: {
         key: 'lb500', lb: 500, name: '500lb 航弹', short: '500lb', group: 4,
-        damage: 500, radius: 100, fortDamage: 200, interval: 0.85, color: '#e0b46e'
+        damage: 500, radius: 100, fortDamage: 200, interval: 1.655, color: '#e0b46e'
       },
       lb1000: {
         key: 'lb1000', lb: 1000, name: '1000lb 航弹', short: '1000lb', group: 2,
-        damage: 900, radius: 125, fortDamage: 340, interval: 1.2, color: '#dca45c'
+        damage: 900, radius: 125, fortDamage: 340, interval: 1.65, color: '#dca45c'
       },
       lb2000: {
         key: 'lb2000', lb: 2000, name: '2000lb 航弹', short: '2000lb', group: 1,
-        damage: 1550, radius: 150, fortDamage: 500, interval: 1.8, color: '#d18b4f'
+        damage: 1550, radius: 150, fortDamage: 500, interval: 2.15, color: '#d18b4f'
       },
       incendiary: {
         key: 'incendiary', lb: 300, name: '300lb 燃烧弹', short: '300lb', group: 4,
-        damage: 220, radius: 50, fortDamage: 100, interval: 0.58,
+        damage: 220, radius: 50, fortDamage: 100, interval: 1.0,
         burn: 60, burnDps: 45, color: '#e08a4b'
       }
     },
     bombOrder: ['lb500', 'lb1000', 'lb2000', 'incendiary']
   });
 
-  var ICON_PLANE = '<img src="assets/b17-dxf-filled.png" alt="">';
+  var ICON_PLANE = '<img src="assets/b17-dxf-blue.png" alt="">';
   var ICON_BOMB = [
     '<svg viewBox="0 0 24 38" aria-hidden="true">',
     '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">',
@@ -58,7 +58,8 @@
 
   var refs = null;
   var dragging = null;
-  var b17Image = null;
+  var b17Images = { blue: null, red: null, green: null };
+  var b17SelectedImage = null;
 
   function $(id) { return document.getElementById(id); }
   function toast(msg, kind) {
@@ -77,6 +78,7 @@
       hp: B.b17.hp, maxHp: B.b17.hp,
       bombs: [], loadout: [], x: 0, y: 0, heading: 0, bank: 0, mgCd: 0, t: 0,
       jitter: Math.random() * Math.PI * 2,
+      speedJitter: 0.97 + Math.random() * 0.06,
       playerBomber: true, kind: 'b17', side: 'blue',
       deployed: false, slot: -1
     };
@@ -153,6 +155,37 @@
       p.y = b.groupY + fy * s.forward + sy * (s.lateral + drift);
       p.heading = b.heading;
       p.bank = b.bank;
+      idx++;
+    }
+  }
+
+  function updateFormation(g, b, dt) {
+    var slots = formationSlots();
+    var fx = Math.cos(b.heading), fy = Math.sin(b.heading);
+    var sx = -fy, sy = fx;
+    var idx = 0;
+    for (var i = 0; i < b.formation.length; i++) {
+      var p = b.formation[i];
+      if (!p || !p.deployed) continue;
+      var s = slots[Math.min(idx, slots.length - 1)];
+      var drift = Math.sin((g.time || 0) * 1.1 + (p.jitter || 0)) * 5;
+      var tx = b.groupX + fx * s.forward + sx * (s.lateral + drift);
+      var ty = b.groupY + fy * s.forward + sy * (s.lateral + drift);
+      var dx = tx - p.x, dy = ty - p.y;
+      var desired = Math.atan2(dy, dx);
+      var diff = desired - (p.heading || 0);
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      var max = B.b17.turnRate * dt * 1.15;
+      var step = U.clamp(diff, -max, max);
+      p.heading += step;
+      p.bank = U.clamp(step / Math.max(0.001, max) * 0.7, -0.7, 0.7);
+      var dist = Math.hypot(dx, dy);
+      var speed = B.b17.speed * (p.speedJitter || 1);
+      if (dist > 260) speed *= 1.08;
+      else if (dist < 45) speed *= 0.92;
+      p.x += Math.cos(p.heading) * speed * dt;
+      p.y += Math.sin(p.heading) * speed * dt;
       idx++;
     }
   }
@@ -540,7 +573,7 @@
     }
     b.groupX += Math.cos(b.heading) * B.b17.speed * dt;
     b.groupY += Math.sin(b.heading) * B.b17.speed * dt;
-    applyFormation(g);
+    updateFormation(g, b, dt);
   }
 
   function update(g, dt) {
@@ -665,6 +698,49 @@
     toast('已购买 ' + d.name + '（' + d.group + '枚）', 'win');
     renderConfig(g);
     refresh(g);
+  }
+
+  function buyBombToPlane(g, plane, type) {
+    var b = ensure(g);
+    var d = B.bombs[type];
+    if (!d || !plane || b.state !== 'base') return false;
+    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('积分不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
+    if (loadWeight(plane) + d.group * bombWeight(type) > B.maxLoadLb) { toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss'); return false; }
+    g.teams.blue.score -= B.bombGroupCost;
+    for (var i = 0; i < d.group; i++) plane.bombs.push(type);
+    plane.loadout = plane.bombs.slice();
+    toast('已购买并挂载 ' + d.name + ' ×' + d.group, 'win');
+    renderConfig(g); refresh(g);
+    return true;
+  }
+
+  function buyPlaneToSlot(g, slot) {
+    var b = ensure(g);
+    if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return false; }
+    if (slot < 0 || slot >= b.formation.length || b.formation[slot]) { toast('该编组位置不可用', 'loss'); return false; }
+    if ((g.teams.blue.score || 0) < B.planeCost) { toast('积分不足，需要 ' + B.planeCost, 'loss'); return false; }
+    g.teams.blue.score -= B.planeCost;
+    var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
+    p.slot = slot;
+    b.formation[slot] = p;
+    toast('已购买 B-17 并编入 ' + (slot + 1) + ' 号位', 'win');
+    renderConfig(g); refresh(g);
+    return true;
+  }
+
+  function refundHangarBomb(g, id) {
+    var b = ensure(g);
+    if (!b || b.state !== 'base') { toast('轰炸机不在基地，无法退回', 'loss'); return false; }
+    for (var i = 0; i < b.hangarBombs.length; i++) {
+      if (b.hangarBombs[i].id === id) {
+        var bg = b.hangarBombs.splice(i, 1)[0];
+        g.teams.blue.score = (g.teams.blue.score || 0) + B.bombGroupCost;
+        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + B.bombGroupCost + ' 分', 'win');
+        renderConfig(g); refresh(g);
+        return true;
+      }
+    }
+    return false;
   }
 
   function addBombGroupToPlane(g, plane, type) {
@@ -806,15 +882,19 @@
 
   /* ---------------- 绘制 ---------------- */
 
-  function drawPlane(ctx, p, sx, sy, cam) {
+  function drawPlane(ctx, p, sx, sy, cam, selected) {
     var zoom = cam.zoom;
-    if (b17Image && b17Image.complete && b17Image.naturalWidth) {
+    var img = b17Images[p.side] || b17Images.blue;
+    if (img && img.complete && img.naturalWidth) {
       var span = 110 * zoom;
       var len = span * 0.716;
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate((p.heading || 0) + Math.PI / 2);
-      ctx.drawImage(b17Image, -span / 2, -len / 2, span, len);
+      ctx.drawImage(img, -span / 2, -len / 2, span, len);
+      if (selected && b17SelectedImage && b17SelectedImage.complete) {
+        ctx.drawImage(b17SelectedImage, -span / 2, -len / 2, span, len);
+      }
       ctx.restore();
       return;
     }
@@ -928,14 +1008,12 @@
     document.addEventListener('dragend', function () { dragging = null; });
     document.addEventListener('dragover', function (ev) {
       var slot = ev.target && ev.target.closest ? ev.target.closest('.bomber-slot') : null;
-      if (!slot) return;
+      var shop = ev.target && ev.target.closest ? ev.target.closest('.bomber-buy') : null;
+      if (!slot && !shop) return;
       ev.preventDefault();
       if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
     });
     document.addEventListener('drop', function (ev) {
-      var slot = ev.target && ev.target.closest ? ev.target.closest('.bomber-slot') : null;
-      if (!slot) return;
-      ev.preventDefault();
       var g = SL.UI && SL.UI.currentGame ? SL.UI.currentGame() : null;
       if (!g) return;
       var payload = dragging;
@@ -944,6 +1022,16 @@
       }
       if (!payload) return;
       var b = ensure(g);
+      var shop = ev.target && ev.target.closest ? ev.target.closest('.bomber-buy') : null;
+      if (shop && payload.kind === 'bomb') {
+        ev.preventDefault();
+        refundHangarBomb(g, payload.id);
+        dragging = null;
+        return;
+      }
+      var slot = ev.target && ev.target.closest ? ev.target.closest('.bomber-slot') : null;
+      if (!slot) return;
+      ev.preventDefault();
       var slotIndex = parseInt(slot.getAttribute('data-slot'), 10);
       if (payload.kind === 'plane') {
         if (movePlaneToSlot(g, payload.id, slotIndex)) { renderConfig(g); refresh(g); }
@@ -953,6 +1041,12 @@
         if (addBombGroupToPlane(g, p, payload.type)) {
           renderConfig(g); refresh(g); toast('航弹已挂载到 ' + p.name, 'order');
         }
+      } else if (payload.kind === 'shopbomb') {
+        var sp = b.formation[slotIndex];
+        if (!sp) { toast('请先把飞机拖入该编组槽', 'loss'); return; }
+        buyBombToPlane(g, sp, payload.type);
+      } else if (payload.kind === 'shopplane') {
+        if (buyPlaneToSlot(g, slotIndex)) { renderConfig(g); refresh(g); }
       }
       dragging = null;
     });
@@ -984,9 +1078,11 @@
       hangar: $('bomber-hangar')
     };
     if (!refs.dock) return;
-    b17Image = new Image();
-    b17Image.src = 'assets/b17-dxf-filled.png';
-    b17Image.onload = function () { refresh(SL.UI && SL.UI.currentGame ? SL.UI.currentGame() : null); };
+    b17Images.blue = new Image(); b17Images.blue.src = 'assets/b17-dxf-blue.png';
+    b17Images.red = new Image(); b17Images.red.src = 'assets/b17-dxf-red.png';
+    b17Images.green = new Image(); b17Images.green.src = 'assets/b17-dxf-green.png';
+    b17SelectedImage = new Image(); b17SelectedImage.src = 'assets/b17-dxf-selected.png';
+    b17Images.blue.onload = function () { refresh(SL.UI && SL.UI.currentGame ? SL.UI.currentGame() : null); };
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.closest && ev.target.closest('.air-drop-mode-row')) return;
       var tab = ev.target && ev.target.closest ? ev.target.closest('.system-tab') : null;
@@ -1055,7 +1151,7 @@
     drawPlane: drawPlane,
     onPlaneDown: onPlaneDown,
     commandMove: commandMove,
-    getImage: function () { return b17Image; },
+    getImage: function () { return b17Images.blue; },
     planeAt: planeAt,
     selectGroup: selectGroup,
     clearSelection: clearSelection,
