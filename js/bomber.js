@@ -27,7 +27,7 @@
     bombs: {
       lb500: {
         key: 'lb500', lb: 500, name: '500lb 航弹', short: '500lb', group: 4,
-        damage: 500, radius: 100, fortDamage: 200, interval: 1.655, color: '#e0b46e'
+        damage: 500, radius: 100, fortDamage: 200, interval: 1.25, color: '#e0b46e'
       },
       lb1000: {
         key: 'lb1000', lb: 1000, name: '1000lb 航弹', short: '1000lb', group: 2,
@@ -76,7 +76,7 @@
       id: 'b17_' + (++g.bombers.planeSeq),
       name: name || ('B-17 ' + ((g.bombers.planeSeq || 1)) + '号机'),
       hp: B.b17.hp, maxHp: B.b17.hp,
-      bombs: [], loadout: [], x: 0, y: 0, heading: 0, bank: 0, mgCd: 0, t: 0,
+      bombs: [], bombGroups: [], loadout: [], loadoutGroups: [], x: 0, y: 0, heading: 0, bank: 0, mgCd: 0, t: 0,
       jitter: Math.random() * Math.PI * 2,
       speedJitter: 0.97 + Math.random() * 0.06,
       playerBomber: true, kind: 'b17', side: 'blue',
@@ -242,6 +242,30 @@
     return w;
   }
 
+  function rebuildBombs(p) {
+    p.bombs = [];
+    for (var i = 0; i < p.bombGroups.length; i++) {
+      var grp = p.bombGroups[i];
+      for (var k = 0; k < grp.count; k++) p.bombs.push(grp.type);
+    }
+  }
+
+  function snapshotLoadout(p) {
+    p.loadout = p.bombs.slice();
+    p.loadoutGroups = p.bombGroups.map(function (g) {
+      return { type: g.type, count: g.count, paid: g.paid };
+    });
+  }
+
+  function restoreLoadout(p) {
+    if (p.loadoutGroups && p.loadoutGroups.length) {
+      p.bombGroups = p.loadoutGroups.map(function (g) {
+        return { type: g.type, count: g.count, paid: g.paid };
+      });
+    }
+    rebuildBombs(p);
+  }
+
   function planeBombsText(p) {
     if (!p.bombs.length) return '无航弹';
     var counts = {};
@@ -251,13 +275,14 @@
     return arr.join(' · ');
   }
 
-  function bombIconHTML(type, planeId, index) {
+  function bombIconHTML(type, planeId, index, count) {
     var d = B.bombs[type] || {};
     var attrs = '';
     if (planeId != null && index != null) {
       attrs = ' draggable="true" data-drag-kind="equippedbomb" data-plane-id="' + planeId + '" data-bomb-index="' + index + '" data-bomb-type="' + type + '"';
     }
-    return '<span class="air-bomb"' + attrs + ' title="' + d.name + '">' + ICON_BOMB + '<i>' + (d.short || type) + '</i></span>';
+    var label = (d.short || type) + (count > 1 ? ' ×' + count : '');
+    return '<span class="air-bomb"' + attrs + ' title="' + d.name + '">' + ICON_BOMB + '<i>' + label + '</i></span>';
   }
 
   function planeHTML(p, extra) {
@@ -300,7 +325,7 @@
     b.elapsed = 0;
     b.bombing = false;
     for (var ti = 0; ti < b.formation.length; ti++) {
-      if (b.formation[ti]) b.formation[ti].loadout = b.formation[ti].bombs.slice();
+      if (b.formation[ti]) snapshotLoadout(b.formation[ti]);
     }
     toast('B-17 编队从基地起飞，1 分钟后抵达战场', 'order');
   }
@@ -393,7 +418,7 @@
       if (!b.formation[i]) continue;
       b.formation[i].hp = b.formation[i].maxHp;
       b.formation[i].deployed = false;
-      b.formation[i].bombs = (b.formation[i].loadout || b.formation[i].bombs).slice();
+      restoreLoadout(b.formation[i]);
     }
     toast('B-17 编队返回基地，可以重新配备或起飞', 'win');
   }
@@ -454,7 +479,7 @@
     var radius = d.radius;
     var credit = { side: 'blue', name: 'B-17 航弹', kills: 0, score: 0 };
     g.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 1.2, r: radius, side: 'blue' });
-    g.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 1.0, size: Math.round(50 + radius * 0.55), side: 'blue' });
+    g.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 1.0, size: radius, world: true, side: 'blue' });
     if (SL.Audio) SL.Audio.explosion(radius, x, y);
     for (var i = 0; i < g.units.length; i++) {
       var u = g.units[i];
@@ -477,6 +502,7 @@
     if (d.fortDamage) g.damageFortifications(x, y, d.fortDamage, radius);
     if (d.burn) {
       g.bomberFires.push({ x: x, y: y, r: d.radius, until: g.time + d.burn, next: 0, dps: d.burnDps, side: 'blue' });
+      addBurnScars(g, x, y, d.radius);
     }
   }
 
@@ -739,8 +765,9 @@
     if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('积分不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
     if (loadWeight(plane) + d.group * bombWeight(type) > B.maxLoadLb) { toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss'); return false; }
     g.teams.blue.score -= B.bombGroupCost;
-    for (var i = 0; i < d.group; i++) plane.bombs.push(type);
-    plane.loadout = plane.bombs.slice();
+    plane.bombGroups.push({ type: type, count: d.group, paid: B.bombGroupCost });
+    rebuildBombs(plane);
+    snapshotLoadout(plane);
     toast('已购买并挂载 ' + d.name + ' ×' + d.group, 'win');
     renderConfig(g); refresh(g);
     return true;
@@ -786,12 +813,14 @@
     if (!b || b.state !== 'base') return false;
     var p = null;
     for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
-    if (!p || index < 0 || index >= p.bombs.length) return false;
-    var type = p.bombs.splice(index, 1)[0];
-    var value = equippedBombUnitValue(type);
+    if (!p || index < 0 || index >= p.bombGroups.length) return false;
+    var grp = p.bombGroups[index];
+    var value = grp.paid || B.bombGroupCost;
+    p.bombGroups.splice(index, 1);
+    rebuildBombs(p);
+    snapshotLoadout(p);
     g.teams.blue.score = (g.teams.blue.score || 0) + value;
-    p.loadout = p.bombs.slice();
-    toast('已出售 ' + (B.bombs[type] ? B.bombs[type].short : '航弹') + '，返还 ' + value + ' 分', 'win');
+    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 分', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -801,11 +830,12 @@
     if (!b || b.state !== 'base') return false;
     var p = null;
     for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
-    if (!p || index < 0 || index >= p.bombs.length) return false;
-    var type = p.bombs.splice(index, 1)[0];
-    b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: 1, paid: equippedBombUnitValue(type) });
-    p.loadout = p.bombs.slice();
-    toast('航弹已放回机库', 'order');
+    if (!p || index < 0 || index >= p.bombGroups.length) return false;
+    var grp = p.bombGroups.splice(index, 1)[0];
+    b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: grp.type, count: grp.count, paid: grp.paid || B.bombGroupCost });
+    rebuildBombs(p);
+    snapshotLoadout(p);
+    toast('航弹组已放回机库', 'order');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -815,11 +845,12 @@
     if (!b || b.state !== 'base') return false;
     var p = null;
     for (var i = 0; i < b.formation.length; i++) if (b.formation[i] && b.formation[i].id === planeId) p = b.formation[i];
-    if (!p || from < 0 || from >= p.bombs.length) return false;
-    var type = p.bombs.splice(from, 1)[0];
-    if (to < 0 || to > p.bombs.length) to = p.bombs.length;
-    p.bombs.splice(to, 0, type);
-    p.loadout = p.bombs.slice();
+    if (!p || from < 0 || from >= p.bombGroups.length) return false;
+    var grp = p.bombGroups.splice(from, 1)[0];
+    if (to < 0 || to > p.bombGroups.length) to = p.bombGroups.length;
+    p.bombGroups.splice(to, 0, grp);
+    rebuildBombs(p);
+    snapshotLoadout(p);
     renderConfig(g); refresh(g);
     return true;
   }
@@ -838,8 +869,9 @@
       toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss');
       return false;
     }
-    for (var k = 0; k < group.count; k++) plane.bombs.push(type);
-    plane.loadout = plane.bombs.slice();
+    plane.bombGroups.push({ type: type, count: group.count, paid: group.paid || B.bombGroupCost });
+    rebuildBombs(plane);
+    snapshotLoadout(plane);
     g.bombers.hangarBombs.splice(idx, 1);
     return true;
   }
@@ -869,7 +901,7 @@
         if (p) {
           html += '<div class="bomber-slot-plane">' + ICON_PLANE +
             '<div><b>' + p.name + '</b><small>耐久 ' + Math.ceil(p.hp) + ' / ' + p.maxHp + ' · 挂载 ' + loadWeight(p) + '/6000lb</small>' +
-            '<div class="bomber-hardpoints">' + (p.bombs.length ? p.bombs.map(function (t, bi) { return bombIconHTML(t, p.id, bi); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
+            '<div class="bomber-hardpoints">' + (p.bombGroups.length ? p.bombGroups.map(function (g, bi) { return bombIconHTML(g.type, p.id, bi, g.count); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
             '<small class="drop-order">投弹顺序：从左到右</small></div></div>';
         } else {
           html += '<div class="bomber-slot-empty">拖动飞机到此编组</div>';
@@ -1036,8 +1068,57 @@
     ctx.restore();
   }
 
+  function addBurnScars(g, x, y, radius) {
+    if (!g.burnScars) g.burnScars = [];
+    g.burnScars.push({ x: x, y: y, r: Math.max(42, radius), seed: Math.random() * 1000 });
+    var T = SL.Terrain;
+    if (T && T.forests) {
+      for (var i = 0; i < T.forests.length; i++) {
+        var f = T.forests[i];
+        if (U.dist(x, y, f.x, f.y) <= radius + f.r * 0.82) {
+          g.burnScars.push({ x: f.x, y: f.y, r: f.r * 0.95, seed: Math.random() * 1000 });
+        }
+      }
+    }
+    if (g.zones) {
+      for (var z = 0; z < g.zones.length; z++) {
+        var zn = g.zones[z];
+        if ((zn.kind === 'bush' || zn.kind === 'forest') && U.dist(x, y, zn.x, zn.y) <= radius + zn.r * 0.9) {
+          g.burnScars.push({ x: zn.x, y: zn.y, r: zn.r, seed: Math.random() * 1000 });
+        }
+      }
+    }
+  }
+
+  function drawBurnScars(ctx, g, proj, cam) {
+    if (!g.burnScars || !g.burnScars.length) return;
+    for (var i = 0; i < g.burnScars.length; i++) {
+      var s = g.burnScars[i];
+      var sx = proj.x(s.x), sy = proj.y(s.y), r = s.r * cam.zoom;
+      if (r < 2) continue;
+      ctx.save();
+      var grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
+      grad.addColorStop(0, 'rgba(38,36,31,0.64)');
+      grad.addColorStop(0.65, 'rgba(52,48,40,0.48)');
+      grad.addColorStop(1, 'rgba(60,56,47,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+      // 焦黑碎块
+      for (var k = 0; k < 18; k++) {
+        var a = (s.seed + k * 2.399) % (Math.PI * 2);
+        var rr = r * (0.12 + ((k * 37) % 70) / 100);
+        ctx.fillStyle = k % 3 ? 'rgba(26,25,22,0.55)' : 'rgba(87,72,52,0.42)';
+        ctx.beginPath();
+        ctx.arc(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr, Math.max(0.8, r * 0.035), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   function drawWorld(ctx, g, proj, cam) {
     if (!g || !g.bombers) return;
+    drawBurnScars(ctx, g, proj, cam);
     var b = g.bombers;
     for (var i = 0; i < g.bomberDrops.length; i++) {
       var d = g.bomberDrops[i];

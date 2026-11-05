@@ -1598,7 +1598,7 @@
         ctx.restore();
       } else if (e.kind === 'explosion') {
         sx = proj.x(e.x); sy = proj.y(e.y);
-        var r = e.size * (0.5 + k * 1.4);
+        var r = e.world ? e.size * cam.zoom * (0.35 + k * 0.75) : e.size * (0.5 + k * 1.4);
         ctx.save();
         ctx.globalAlpha = (1 - k) * 0.9;
         var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, r);
