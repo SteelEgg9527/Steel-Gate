@@ -271,6 +271,8 @@
 
   function newGame(autostart) {
     game = SL.Game.create(gameOptions());
+    // 本地试玩入口：?trial=1 提供轰炸机测试积分，不影响正常对局
+    if (params.get('trial') === '1' && game.teams && game.teams.blue) game.teams.blue.score += 20000;
     UI.bind(game);
     UI.hideGameMenu();
     paused = false;
@@ -335,7 +337,7 @@
       'topbar', 'yellow-hud', 'naval-hud', 'defense-hud', 'boss-hud',
       'boss-kill-banner', 'perf-hud', 'draft-alert', 'range-tools',
       'roster-panel', 'selpanel', 'minimap-panel', 'rightpanels',
-      'draft-queue-wrap', 'cardbar', 'toasts', 'hint', 'pause-badge'
+      'draft-queue-wrap', 'cardbar', 'toasts', 'hint', 'pause-badge', 'system-dock'
     ];
     for (var i = 0; i < ids.length; i++) {
       var node = document.getElementById(ids[i]);
@@ -588,6 +590,10 @@
       }
       var ship = game.shipAt ? game.shipAt(w.x, w.y, 115 / R.cam.zoom) : null;
       if (ship) { game.setSelectedShip(ship); return; }
+      if (SL.Bomber && SL.Bomber.planeAt(game, w.x, w.y, 42 / R.cam.zoom)) {
+        SL.Bomber.selectGroup(game);
+        return;
+      }
       var own = game.unitAt(w.x, w.y, 20 / R.cam.zoom);
       if (own) {
         if (ev.shiftKey) {
@@ -601,7 +607,7 @@
         return;
       }
       drag = { kind: 'box', sx: p.x, sy: p.y, ex: p.x, ey: p.y, shift: ev.shiftKey };
-      if (!ev.shiftKey) game.setSelection([]);
+      if (!ev.shiftKey) { if (SL.Bomber) SL.Bomber.clearSelection(game); game.setSelection([]); }
       R.setSelectionBox({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
     });
 
@@ -641,6 +647,7 @@
           }
           game.setSelection(picked);
         }
+        if (SL.Bomber) SL.Bomber.clearSelection(game);
         R.setSelectionBox(null);
         drag = null;
       }
@@ -729,6 +736,12 @@
       game.selectedShip.dest = { x: w.x, y: w.y };
       R.addMarker(w.x, w.y, 'move');
       return;
+    }
+    if (game.selectedBomber && SL.Bomber) {
+      if (SL.Bomber.commandMove(game, w.x, w.y)) {
+        R.addMarker(w.x, w.y, 'move');
+        return;
+      }
     }
     var enemy = game.enemyAt(w.x, w.y, hitR);
     if (!game.selected.length) {

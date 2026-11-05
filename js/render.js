@@ -2014,6 +2014,7 @@
       ctx.restore();
     }
     // 飞机
+    if (SL.Bomber) SL.Bomber.drawWorld(ctx, game, proj, cam);
     for (i = 0; i < game.planes.length; i++) {
       var p = game.planes[i];
       // 轰炸预警：落点、杀伤半径、到达时间
@@ -2046,6 +2047,25 @@
         ctx.restore();
       }
       sx = proj.x(p.x); sy = proj.y(p.y);
+      if (p.kind === 'b17' && SL.Bomber) {
+        SL.Bomber.drawPlane(ctx, p, sx, sy, cam);
+        if (game.selectedBomber && game.selectedBomber.formation.indexOf(p) >= 0) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(238,211,137,0.9)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.arc(sx, sy, 32, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        var bbw = 70;
+        ctx.fillStyle = 'rgba(14,16,12,0.72)';
+        ctx.fillRect(sx - bbw / 2, sy + 36, bbw, 3);
+        ctx.fillStyle = '#d8b25e';
+        ctx.fillRect(sx - bbw / 2, sy + 36, bbw * Math.max(0, p.hp / p.maxHp), 3);
+        continue;
+      }
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(p.heading || 0);

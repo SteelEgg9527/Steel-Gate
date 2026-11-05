@@ -115,6 +115,9 @@
     this.aiShipTimer = { red: 5, green: 8 };
     this.aiReinforceAt = { red: 0, green: 0 };
     this.aiReinforceAtGlobal = 10;
+    this.aiPatrolAt = { red: 22 + Math.random() * 12, green: 32 + Math.random() * 14 };
+    this.aiRaidCd = { red: 0, green: 0 };
+    this.aiPlaneLosses = [];
     this.aiNavalReplenishTimer = (SL.AI_NAVAL_REPLENISH && SL.AI_NAVAL_REPLENISH.first) || 16;
     this.shipCards = [];
     this.seaplanes = [];
@@ -241,7 +244,9 @@
     return { ok: true, msg: '修复炮塔 ' + Math.ceil(target.hp) + ' / ' + target.maxHp };
   };
 
-  Game.prototype.setSelectedShip = function (ship) {    this.selectedShip = ship;
+  Game.prototype.setSelectedShip = function (ship) {
+    this.selectedShip = ship;
+    this.selectedBomber = null;
     for (var s = 0; s < this.battleships.length; s++) this.battleships[s].selected = false;
     if (ship) {
       ship.selected = true;
@@ -1360,7 +1365,7 @@
       mines: this.mines,
       barriers: this.barriers,
       recons: [],
-      planes: this.planes,
+      planes: this.planes.filter(function (p) { return !p.playerBomber; }),
       naval: this.naval ? {
         playerShipSummoned: this.playerShipSummoned,
         shipSupportOwned: this.shipSupportOwned,
@@ -2053,6 +2058,7 @@
   Game.prototype.setSelection = function (units) {
     this.selected = units.slice();
     this.selectedShip = null;
+    this.selectedBomber = null;
     for (var i = 0; i < this.units.length; i++) this.units[i].selected = false;
     for (var k = 0; k < this.selected.length; k++) this.selected[k].selected = true;
   };
@@ -3138,6 +3144,7 @@
     this.updateEffects(dt);
     this.updateStrikes(dt);
     this.updateSupplies(dt);
+    if (SL.Bomber) SL.Bomber.update(this, dt);
     this.updatePlanes(dt);
     this.updateRecons();
     this.updateTeams(dt);
@@ -5234,6 +5241,11 @@
     p.hp -= dmg;
     p.hitFlash = 0.12;
     if (p.hp > 0) return;
+    if (p.side !== 'blue') {
+      if (!this.aiPlaneLosses) this.aiPlaneLosses = [];
+      this.aiPlaneLosses.push({ side: p.side, t: this.time });
+    }
+    if (p.playerBomber && SL.Bomber) SL.Bomber.onPlaneDown(this, p, source);
     var idx = this.planes.indexOf(p);
     if (idx >= 0) this.planes.splice(idx, 1);
     this.recons = this.recons.filter(function (r) { return r.plane !== p; });
@@ -5535,7 +5547,7 @@
       this.hellLowAttack(p, dt);
     }
   };
-  Game.prototype.spawnAirPatrol = function (x, y, side) {
+  Game.prototype.spawnAirPatrol = function (x, y, side, duration) {
     side = side || 'blue';
     var cfg = SL.AIR_PATROL;
     var ms = SL.CONFIG.mapSize;
@@ -5546,8 +5558,9 @@
     else if (edge === dr) { sx = ms + 100; sy = y; shd = Math.PI; }
     else if (edge === dtp) { sx = x; sy = -100; shd = Math.PI / 2; }
     else { sx = x; sy = ms + 100; shd = -Math.PI / 2; }
+    var groupPhase = Math.random() * Math.PI * 2;
     for (var i = 0; i < cfg.count; i++) {
-      var ang = (Math.PI * 2 / cfg.count) * i;
+      var ang = groupPhase + (Math.PI * 2 / cfg.count) * i;
       var spread = (i - (cfg.count - 1) / 2) * 46;
       var px = sx, py = sy;
       if (edge === dl || edge === dr) py += spread;
@@ -5556,9 +5569,10 @@
         kind: 'fighter', name: '战斗机', cx: x, cy: y, ang: ang,
         orbitR: cfg.orbitRadius, x: px, y: py, heading: shd,
         arrived: false, ferrySpeed: 280,
-        side: side, t: 0, dur: cfg.duration, gunCd: i * 0.25,
+        side: side, t: 0, dur: duration || cfg.duration, gunCd: i * 0.25,
         interval: cfg.interval, damage: cfg.damage, range: cfg.radius,
         mode: 'orbit', targetPlane: null, formationSlot: i,
+        orbitPhase: groupPhase,
         jitterPhase: Math.random() * Math.PI * 2,
         hp: cfg.hp, maxHp: cfg.hp, evade: cfg.evade, hitFlash: 0,
         kills: 0, score: 0
@@ -5578,9 +5592,17 @@
       if (ed <= estep + 2) {
         p.arrived = true;
         p.t = 0;
-        p.x = p.cx + Math.cos(p.ang) * p.orbitR;
-        p.y = p.cy + Math.sin(p.ang) * p.orbitR;
-        p.heading = p.ang + Math.PI / 2;
+        p.orbitPhase = p.orbitPhase == null ? p.ang : p.orbitPhase;
+        var arrivalSlot = p.formationSlot || 0;
+        var arrivalBack = arrivalSlot === 0 ? 0 : 55;
+        var arrivalLat = arrivalSlot === 1 ? -55 : (arrivalSlot === 2 ? 55 : 0);
+        var arrivalRadialX = Math.cos(p.orbitPhase);
+        var arrivalRadialY = Math.sin(p.orbitPhase);
+        var arrivalTangentX = -arrivalRadialY;
+        var arrivalTangentY = arrivalRadialX;
+        p.x = p.cx + arrivalRadialX * p.orbitR - arrivalTangentX * arrivalBack + arrivalRadialX * arrivalLat;
+        p.y = p.cy + arrivalRadialY * p.orbitR - arrivalTangentY * arrivalBack + arrivalRadialY * arrivalLat;
+        p.heading = p.orbitPhase + Math.PI / 2;
         p.mode = 'orbit';
       } else {
         p.x += ex / ed * estep;
@@ -5595,7 +5617,7 @@
     if (p.targetPlane) {
       var tp = p.targetPlane;
       if (!tp || tp.hp <= 0 || this.planes.indexOf(tp) < 0 ||
-        U.dist(tp.x, tp.y, p.cx, p.cy) > cfg.radius + (cfg.searchBonus || 300)) {
+        U.dist(tp.x, tp.y, p.x, p.y) > (tp.kind === 'b17' ? 1800 : cfg.radius + (cfg.searchBonus || 300))) {
         p.targetPlane = null;
         p.mode = 'orbit';
       }
@@ -5605,8 +5627,9 @@
       for (var i = 0; i < this.planes.length; i++) {
         var e = this.planes[i];
         if (e === p || e.side === p.side || e.hp <= 0) continue;
-        var d = U.dist(p.cx, p.cy, e.x, e.y);
-        if (d > cfg.radius + (cfg.searchBonus || 300) || d >= bestD) continue;
+        var seekR = e.kind === 'b17' ? 1800 : cfg.radius + (cfg.searchBonus || 300);
+        var d = U.dist(p.x, p.y, e.x, e.y);
+        if (d > seekR || d >= bestD) continue;
         best = e; bestD = d;
       }
       if (best) {
@@ -5667,10 +5690,17 @@
             { side: p.side, name: '战斗机扫射', kills: 0, score: 0 }, 1.2);
         }
       }
-      // 无目标：沿直径 500m 的制空圈盘旋
-      p.ang += cfg.orbitSpeed * dt;
-      desiredX = p.cx + Math.cos(p.ang) * p.orbitR;
-      desiredY = p.cy + Math.sin(p.ang) * p.orbitR;
+      // 无目标：三机品字形沿制空圈盘旋，不叠在同一位置
+      p.orbitPhase = (p.orbitPhase == null ? p.ang : p.orbitPhase) + cfg.orbitSpeed * dt;
+      var slot = p.formationSlot || 0;
+      var back = slot === 0 ? 0 : 55;
+      var lat = slot === 1 ? -55 : (slot === 2 ? 55 : 0);
+      var radialX = Math.cos(p.orbitPhase);
+      var radialY = Math.sin(p.orbitPhase);
+      var tangentX = -radialY;
+      var tangentY = radialX;
+      desiredX = p.cx + radialX * p.orbitR - tangentX * back + radialX * lat;
+      desiredY = p.cy + radialY * p.orbitR - tangentY * back + radialY * lat;
       var rdx = desiredX - p.x, rdy = desiredY - p.y;
       var rd = Math.hypot(rdx, rdy);
       if (rd > 2) {
@@ -5680,7 +5710,7 @@
       } else {
         p.x = desiredX; p.y = desiredY;
       }
-      p.heading = p.ang + Math.PI / 2;
+      p.heading = p.orbitPhase + Math.PI / 2;
     }
     return true;
   };
@@ -5691,6 +5721,7 @@
       var p = this.planes[i];
       p.t += dt;
       if (p.hitFlash > 0) p.hitFlash -= dt;
+      if (p.kind === 'b17') continue;
       if (p.kind === 'fighter') {
         if (!this.updateFighter(p, dt)) this.planes.splice(i, 1);
         continue;
@@ -6229,6 +6260,7 @@
         this.spawnAirGroup('red', ctx0, cty0, this.yellow.x, this.yellow.y,
           this.yellow.r * 0.9, count);
       }
+      this.updateAIPatrols();
       return;
     }
     var air = SL.AI_AIR;
@@ -6279,6 +6311,67 @@
         gy = ty + (Math.random() - 0.5) * 80;
       }
       this.spawnAirGroup(side, gx, gy, tx, ty, radius, count, antiShip);
+    }
+    this.updateAIPatrols();
+    this.tryAILargeRaid();
+  };
+
+  Game.prototype.updateAIPatrols = function () {
+    if (!this.aiPatrolAt) this.aiPatrolAt = { red: 30, green: 40 };
+    var sides = ['red', 'green'];
+    for (var i = 0; i < sides.length; i++) {
+      var side = sides[i];
+      if (this.aliveCount(side) === 0) continue;
+      if (this.time < (this.aiPatrolAt[side] || 0)) continue;
+      this.aiPatrolAt[side] = this.time + 55 + Math.random() * 20;
+      var cx = 0, cy = 0, n = 0;
+      for (var k = 0; k < this.units.length; k++) {
+        var u = this.units[k];
+        if (!u.alive || u.side !== side) continue;
+        cx += u.x; cy += u.y; n++;
+      }
+      if (!n && T.spawns && T.spawns[side]) { cx = T.spawns[side].x; cy = T.spawns[side].y; n = 1; }
+      if (!n) continue;
+      cx /= n; cy /= n;
+      var groups = Math.min(3, 1 + Math.floor(this.time / 600));
+      for (var g = 0; g < groups; g++) {
+        if (this.planes.length + 3 > 34) break;
+        var ang = (g / Math.max(1, groups)) * Math.PI * 2;
+        this.spawnAirPatrol(cx + Math.cos(ang) * 120, cy + Math.sin(ang) * 120, side, 60);
+      }
+      this.log(SL.SIDES[side].name + ' 派出战斗机巡逻', 'info');
+    }
+  };
+
+  Game.prototype.tryAILargeRaid = function () {
+    if (!this.aiPlaneLosses) this.aiPlaneLosses = [];
+    if (!this.aiRaidCd) this.aiRaidCd = { red: 0, green: 0 };
+    var cutoff = this.time - 60;
+    this.aiPlaneLosses = this.aiPlaneLosses.filter(function (e) { return e.t >= cutoff; });
+    var sides = ['red', 'green'];
+    for (var i = 0; i < sides.length; i++) {
+      var side = sides[i];
+      var losses = 0;
+      for (var k = 0; k < this.aiPlaneLosses.length; k++) if (this.aiPlaneLosses[k].side === side) losses++;
+      if (losses < 4 || this.time < (this.aiRaidCd[side] || 0)) continue;
+      this.aiRaidCd[side] = this.time + 120;
+      this.aiPlaneLosses = this.aiPlaneLosses.filter(function (e) { return e.side !== side; });
+      var tx = 0, ty = 0, tn = 0;
+      for (var b = 0; b < this.units.length; b++) {
+        var bu = this.units[b];
+        if (bu.alive && bu.side === 'blue') { tx += bu.x; ty += bu.y; tn++; }
+      }
+      if (tn) { tx /= tn; ty /= tn; } else if (this.yellow) { tx = this.yellow.x; ty = this.yellow.y; }
+      var count = Math.min(14, 6 + Math.floor(this.time / 300));
+      if (this.planes.length + count + 3 > 38) continue;
+      this.spawnAirGroup(side, tx + (Math.random() - 0.5) * 100, ty + (Math.random() - 0.5) * 100,
+        tx, ty, 260, count, false);
+      this.spawnAirPatrol(tx, ty, side, 60);
+      this.log(SL.SIDES[side].name + ' 发动大规模轰炸（' + count + ' 架轰炸机 + 战斗机护航）', 'loss');
+      this.feed.push({
+        id: ++this.feedSeq, t: this.time, kind: 'level', ks: side, vs: 'blue',
+        xp: 0, score: 0, killer: '', victim: '', text: '大规模轰炸'
+      });
     }
   };
 

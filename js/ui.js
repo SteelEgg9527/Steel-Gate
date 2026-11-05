@@ -3,6 +3,7 @@
   'use strict';
   var SL = window.SL, U = SL.U, R = SL.Render;
   var UI = (SL.UI = {});
+  UI.currentGame = function () { return game; };
   var el = {};
   var game = null;
   var callbacks = {};
@@ -914,7 +915,7 @@
       row.className = 'roster-row' + (u.selected ? ' sel' : '');
       row.dataset.id = u.id;
       row.title = u.name + ' · ' + Math.ceil(u.hp) + '/' + u.maxHp;
-      row.innerHTML = '<span class="rt">' + (abbr[u.type] || '?') + '</span>';
+      row.innerHTML = '<img class="rt-img" src="assets/units/roster/' + u.type + '.svg" alt="" draggable="false"><span class="rt-sr">' + (abbr[u.type] || '?') + '</span>';
       row.addEventListener('click', function () {
         game.setSelection([u]);
         R.centerOn(u.x, u.y);
@@ -946,8 +947,11 @@
       main.type = 'button';
       main.className = 'control-main';
       main.title = units.length ? units.map(function (u) { return u.name; }).join('、') : '该编组暂无存活单位';
+      var unitIcons = units.length
+        ? units.slice(0, 8).map(function (u) { return '<img class="control-unit-img" src="assets/units/roster/' + u.type + '.svg" alt="" draggable="false">'; }).join('')
+        : '<span class="control-empty">空</span>';
       main.innerHTML = '<span class="control-num">' + (idx + 1) + '</span>' +
-        '<span class="control-units">' + (units.length ? units.slice(0, 8).map(function (u) { return abbr[u.type] || '?'; }).join(' ') : '空') + '</span>' +
+        '<span class="control-units">' + unitIcons + '</span>' +
         '<span class="control-count">' + units.length + '</span>';
       main.addEventListener('click', function () {
         var picked = game.controlGroupUnits(grp);
@@ -1375,14 +1379,15 @@
     }
 
     var sig = g.selected.map(function (u) { return u.id; }).join(',') +
-      '|ship:' + (g.selectedShip ? g.selectedShip.id : '');
+      '|ship:' + (g.selectedShip ? g.selectedShip.id : '') +
+      '|bomber:' + (g.selectedBomber ? g.selectedBomber.formation.filter(function (p) { return !!p; }).map(function (p) { return p.id; }).join('-') : '');
     if (sig !== selSig) {
       selSig = sig;
       rebuildSelection(g);
     } else {
       updateBars();
     }
-    var selN = g.selected.length + (g.selectedShip ? 1 : 0);
+    var selN = g.selected.length + (g.selectedShip ? 1 : 0) + (g.selectedBomber ? 1 : 0);
     if (uiCache.selCount !== selN) {
       uiCache.selCount = selN;
       el.count.textContent = selN;
@@ -1494,12 +1499,45 @@
       el.scaleLine.style.width = w + 'px';
       el.scaleLabel.textContent = best + ' m';
     }
+    if (SL.Bomber) SL.Bomber.refresh(g);
   };
 
   /* ---------------- 选择与详情 ---------------- */
 
   function rebuildSelection(g) {
     var i;
+    if (g.selectedBomber) {
+      primaryId = null;
+      var bg = g.selectedBomber;
+      var bplanes = bg.formation.filter(function (p) { return !!p; });
+      var bhp = 0, bmax = 0, bbombs = 0;
+      for (var bi = 0; bi < bplanes.length; bi++) {
+        bhp += bplanes[bi].hp; bmax += bplanes[bi].maxHp; bbombs += bplanes[bi].bombs.length;
+      }
+      el.detail.classList.remove('hidden');
+      el.dType.textContent = 'B-17 轰炸机编队';
+      el.dName.textContent = bplanes.length + ' 架 B-17';
+      el.dVision.textContent = '600 m';
+      el.dStRow.style.display = 'none';
+      el.dHp.textContent = Math.ceil(bhp) + ' / ' + bmax;
+      el.dHpbar.style.width = (bmax ? bhp / bmax * 100 : 0).toFixed(0) + '%';
+      el.dHpbar.style.background = bmax && bhp / bmax > 0.35 ? '#7fd4a0' : '#e06a52';
+      el.dRange.textContent = '航弹';
+      el.dCover.textContent = '空中';
+      el.dKills.textContent = '—';
+      if (el.dAmmoRow) el.dAmmoRow.style.display = '';
+      if (el.dAmmo) el.dAmmo.textContent = '航弹 ' + bbombs;
+      if (el.dAmbar) el.dAmbar.style.width = bplanes.length ? Math.min(100, bbombs / 12 * 100).toFixed(0) + '%' : '0%';
+      if (el.dReloadRow) el.dReloadRow.style.display = 'none';
+      if (el.dFireRow) el.dFireRow.style.display = 'none';
+      if (el.grenadeModeRow) el.grenadeModeRow.style.display = 'none';
+      if (el.commandActions) el.commandActions.style.display = 'none';
+      if (el.shipActions) el.shipActions.style.display = 'none';
+      if (el.shipRepairRow) el.shipRepairRow.style.display = 'none';
+      el.list.innerHTML = '';
+      rows = [];
+      return;
+    }
     if (g.selectedShip && g.selectedShip.alive) {
       primaryId = null;
       var sh = g.selectedShip;
@@ -1653,6 +1691,20 @@
 
   function updateBars() {
     var i;
+    if (game && game.selectedBomber) {
+      var bg = game.selectedBomber;
+      var bplanes = bg.formation.filter(function (p) { return !!p; });
+      var bhp = 0, bmax = 0, bbombs = 0;
+      for (var bi = 0; bi < bplanes.length; bi++) {
+        bhp += bplanes[bi].hp; bmax += bplanes[bi].maxHp; bbombs += bplanes[bi].bombs.length;
+      }
+      el.dHp.textContent = Math.ceil(bhp) + ' / ' + bmax;
+      el.dHpbar.style.width = (bmax ? bhp / bmax * 100 : 0).toFixed(0) + '%';
+      el.dHpbar.style.background = bmax && bhp / bmax > 0.35 ? '#7fd4a0' : '#e06a52';
+      if (el.dAmmo) el.dAmmo.textContent = '航弹 ' + bbombs;
+      if (el.dAmbar) el.dAmbar.style.width = bplanes.length ? Math.min(100, bbombs / 12 * 100).toFixed(0) + '%' : '0%';
+      return;
+    }
     if (game && game.selectedShip && game.selectedShip.alive) {
       var ss = game.selectedShip;
       var shr = U.clamp(ss.hp / ss.maxHp, 0, 1);
