@@ -400,6 +400,8 @@
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
       var aside = SL.SIDE_ORDER[ai];
       if (aside === 'blue') continue;
+      // 舰炮背水试做：第 10 波前禁止 AI 购买/补充舰艇
+      if (this.mode === 'navalLastStand' && (!this.defense || this.defense.wave < 10)) continue;
       if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
       if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
         var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2500);
@@ -937,11 +939,11 @@
     this.teams.blue.respawnAt = 0;
     this.teams.red.airTimer = 18 + Math.random() * 12;
     if (this.mode === 'navalLastStand') {
-      // 试做版：开局即有敌方战舰，之后由 AI 舰船补充系统继续维持
-      if (this.spawnShip) this.spawnShip('red');
-      this.aiShipRespawn.red = true;
+      // 试做版：前 9 波不出动舰艇，第 10 波才投入敌方战舰
+      this.aiShipRespawn.red = false;
+      this.aiShipUsed.red = true;
       this.aiShipTimer.red = 20;
-      this.log('试做版：敌方战舰已进入战区', 'loss');
+      this.log('试做版：敌方战舰将在第 10 波出动', 'info');
     }
     // 只有蓝红两方；没有中立单位和绿色单位
     this.drawCard();
@@ -1007,6 +1009,12 @@
       u.aggressive = true;
     }
     this.log('第 ' + wave + ' 波敌军抵达（' + count + ' 个单位）', 'loss');
+    if (this.mode === 'navalLastStand' && wave === 10 && !this.shipOf('red')) {
+      this.spawnShip('red');
+      this.aiShipUsed.red = true;
+      this.aiShipRespawn.red = true;
+      this.log('第 10 波：敌方战舰出动', 'loss');
+    }
     var airCfg = SL.LAST_STAND.air;
     var airCount = Math.min(airCfg.maxPerWave,
       airCfg.baseMin + Math.floor((wave - 1) / (airCfg.tier || 5)));
@@ -1045,6 +1053,13 @@
 
   Game.prototype.spawnBossForSide = function (side) {
     side = side || 'red';
+    if (this.mode === 'navalLastStand' && (!this.defense || this.defense.wave < 10)) {
+      var preRoll = Math.floor(Math.random() * 3);
+      if (preRoll === 0) this.spawnBossHell(null, null, side);
+      else if (preRoll === 1) this.spawnBossSuper(null, null, side);
+      else this.spawnBossGhost(null, null, side);
+      return preRoll;
+    }
     if (this.naval && SL.SIDES[side] && SL.SIDES[side].ai && !this.shipOf(side)) this.aiShipRespawn[side] = true;
     var roll = Math.floor(Math.random() * 3);
     if (roll === 0) this.spawnBossHell(null, null, side);
