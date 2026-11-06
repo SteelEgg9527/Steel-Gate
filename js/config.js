@@ -183,7 +183,7 @@
       aaRange: 600,
       airDmg: 8,
       weapon: {
-        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 38, splash: 28,
+        dmg: 7, interval: 0.13, ap: 0.3, accuracy: 0.72, spread: 24, splash: 28,
         mag: 20, reload: 6, ammo: 300, kind: 'direct', label: '20mm Flak 38'
       }
     },
@@ -439,16 +439,16 @@
       },
       aa37: {
         name: '37mm 防空炮', count: 6, hp: 100, rangeAir: 800, rangeGround: 500,
-        maxSpread: 85, splash: 46, dmg: 35, ap: 0.8, shots: 1200,
-        interval: 0.6, turnRate: 0.95, arc: 1.35, side: 'split',
-        aimTime: 0.32,
+        maxSpread: 50, splash: 46, dmg: 35, ap: 0.8, shots: 1200,
+        interval: 0.6, turnRate: 1.55, arc: 1.35, side: 'split',
+        aimTime: 0.18,
         color: '#b7c6ad'
       },
       aa20: {
         name: '20mm 机关炮', count: 10, hp: 60, rangeAir: 600, rangeGround: 400,
-        maxSpread: 55, splash: 30, dmg: 14, ap: 0.4, shots: 2400,
-        interval: 0.22, turnRate: 1.15, arc: 1.2, side: 'split',
-        aimTime: 0.2,
+        maxSpread: 30, splash: 30, dmg: 14, ap: 0.4, shots: 2400,
+        interval: 0.22, turnRate: 2.0, arc: 1.2, side: 'split',
+        aimTime: 0.1,
         color: '#aebfae'
       }
     },

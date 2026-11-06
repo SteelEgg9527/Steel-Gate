@@ -2811,8 +2811,8 @@
             st.ammo--;
             if (SL.Audio) SL.Audio.shot({ dmg: 90, label: '88' }, { type: 'structure' }, false, z.x, z.y);
             st.cd = SL.FORT.flakAirInterval;
-            var fax = plane.x + (Math.random() - 0.5) * 86;
-            var fay = plane.y + (Math.random() - 0.5) * 86;
+            var fax = plane.x + (Math.random() - 0.5) * 50;
+            var fay = plane.y + (Math.random() - 0.5) * 50;
             this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: fax, y2: fay, t: 0, dur: 0.1, side: side, heavy: true });
             this.flakBurst(fax, fay, 80, SL.FORT.flakAirDmg, source, side);
             continue;
@@ -2854,8 +2854,8 @@
           if (Math.random() <= aacc) this.damage(target, SL.FORT.atNestDmg, source, SL.FORT.atNestAP);
         } else if (st.type === 'flak88') {
           st.cd = SL.FORT.flakGroundInterval;
-          var fgx = target.x + (Math.random() - 0.5) * 74;
-          var fgy = target.y + (Math.random() - 0.5) * 74;
+          var fgx = target.x + (Math.random() - 0.5) * 45;
+          var fgy = target.y + (Math.random() - 0.5) * 45;
           this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: fgx, y2: fgy, t: 0, dur: 0.1, side: side, heavy: true });
           this.flakBurst(fgx, fgy, 58, SL.FORT.flakGroundDmg * 0.7, source, side);
         } else if (st.type === 'bunker') {
@@ -3221,8 +3221,8 @@
           var pa = U.angle(u.x, u.y, plane.x, plane.y);
           u.turret = pa;
           u.facing = pa;
-          var aax = plane.x + (Math.random() - 0.5) * 70;
-          var aay = plane.y + (Math.random() - 0.5) * 70;
+          var aax = plane.x + (Math.random() - 0.5) * 40;
+          var aay = plane.y + (Math.random() - 0.5) * 40;
           this.effects.push({
             kind: 'tracer', x1: u.x, y1: u.y, x2: aax, y2: aay,
             t: 0, dur: 0.08, side: u.side, heavy: false

@@ -1715,7 +1715,7 @@ return null;
     if (t.cls === 'aa37' || t.cls === 'aa20') {
       // 防空炮：明显散布 + 近炸引信式溅射，不采用“命中/未命中”二值判定
       var aaAng = Math.random() * Math.PI * 2;
-      var aaRad = Math.max(55, c.maxSpread || 55) * Math.sqrt(Math.random());
+      var aaRad = Math.max(24, c.maxSpread || 30) * Math.sqrt(Math.random());
       var ahx = U.clamp(tx + Math.cos(aaAng) * aaRad, 20, SL.CONFIG.mapSize - 20);
       var ahy = U.clamp(ty + Math.sin(aaAng) * aaRad, 20, SL.CONFIG.mapSize - 20);
       game.effects.push({ kind: 'tracer', x1: from.x, y1: from.y, x2: ahx, y2: ahy, t: 0, dur: 0.1, side: ship.side });
