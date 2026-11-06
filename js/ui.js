@@ -1174,7 +1174,7 @@
       if (el.bkbName) el.bkbName.textContent = ev.name;
       if (el.bkbRewards) {
         el.bkbRewards.textContent = ev.isShip
-          ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 战功'
+          ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 战功   ·   +' + (ev.cards || 0) + ' 张抽卡'
           : '+' + ev.xp + ' 经验   ·   +' + ev.score +
             ' 战功   ·   +' + ev.cards + ' 张单位卡';
       }

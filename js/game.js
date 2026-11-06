@@ -293,6 +293,13 @@
     return ship;
   };
 
+  Game.prototype.awardTrialCards = function (count, x, y, label) {
+    if (this.mode !== 'navalLastStand') return;
+    for (var ci = 0; ci < count; ci++) this.drawCard();
+    if (x != null && y != null) this.fxText(x, y - 24, label + ' +' + count + '抽卡', '#ffe08a');
+    this.log(label + '：获得 ' + count + ' 次抽卡', 'order');
+  };
+
   Game.prototype.damageShip = function (ship, dmg, source, ap) {
     if (!ship || !ship.alive) return;
     var armored = Math.max(0.25, 1 - (ship.armor || 0) * 0.07 * Math.min(1, ap || 1));
@@ -5397,6 +5404,7 @@
       source.score += 20;
       this.addScore('blue', 20);
       this.stats.kills.blue = (this.stats.kills.blue || 0) + 1;
+      if (p.kind === 'hellBomber') this.awardTrialCards(1, p.x, p.y, '击落重型轰炸机');
       if (p.boss) this.awardBossKill(p);
       this.feed.push({
         id: ++this.feedSeq, t: this.time, kind: 'kill',
