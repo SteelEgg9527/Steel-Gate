@@ -558,7 +558,7 @@
     box.innerHTML = '';
     var fleet = mode || (game ? game.mode : 'melee');
     var list = SL.MAPS.filter(function (m) {
-      return fleet === 'naval' ? !!m.naval : !m.naval;
+      return (fleet === 'naval' || fleet === 'navalLastStand') ? !!m.naval : !m.naval;
     }).map(function (m) { return { id: m.id, name: m.name }; });
     list.push({ id: 'random', name: '随机' });
     for (var i = 0; i < list.length; i++) {
@@ -1014,7 +1014,7 @@
 
   function renderYellowHud(g) {
     if (!el.yellowHud) return;
-    if (g.mode === 'lastStand') {
+    if (g.mode === 'lastStand' || g.mode === 'navalLastStand') {
       el.yellowHud.classList.add('hidden');
       return;
     }
@@ -1126,7 +1126,7 @@
       return;
     }
     el.bossHud.classList.remove('hidden');
-    el.bossHud.style.top = g.mode === 'lastStand' ? '160px' : '74px';
+    el.bossHud.style.top = (g.mode === 'lastStand' || g.mode === 'navalLastStand') ? '160px' : '74px';
     var sig = list.map(function (b) {
       return b.kind + ':' + b.name + ':' + Math.ceil(b.hp) + ':' + Math.ceil(b.maxHp) + ':' + b.side;
     }).join('|');
@@ -1201,7 +1201,7 @@
     el.gameMenu.classList.remove('hidden');
     document.body.classList.add('menu-open');
     if (el.leaderboard) el.leaderboard.classList.add('show');
-    var endless = game.difficulty === 'endless' && (game.mode === 'lastStand' || game.mode === 'naval') && !game.ended;
+    var endless = game.difficulty === 'endless' && (game.mode === 'lastStand' || game.mode === 'navalLastStand' || game.mode === 'naval') && !game.ended;
     if (el.gmSave) el.gmSave.disabled = !endless;
     if (el.gmSettle) el.gmSettle.disabled = !endless;
     renderLeaderboard(game);
@@ -1310,7 +1310,7 @@
     }
     var i, side;
     if (el.counts.green && el.counts.green.parentNode) {
-      el.counts.green.parentNode.classList.toggle('hidden', g.mode === 'lastStand');
+      el.counts.green.parentNode.classList.toggle('hidden', g.mode === 'lastStand' || g.mode === 'navalLastStand');
     }
     var counts = { blue: 0, red: 0, green: 0 };
     for (i = 0; i < g.units.length; i++) {
@@ -1849,9 +1849,9 @@
   function recordRecentResult(g) {
     if (!g || g._recentSaved || g.testMode || g.demo) return;
     g._recentSaved = true;
-    var mode = g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '背水一战' : '三军混战');
+    var mode = g.mode === 'navalLastStand' ? '舰炮背水（试做）' : (g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '背水一战' : '三军混战'));
     var diff = '普通';
-    if (g.mode === 'lastStand') {
+    if (g.mode === 'lastStand' || g.mode === 'navalLastStand') {
       var ld = SL.LAST_STAND && SL.LAST_STAND.difficulties && SL.LAST_STAND.difficulties[g.difficulty];
       if (ld) diff = ld.name;
     } else {

@@ -12,8 +12,11 @@
   var follow = params.get('follow') === '1';
   var gameMode = 'melee';
   var difficulty = 'normal';
+  function isNavalMode(id) { return id === 'naval' || id === 'navalLastStand'; }
+  function isStandMode(id) { return id === 'lastStand' || id === 'navalLastStand'; }
   if (params.get('mode') === 'lastStand') gameMode = 'lastStand';
   if (params.get('mode') === 'naval') gameMode = 'naval';
+  if (params.get('mode') === 'navalLastStand') gameMode = 'navalLastStand';
   if (params.get('difficulty') && (SL.LAST_STAND.difficulties[params.get('difficulty')] || SL.MELEE_DIFFICULTIES[params.get('difficulty')])) {
     difficulty = params.get('difficulty');
   }
@@ -30,14 +33,14 @@
     // 先让加载层画出来，再做地图测绘
     setTimeout(function () {
       var playable = SL.MAPS.filter(function (m) {
-        return !m.test && (gameMode === 'naval' ? m.naval : !m.naval);
+        return !m.test && (isNavalMode(gameMode) ? m.naval : !m.naval);
       });
       if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
       var chosen = (paramMap && SL.MAP_BY_ID[paramMap])
         ? paramMap
         : playable[Math.floor(Math.random() * playable.length)].id;
-      if (SL.MAP_BY_ID[chosen].naval) gameMode = 'naval';
-      else if (gameMode === 'naval') gameMode = 'melee';
+      if (SL.MAP_BY_ID[chosen].naval && !isNavalMode(gameMode)) gameMode = 'naval';
+      else if (!SL.MAP_BY_ID[chosen].naval && isNavalMode(gameMode)) gameMode = 'melee';
       SL.Terrain.setMap(chosen);
       if (SL.MAP_BY_ID[chosen].test) gameMode = SL.MAP_BY_ID[chosen].naval ? 'naval' : 'melee';
       SL.Terrain.build(seed);
@@ -94,10 +97,11 @@
     var el = document.getElementById('objective');
     var m = SL.Terrain.map;
     var actualMode = game ? game.mode : gameMode;
-    var diffTable = actualMode === 'lastStand' ? SL.LAST_STAND.difficulties : SL.MELEE_DIFFICULTIES;
+    var diffTable = isStandMode(actualMode) ? SL.LAST_STAND.difficulties : SL.MELEE_DIFFICULTIES;
     var diff = diffTable[difficulty] || diffTable.normal;
     if (el && m) {
       el.textContent = m.test ? '训练场 · 无敌人'
+        : actualMode === 'navalLastStand' ? '舰炮背水（试做） · ' + diff.name + ' · ' + m.name
         : actualMode === 'lastStand' ? '背水一战 · ' + diff.name + ' · ' + m.name
           : actualMode === 'naval' ? '舰炮轰鸣 · ' + diff.name + ' · ' + m.name
             : '三军混战 · ' + diff.name + ' · ' + m.name;
@@ -107,19 +111,21 @@
     var title = document.getElementById('brief-title');
     if (title && m) title.textContent = '作战简报 · ' + m.name;
     var stamp = document.getElementById('brief-stamp');
-    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮背水·试做' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var missionTag = document.getElementById('mission-tag');
-    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮背水·试做' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var sub = document.getElementById('brief-sub');
     if (sub) {
       sub.textContent = '1944 年 6 月 10 日 · ' +
-        (m.test ? '训练场 · 无敌人' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : actualMode === 'naval' ? '海陆协同 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
+        (m.test ? '训练场 · 无敌人' : actualMode === 'navalLastStand' ? '试做防守战 · ' + diff.name + '难度' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : actualMode === 'naval' ? '海陆协同 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
     }
     var copy = document.getElementById('brief-copy');
     if (copy) {
       copy.textContent = m.test
         ? '训练场用于测试单位、武器、工事与占领机制；可选择任意测试卡，不受资源与波次限制。'
-        : actualMode === 'lastStand'
+        : actualMode === 'navalLastStand'
+          ? '舰炮轰鸣·背水一战（试做）。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站改为全图搜索。' 
+          : actualMode === 'lastStand'
           ? '背水一战。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
           : actualMode === 'naval'
             ? '1944 年 6 月，海岸线。蓝、红、绿三支合成部队在 4 km 海陆战场争夺黄圈；占领通讯塔与雷达站，购买战舰支援与舰船卡片，用舰炮火力打开局面。'
@@ -191,7 +197,7 @@
         var b = document.createElement('button');
         b.className = 'map-btn' + (gameMode === id ? ' on' : '');
         b.textContent = SL.MODES[id].name;
-        b.disabled = isTest && id === 'lastStand';
+        b.disabled = isTest && isStandMode(id);
         if (b.disabled) b.title = '训练场不支持背水一战';
         b.addEventListener('click', function () { selectMode(id); });
         modeBox.appendChild(b);
@@ -199,7 +205,7 @@
     }
     if (diffBox) {
       diffBox.innerHTML = '';
-      var diffTable = gameMode === 'lastStand' ? SL.LAST_STAND.difficulties : SL.MELEE_DIFFICULTIES;
+      var diffTable = isStandMode(gameMode) ? SL.LAST_STAND.difficulties : SL.MELEE_DIFFICULTIES;
       Object.keys(diffTable).forEach(function (id) {
         var d = diffTable[id];
         var b = document.createElement('button');
@@ -214,14 +220,14 @@
 
   function selectMode(id) {
     if (!SL.MODES[id] || id === gameMode) return;
-    if (SL.Terrain.map && SL.Terrain.map.test && id === 'lastStand') return;
+    if (SL.Terrain.map && SL.Terrain.map.test && isStandMode(id)) return;
     gameMode = id;
     var cur = SL.Terrain.map;
-    var needSwitch = (id === 'naval' && (!cur || !cur.naval)) ||
-      (id !== 'naval' && cur && cur.naval && !cur.test);
+    var needSwitch = (isNavalMode(id) && (!cur || !cur.naval)) ||
+      (!isNavalMode(id) && cur && cur.naval && !cur.test);
     if (needSwitch) {
       var pool = SL.MAPS.filter(function (m) {
-        return !m.test && (id === 'naval' ? m.naval : !m.naval);
+        return !m.test && (isNavalMode(id) ? m.naval : !m.naval);
       });
       if (pool.length) { chooseMap(pool[0].id); return; }
     }
@@ -231,7 +237,7 @@
   }
 
   function selectDifficulty(id) {
-    var valid = gameMode === 'lastStand' ? SL.LAST_STAND.difficulties[id] : SL.MELEE_DIFFICULTIES[id];
+    var valid = isStandMode(gameMode) ? SL.LAST_STAND.difficulties[id] : SL.MELEE_DIFFICULTIES[id];
     if (!valid || id === difficulty) return;
     difficulty = id;
     if (!SL.Terrain.map.test) newGame(false);
@@ -246,14 +252,14 @@
   function chooseMap(id) {
     if (id === 'random') {
       var playable = SL.MAPS.filter(function (m) {
-        return !m.test && (gameMode === 'naval' ? m.naval : !m.naval);
+        return !m.test && (isNavalMode(gameMode) ? m.naval : !m.naval);
       });
       if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
       id = playable[Math.floor(Math.random() * playable.length)].id;
     }
     if (!SL.MAP_BY_ID[id] || (SL.Terrain.map && id === SL.Terrain.map.id)) return;
-    if (SL.MAP_BY_ID[id].naval) gameMode = 'naval';
-    else if (gameMode === 'naval') gameMode = 'melee';
+    if (SL.MAP_BY_ID[id].naval && !isNavalMode(gameMode)) gameMode = 'naval';
+    else if (!SL.MAP_BY_ID[id].naval && isNavalMode(gameMode)) gameMode = 'melee';
     if (SL.MAP_BY_ID[id].test) gameMode = SL.MAP_BY_ID[id].naval ? 'naval' : 'melee';
     SL.Terrain.setMap(id);
     SL.Terrain.build();
