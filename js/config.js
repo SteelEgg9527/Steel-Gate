@@ -930,7 +930,7 @@
     repair: { key: 'repair', name: '维修包', icon: '⚒', color: '#c08a4a', use: 'unit', desc: '拖到装甲单位：恢复 40% 生命' },
     unitpack: { key: 'unitpack', name: '单位包', icon: '▣', color: '#5c7fa8', use: 'open', desc: '升级选中后立即开出一张单位卡' },
     equippack: { key: 'equippack', name: '装备包', icon: '✦', color: '#8a7a4a', use: 'open', desc: '升级选中后立即开出一张装备卡' },
-    ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送：补给圈中心有 500 HP 补给箱，可被摧毁' },
+    ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送：可投到海面，为范围内战舰补充舰体与炮塔弹药；补给箱可被摧毁' },
     airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：半径 125m 伤害圈，高额杀伤' },
     artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：重炮支援 15s 30 发，直径 300m' },
     recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：侦察机从边缘进入，抵达后盘旋 20 秒，侦察直径 500m' },

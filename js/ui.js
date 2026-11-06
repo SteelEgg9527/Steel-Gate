@@ -656,7 +656,7 @@
       var rad = 50 + Math.random() * 140;
       var x = U.clamp(a.x + Math.cos(ang) * rad, 40, SL.CONFIG.mapSize - 40);
       var y = U.clamp(a.y + Math.sin(ang) * rad, 40, SL.CONFIG.mapSize - 40);
-      if (SL.Terrain && SL.Terrain.naval && SL.Naval && SL.Naval.isWater(x, y)) {
+      if (card.key !== 'ammo' && SL.Terrain && SL.Terrain.naval && SL.Naval && SL.Naval.isWater(x, y)) {
         var lp = SL.Naval.nearestLandPoint(x, y);
         x = lp.x; y = lp.y;
       }

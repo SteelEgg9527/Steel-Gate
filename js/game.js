@@ -5994,6 +5994,28 @@
         }
       }
 
+      // 空投到海面时，为范围内的友方战舰补给舰体与炮塔弹药
+      for (var bsi = 0; bsi < this.battleships.length; bsi++) {
+        var bship = this.battleships[bsi];
+        if (!bship.alive || bship.side !== s.side) continue;
+        if (U.dist(bship.x, bship.y, s.x, s.y) > s.r + (bship.hitRadius || 60)) continue;
+        if (s.hp > 0 && bship.hp < bship.maxHp) {
+          var hullMend = Math.min((SL.SUPPLY.vehicleRepair || 20), bship.maxHp - bship.hp, s.hp);
+          bship.hp += hullMend;
+          s.hp -= hullMend;
+        }
+        if (s.ammo > 0) {
+          for (var bti = 0; bti < bship.turrets.length; bti++) {
+            var btt = bship.turrets[bti];
+            if (btt.destroyed || btt.ammo >= btt.maxAmmo) continue;
+            var bta = Math.min(SL.SUPPLY.ammoRate, btt.maxAmmo - btt.ammo, s.ammo);
+            btt.ammo += bta;
+            s.ammo -= bta;
+            if (s.ammo <= 0) break;
+          }
+        }
+      }
+
       // 补给站：工事弹药 / 工事维修
       for (var zi = 0; zi < T.zones.length; zi++) {
         var z = T.zones[zi];
