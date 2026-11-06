@@ -1104,7 +1104,7 @@
     else if (m === dtp) { sx = center.x; sy = -180; ex = center.x; ey = ms + 220; }
     else { sx = center.x; sy = ms + 180; ex = center.x; ey = -220; }
     this.planes.push({
-      kind: 'hellBomber', boss: !heavyOnly, name: heavyOnly ? ('重型轰炸机 ' + heavyLb + 'lb') : cfg.name,
+      kind: 'hellBomber', boss: !heavyOnly, name: heavyOnly ? '重型轰炸机' : cfg.name,
       x: sx, y: sy, tx: center.x, ty: center.y, ex: ex, ey: ey,
       center: center, side: side, speed: cfg.speed, t: 0, dropped: false, bombRadius: cfg.bombRadius,
       hp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
