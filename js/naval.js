@@ -1674,10 +1674,11 @@ return null;
     function aaCanEngage(ship, t, plane, c) {
     var d = U.dist(ship.x, ship.y, plane.x, plane.y);
     if (d > c.rangeAir) return false;
-    // 舰船上空/近距空域：所有防空炮都可对空，不受背后死角限制
+    // 舰船上空/近距空域：所有防空炮都可对空，不受死角限制
     if (d <= (c.overheadRadius || 190)) return true;
-    // 远距离目标仍必须位于本炮塔射界内，不能打舰船背后远目标
-    return allowedArc(ship, t, Math.atan2(plane.y - ship.y, plane.x - ship.x));
+    // 远距按全舰防空界处理：船头、两舷都可打，只保留船尾后方死角
+    var rel = Math.abs(angleDiff(Math.atan2(plane.y - ship.y, plane.x - ship.x), ship.heading));
+    return rel <= 2.62;
   }
 
   // 炮塔在自身射界内转动；目标位于死角/另一侧时，从射界内绕行，不穿越死角
