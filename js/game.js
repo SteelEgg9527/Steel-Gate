@@ -1030,7 +1030,7 @@
       this.defense.airQueue.push({
         at: this.time + 18 + Math.random() * 24,
         wave: wave, heavy: true,
-        count: (SL.NAVAL_LAST_STAND.heavyCount || 2) + Math.floor(wave / 12)
+        count: Math.min((SL.NAVAL_LAST_STAND.heavyMax || 5), Math.max(1, Math.floor(wave / 5)))
       });
     }
     this.defense.airQueue.sort(function (a, b) { return a.at - b.at; });
@@ -1068,9 +1068,26 @@
     return roll;
   };
 
+  Game.prototype.heavyBombProgress = function (wave) {
+    return U.clamp(((wave || 5) - 5) / 25, 0, 1);
+  };
+
+  Game.prototype.heavyBombWeight = function (wave) {
+    var cfg = SL.NAVAL_LAST_STAND || {};
+    var p = this.heavyBombProgress(wave);
+    return Math.round((cfg.heavyBombMinLb || 500) + p * ((cfg.heavyBombMaxLb || 2000) - (cfg.heavyBombMinLb || 500)));
+  };
+
+  Game.prototype.heavyBombScale = function (wave) {
+    return 0.65 + this.heavyBombProgress(wave) * 0.75;
+  };
+
   Game.prototype.spawnBossHell = function (tx, ty, side, nonBoss) {
     side = side || 'red';
     var heavyOnly = !!nonBoss;
+    var heavyWave = this.defense ? this.defense.wave : 5;
+    var heavyScale = this.heavyBombScale(heavyWave);
+    var heavyLb = this.heavyBombWeight(heavyWave);
     var cfg = SL.BOSS.hell, ms = SL.CONFIG.mapSize;
     var center = (tx != null && ty != null) ? { x: tx, y: ty } : this.yellow;
     var dl = center.x, dr = ms - center.x, dtp = center.y, db = ms - center.y;
@@ -1080,11 +1097,14 @@
     else if (m === dtp) { sx = center.x; sy = -180; ex = center.x; ey = ms + 220; }
     else { sx = center.x; sy = ms + 180; ex = center.x; ey = -220; }
     this.planes.push({
-      kind: 'hellBomber', boss: !heavyOnly, name: heavyOnly ? '重型轰炸机' : cfg.name,
+      kind: 'hellBomber', boss: !heavyOnly, name: heavyOnly ? ('重型轰炸机 ' + heavyLb + 'lb') : cfg.name,
       x: sx, y: sy, tx: center.x, ty: center.y, ex: ex, ey: ey,
       center: center, side: side, speed: cfg.speed, t: 0, dropped: false, bombRadius: cfg.bombRadius,
       hp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
       maxHp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
+      heavyWave: heavyOnly ? heavyWave : 0,
+      heavyBombScale: heavyOnly ? heavyScale : 1,
+      heavyBombLb: heavyOnly ? heavyLb : 0,
       hitFlash: 0, heading: Math.atan2(center.y - sy, center.x - sx),
       orbitAng: Math.atan2(sy - center.y, sx - center.x), orbitR: (center.r || this.yellow.r) + 60, gunCd: 1,
       hellState: 'entry', altitude: 'high', phase2: false,
@@ -5503,35 +5523,38 @@
     this.effects.push({ kind: 'muzzle', x: p.x, y: p.y, a: Math.atan2(ty - p.y, tx - p.x), t: 0, dur: 0.12, size: phase2 ? 16 : 9, side: p.side, heavy: phase2, smoke: true });
   };
 
-  Game.prototype.hellBomb = function (x, y, side) {
+  Game.prototype.hellBomb = function (x, y, side, plane) {
     var cfg = SL.BOSS.hell;
-    if (SL.Audio) SL.Audio.explosion(cfg.bombRadius, x, y);
-    this.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 1.8, r: cfg.bombRadius, side: side });
+    var bs = (plane && plane.heavyBombScale) || 1;
+    var bombRadius = Math.round(cfg.bombRadius * (plane && plane.heavyBombScale ? bs : 1));
+    if (SL.Audio) SL.Audio.explosion(bombRadius, x, y);
+    this.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 1.8, r: bombRadius, side: side });
     this.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 1.6, size: 160, side: side });
     var credit = { side: side, name: '地狱轰炸机', kills: 0, score: 0 };
     for (var i = 0; i < this.units.length; i++) {
       var u = this.units[i];
       if (!u.alive || u.side === side) continue;
       var d = U.dist(u.x, u.y, x, y);
-      if (d > cfg.bombRadius) continue;
-      this.hellExactDamage(u, cfg.firstBombFrac || 0.66, credit);
+      if (d > bombRadius) continue;
+      this.hellExactDamage(u, (cfg.firstBombFrac || 0.66) * (plane && plane.heavyBombScale ? (0.85 + bs * 0.15) : 1), credit);
     }
     for (var hb = 0; hb < this.battleships.length; hb++) {
       var hbs = this.battleships[hb];
       if (!hbs.alive || hbs.side === side) continue;
       var hbd = U.dist(hbs.x, hbs.y, x, y);
-      if (hbd > cfg.bombRadius + 60) continue;
-      var hbFall = 1 - 0.72 * Math.min(1, hbd / (cfg.bombRadius + 60));
-      this.damageShip(hbs, hbs.maxHp * 0.3 * hbFall, credit, 3);
+      if (hbd > bombRadius + 60) continue;
+      var hbFall = 1 - 0.72 * Math.min(1, hbd / (bombRadius + 60));
+      this.damageShip(hbs, hbs.maxHp * 0.3 * hbFall * bs, credit, 3);
     }
-    this.hellDestroyForts(x, y, cfg.bombRadius);
-    this.damageSupplies(x, y, 5000, cfg.bombRadius);
+    this.hellDestroyForts(x, y, bombRadius);
+    this.damageSupplies(x, y, 5000 * bs, bombRadius);
   };
 
-  Game.prototype.hellSmallBomb = function (x, y, side) {
+  Game.prototype.hellSmallBomb = function (x, y, side, plane) {
     var cfg = SL.BOSS.hell;
-    var radius = cfg.extraBombRadius || 75;
-    var coreR = cfg.extraBombCoreRadius || 25;
+    var bs = (plane && plane.heavyBombScale) || 1;
+    var radius = Math.round((cfg.extraBombRadius || 75) * (plane && plane.heavyBombScale ? bs : 1));
+    var coreR = (cfg.extraBombCoreRadius || 25) * (plane && plane.heavyBombScale ? bs : 1);
     if (SL.Audio) SL.Audio.explosion(radius, x, y);
     this.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 0.65, r: radius, side: side });
     this.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 0.7, size: 58, side: side });
@@ -5553,7 +5576,7 @@
       this.damageShip(hss, hss.maxHp * hsf, credit, 2.2);
     }
     this.damageFortifications(x, y, cfg.extraBombFortDmg || 600, radius);
-    this.damageSupplies(x, y, cfg.extraBombSupplyDmg || 1000, radius);
+    this.damageSupplies(x, y, (cfg.extraBombSupplyDmg || 1000) * bs, radius);
   };
 
   Game.prototype.updateHellBomber = function (p, dt) {
@@ -5577,7 +5600,7 @@
       if (de <= (p.speed * dt) + 3) {
         p.x = yx; p.y = yy;
         p.dropped = true; p.firstBombAt = this.time;
-        this.hellBomb(yx, yy, p.side);
+        this.hellBomb(yx, yy, p.side, p);
         p.hellState = 'toOrbitFirst';
         p.orbitEntryAng = p.orbitAng;
         p.orbitTarget = this.hellOrbitPoint(p, y, p.orbitEntryAng);
@@ -5635,7 +5658,7 @@
           p.secondBombTimer = cfg.extraBombInterval || 1.8;
           var ea = Math.random() * Math.PI * 2;
           var er = Math.sqrt(Math.random()) * (y.r || 260) * 0.9;
-          this.hellSmallBomb(yx + Math.cos(ea) * er, yy + Math.sin(ea) * er, p.side);
+          this.hellSmallBomb(yx + Math.cos(ea) * er, yy + Math.sin(ea) * er, p.side, p);
         }
       }
       var so = p.orbitTarget;

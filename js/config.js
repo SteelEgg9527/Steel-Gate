@@ -538,8 +538,10 @@
     enemyMultiplier: 2.0,
     maxWaveUnits: 80,
     airMultiplier: 1.5,
-    heavyEvery: 2,
-    heavyCount: 2,
+    heavyEvery: 5,
+    heavyMax: 5,
+    heavyBombMinLb: 500,
+    heavyBombMaxLb: 2000,
     heavyHpScale: 0.42,
     bossExtraEvery: 5
   };
