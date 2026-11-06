@@ -882,9 +882,42 @@
     return this.findDefenseEdgeSpawn(y.x, y.y, y.r + 120);
   };
 
+  Game.prototype.pickTrialYellowNearRadar = function () {
+    var radar = this.radar;
+    if (!radar) return false;
+    var ys = SL.YELLOW.r || 300;
+    var best = null;
+    for (var tries = 0; tries < 32; tries++) {
+      var ang = Math.random() * Math.PI * 2;
+      var dist = (radar.r || 80) + 80 + Math.random() * 220;
+      var lp = SL.Naval.nearestLandPoint(
+        radar.x + Math.cos(ang) * dist,
+        radar.y + Math.sin(ang) * dist
+      );
+      if (lp.x < ys + 30 || lp.y < ys + 30 || lp.x > T.size - ys - 30 || lp.y > T.size - ys - 30) continue;
+      var clear = true;
+      for (var a = 0; a < 16; a++) {
+        var aa = a / 16 * Math.PI * 2;
+        if (SL.Naval.isWater(lp.x + Math.cos(aa) * ys * 0.96, lp.y + Math.sin(aa) * ys * 0.96)) { clear = false; break; }
+      }
+      if (clear) { best = lp; break; }
+    }
+    if (!best) {
+      var fallback = SL.Naval.nearestLandPoint(radar.x, radar.y);
+      best = { x: U.clamp(fallback.x, ys + 30, T.size - ys - 30), y: U.clamp(fallback.y, ys + 30, T.size - ys - 30) };
+    }
+    this.yellow.x = best.x;
+    this.yellow.y = best.y;
+    this.yellow.r = ys;
+    return true;
+  };
+
   Game.prototype.setupLastStand = function () {
     var d = SL.LAST_STAND;
     var diff = d.difficulties[this.difficulty];
+    if (this.mode === 'navalLastStand' && this.pickTrialYellowNearRadar()) {
+      this.log('试做版：黄圈固定在雷达站区域（本局随机位置）', 'order');
+    }
     this.yellow.active = true;
     this.yellow.nextSpawn = Infinity;
     this.yellow.activeUntil = Infinity;
