@@ -792,6 +792,12 @@
             clear = false; break;
           }
         }
+        if (clear && L.forts) {
+          for (var ff = 0; ff < L.forts.length; ff++) {
+            var ft = L.forts[ff];
+            if (U.dist(p.x, p.y, ft.x, ft.y) < 78 + (ft.r || 60) + 24) { clear = false; break; }
+          }
+        }
         if (clear) break;
         p.x = U.clamp(p.x + dir * 8, 40, T.size - 40);
       }

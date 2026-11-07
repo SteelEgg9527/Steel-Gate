@@ -2224,3 +2224,51 @@ html, body {
   width: 336px !important;
   max-height: 34vh;
 }
+
+/* compact roster fixed below minimap; selected detail height limit */
+#roster-panel {
+  left: 16px !important;
+  right: auto !important;
+  top: 334px !important;
+  bottom: auto !important;
+  width: 218px !important;
+  max-height: 132px !important;
+  padding: 8px 9px 7px !important;
+  overflow: hidden !important;
+}
+#roster-list {
+  max-height: 82px;
+  overflow-y: auto;
+  gap: 4px;
+}
+#roster-panel .roster-row {
+  width: 42px !important;
+  height: 25px !important;
+}
+#roster-panel .roster-row .rt-img {
+  width: 21px !important;
+  height: 21px !important;
+  max-width: 21px !important;
+}
+#roster-panel .panel-head {
+  padding-bottom: 5px;
+}
+#selpanel {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 22vh !important;
+  overflow: hidden !important;
+}
+#sel-detail {
+  min-height: 0;
+  overflow-y: auto;
+}
+#sel-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+@media (max-width: 960px) {
+  #roster-panel {
+    width: 190px !important;
+  }
+}

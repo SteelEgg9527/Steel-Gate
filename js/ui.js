@@ -1089,7 +1089,7 @@
 
   function renderDefenseHud(g) {
     if (!el.defenseHud) return;
-    if (g.mode !== 'lastStand' || !g.defense) {
+    if (!(g.mode === 'lastStand' || g.mode === 'navalLastStand') || !g.defense) {
       el.defenseHud.classList.add('hidden');
       return;
     }
