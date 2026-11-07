@@ -2891,3 +2891,8 @@ html, body {
 #control-groups .control-num { font-size: 8px !important; }
 #control-groups .control-type { font-size: 8px !important; }
 #control-groups .control-count { font-size: 8px !important; }
+
+/* 编组块文字再次放大 */
+#control-groups .control-num { font-size: 9px !important; }
+#control-groups .control-type { font-size: 9px !important; }
+#control-groups .control-count { font-size: 9px !important; }
