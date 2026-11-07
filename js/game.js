@@ -98,6 +98,7 @@
     this.towers = this.navalSites ? this.navalSites.towers : [];
     this.radar = this.navalSites ? this.navalSites.radar : null;
     this.coastBases = this.navalSites ? (this.navalSites.coastBases || []) : [];
+    this.ports = this.navalSites ? (this.navalSites.ports || []) : [];
     this.coastalGuns = [];
     this.navalCards = [];
     this.battleships = [];
@@ -214,6 +215,14 @@
     return null;
   };
 
+  Game.prototype.portOf = function (side) {
+    for (var i = 0; i < (this.ports || []).length; i++) {
+      var p = this.ports[i];
+      if (p && !p.destroyed && p.owner === side) return p;
+    }
+    return null;
+  };
+
   Game.prototype.shipAt = function (x, y, radius) {
     for (var i = 0; i < this.battleships.length; i++) {
       var s = this.battleships[i];
@@ -265,19 +274,31 @@
       if (uu.alive && uu.side === side) { sumX += uu.x; sumY += uu.y; n++; }
     }
     var anchor = n ? { x: sumX / n, y: sumY / n } : ((T.spawns && T.spawns[side]) || { x: T.size / 2, y: T.size / 2 });
-    if (yHint != null) anchor.y = yHint;
-    var anchors = [
-      { x: T.size - 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: Math.PI },
-      { x: 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: 0 },
-      { x: U.clamp(anchor.x, 260, T.size - 260), y: 30, inward: Math.PI / 2 },
-      { x: U.clamp(anchor.x, 260, T.size - 260), y: T.size - 30, inward: -Math.PI / 2 }
-    ];
-    var best = null, bd = Infinity;
-    for (var ai = 0; ai < anchors.length; ai++) {
-      var ac = anchors[ai];
-      if (!SL.Naval.isWater(ac.x, ac.y)) continue;
-      var ad = U.dist(ac.x, ac.y, anchor.x, anchor.y);
-      if (ad < bd) { bd = ad; best = ac; }
+    // 没有可用港口时，从靠近本方阵营的地图边缘海域进入
+    var home = (T.spawns && T.spawns[side]) || anchor;
+    anchor = { x: home.x, y: yHint != null ? yHint : home.y };
+    var best = null;
+    var port = this.portOf ? this.portOf(side) : null;
+    if (port) {
+      var pwater = SL.Naval.nearestWaterPoint(port.x, port.y);
+      if (SL.Naval.isWater(pwater.x, pwater.y)) {
+        best = { x: pwater.x, y: pwater.y, inward: Math.atan2(port.y - pwater.y, port.x - pwater.x) };
+      }
+    }
+    if (!best) {
+      var anchors = [
+        { x: T.size - 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: Math.PI },
+        { x: 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: 0 },
+        { x: U.clamp(anchor.x, 260, T.size - 260), y: 30, inward: Math.PI / 2 },
+        { x: U.clamp(anchor.x, 260, T.size - 260), y: T.size - 30, inward: -Math.PI / 2 }
+      ];
+      var bd = Infinity;
+      for (var ai = 0; ai < anchors.length; ai++) {
+        var ac = anchors[ai];
+        if (!SL.Naval.isWater(ac.x, ac.y)) continue;
+        var ad = U.dist(ac.x, ac.y, anchor.x, anchor.y);
+        if (ad < bd) { bd = ad; best = ac; }
+      }
     }
     if (!best) {
       var wp = SL.Naval.nearestWaterPoint(anchor.x, anchor.y);
@@ -371,6 +392,25 @@
       var u = this.spawnReinforcement(side);
       if (u) this.log(SL.SIDES[side].name + ' 花费 ' + cfg.cost + ' 分补充 ' + u.name, 'info');
       else team.score += cfg.cost;
+    }
+  };
+
+  Game.prototype.moveWaterToward = function (obj, tx, ty, speed, dt) {
+    var dx = tx - obj.x, dy = ty - obj.y;
+    var d = Math.hypot(dx, dy);
+    if (d < 0.001) return;
+    var step = Math.min(d, speed * dt);
+    var base = Math.atan2(dy, dx);
+    var offsets = [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4, 1.9, -1.9];
+    for (var i = 0; i < offsets.length; i++) {
+      var a = base + offsets[i];
+      var nx = obj.x + Math.cos(a) * step;
+      var ny = obj.y + Math.sin(a) * step;
+      if (SL.Naval.isWater(nx, ny)) {
+        obj.heading = a;
+        obj.x = nx; obj.y = ny;
+        return;
+      }
     }
   };
 
@@ -535,7 +575,7 @@
         var sdx = targetShip.x - ss.x, sdy = targetShip.y - ss.y;
         var sdd = Math.hypot(sdx, sdy);
         ss.heading = Math.atan2(sdy, sdx);
-        if (sdd > (ss.r || SL.NAVAL.supplyRadius || 170)) { ss.x += sdx / sdd * 70 * dt; ss.y += sdy / sdd * 70 * dt; }
+        if (sdd > (ss.r || SL.NAVAL.supplyRadius || 170)) { this.moveWaterToward(ss, targetShip.x, targetShip.y, 70, dt); }
         else {
           targetShip.hp = Math.min(targetShip.maxHp, targetShip.hp + 55 * dt);
           targetShip.supply = Math.max(0, (targetShip.supply || 0) - dt);
@@ -716,7 +756,7 @@
       var supplyCost = SL.NAVAL_CARDS.naval_supply.cost || 500;
       if (this.teams.blue.score < supplyCost) return { ok: false, msg: '积分不足，需要 ' + supplyCost };
       this.teams.blue.score -= supplyCost;
-      this.supplyShips.push({ side: 'blue', x: T.size - 90, y: y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
+      var swp = SL.Naval.nearestWaterPoint(T.size - 90, y); this.supplyShips.push({ side: 'blue', x: swp.x, y: swp.y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
       return { ok: true, msg: '补给舰已出发（' + supplyCost + ' 分）' };
     }
     if (key === 'naval_bombard') return this.navalBombard('blue', x, y);
@@ -807,7 +847,7 @@
       ship.planeReserve--;
       this.seaplanes.push({ side: 'blue', ship: ship, x: ship.x, y: ship.y, tx: x, ty: y, t: 0, ready: false, hp: SL.NAVAL.seaplaneHp || 120 });
     } else if (card.key === 'naval_supply') {
-      this.supplyShips.push({ side: 'blue', x: T.size - 90, y: y, tx: this.shipOf('blue') ? this.shipOf('blue').x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
+      var swp2 = SL.Naval.nearestWaterPoint(T.size - 90, y); this.supplyShips.push({ side: 'blue', x: swp2.x, y: swp2.y, tx: this.shipOf('blue') ? this.shipOf('blue').x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
     } else if (card.key === 'naval_suppress') {
       var sr = this.navalSuppress('blue', x, y);
       if (!sr.ok) return sr;
@@ -826,6 +866,7 @@
       this.towers = this.navalSites ? this.navalSites.towers : [];
       this.radar = this.navalSites ? this.navalSites.radar : null;
       this.coastBases = this.navalSites ? (this.navalSites.coastBases || []) : [];
+      this.ports = this.navalSites ? (this.navalSites.ports || []) : [];
     }
     if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) {
       this.setupLastStand();
@@ -2061,6 +2102,10 @@
 
   Game.prototype.addUnit = function (side, typeKey, x, y, name) {
     var def = SL.UNIT_TYPES[typeKey];
+    if (T.naval && SL.Naval && typeKey !== 'battleship' && SL.Naval.isWater(x, y)) {
+      var landAt = SL.Naval.nearestLandPoint(x, y);
+      x = landAt.x; y = landAt.y;
+    }
     var u = {
       id: nextId++,
       side: side,
@@ -3695,7 +3740,20 @@
     var nx = u.x + dx / d * step;
     var ny = u.y + dy / d * step;
     if (this.naval && u.type !== 'battleship' && SL.Naval && SL.Naval.isWater(nx, ny)) {
-      if (u.order) u.order = null;
+      // 沿岸滑行：尝试左右偏转，绕过海岸线，不直接丢弃移动指令
+      var base = Math.atan2(dy, dx);
+      var offsets = [0.42, -0.42, 0.78, -0.78, 1.15, -1.15, 1.55, -1.55, 2.0, -2.0];
+      for (var wa = 0; wa < offsets.length; wa++) {
+        var aa = base + offsets[wa];
+        var wx = u.x + Math.cos(aa) * step;
+        var wy = u.y + Math.sin(aa) * step;
+        if (!SL.Naval.isWater(wx, wy)) {
+          u.x = wx; u.y = wy;
+          u.facing = Math.atan2(wy - u.y || Math.sin(aa), wx - u.x || Math.cos(aa));
+          u.moving = true;
+          return;
+        }
+      }
       u.moving = false;
       return;
     }

@@ -105,6 +105,9 @@
           { x: 475, y: 4000 }, { x: 4050, y: 3200 },
           { x: 4050, y: 3725 }, { x: 4050, y: 4275 }
         ],
+        ports: [
+          { name: '港湾', x: 2810, y: 1360 }
+        ],
         villages: [
           { name: '北岸村', x: 1700, y: 375, r: 82 },
           { name: '东岸村', x: 1800, y: 1000, r: 82 },
@@ -341,7 +344,7 @@
   function makeSite(kind, x, y, name, id, towerIndex) {
     return {
       id: id, name: name, kind: kind, x: x, y: y,
-      r: kind === 'radar' ? 66 : (kind === 'coastbase' ? 74 : 58),
+      r: kind === 'radar' ? 66 : (kind === 'coastbase' ? 74 : (kind === 'port' ? 90 : 58)),
       owner: null, cap: 0, capSide: null,
       site: true, siteHp: 2000, siteKind: kind, towerIndex: towerIndex,
       hp: 2000, maxHp: 2000, destroyed: false,
@@ -386,7 +389,7 @@
       var cb = makeSite('coastbase', bx, by, '海岸炮台 ' + (bi + 1), m.id + '_coast' + bi, bi);
       coastBases.push(cb);
     }
-    return { towers: towers, radar: radar, coastBases: coastBases };
+    return { towers: towers, radar: radar, coastBases: coastBases, ports: [] };
   }
 
   function randomLandPoint(rnd, margin) {
@@ -809,6 +812,26 @@
       towers.push(place('comm', tw.x, tw.y, tw.name, m.id + '_comm' + i, i));
     }
     var radar = place('radar', L.radar.x, L.radar.y, '雷达站', m.id + '_radar', -1);
+    function placePort(x, y, name, id) {
+      var p = NAVAL.nearestLandPoint(x, y);
+      var dir = p.x < T.size / 2 ? -1 : 1;
+      for (var guard = 0; guard < 120; guard++) {
+        var clear = true;
+        for (var a = 0; a < 16; a++) {
+          var ang = a / 16 * Math.PI * 2;
+          if (NAVAL.isWater(p.x + Math.cos(ang) * 94, p.y + Math.sin(ang) * 94)) { clear = false; break; }
+        }
+        if (clear) {
+          for (var cf = 0; cf < coastBases.length; cf++) {
+            var cb0 = coastBases[cf];
+            if (U.dist(p.x, p.y, cb0.x, cb0.y) < 90 + (cb0.r || 74) + 18) { clear = false; break; }
+          }
+        }
+        if (clear) break;
+        p.x = U.clamp(p.x + dir * 8, 40, T.size - 40);
+      }
+      return makeSite('port', p.x, p.y, name, id, 0);
+    }
     var coastBases = [];
     for (var ci = 0; ci < L.coastBases.length; ci++) {
       var cb = L.coastBases[ci];
@@ -824,7 +847,14 @@
       }
       coastBases.push(placeCoastal(bx, by, cbName, m.id + '_coast' + ci, ci));
     }
-    return { towers: towers, radar: radar, coastBases: coastBases };
+    var ports = [];
+    if (L.ports) {
+      for (var pi = 0; pi < L.ports.length; pi++) {
+        var pp = L.ports[pi];
+        ports.push(placePort(pp.x, pp.y, pp.name || '港湾', m.id + '_port' + pi));
+      }
+    }
+    return { towers: towers, radar: radar, coastBases: coastBases, ports: ports };
   }
 
 function circleLand(x, y, r) {
@@ -992,6 +1022,9 @@ return null;
     if (sites.coastBases) {
       for (var cbi = 0; cbi < sites.coastBases.length; cbi++) T.zones.push(sites.coastBases[cbi]);
     }
+    if (sites.ports) {
+      for (var cpi = 0; cpi < sites.ports.length; cpi++) T.zones.push(sites.ports[cpi]);
+    }
     if (T.villages[0]) T.village = { x: T.villages[0].x, y: T.villages[0].y, name: T.villages[0].name };
     T.objective = { x: sites.radar.x, y: sites.radar.y };
     T.bounds = { minX: 0, minY: 0, maxX: T.size, maxY: T.size };
@@ -1007,6 +1040,9 @@ return null;
     T.zones.push(sites.towers[0], sites.towers[1], sites.towers[2], sites.radar);
     if (sites.coastBases) {
       for (var cbi2 = 0; cbi2 < sites.coastBases.length; cbi2++) T.zones.push(sites.coastBases[cbi2]);
+    }
+    if (sites.ports) {
+      for (var cpi2 = 0; cpi2 < sites.ports.length; cpi2++) T.zones.push(sites.ports[cpi2]);
     }
     T.objective = { x: sites.radar.x, y: sites.radar.y };
     return sites;
@@ -1973,6 +2009,7 @@ return null;
     if (!game || !game.naval) return;
     var list = (game.towers || []).concat(game.radar ? [game.radar] : []);
     if (game.coastBases) list = list.concat(game.coastBases);
+    if (game.ports) list = list.concat(game.ports);
     for (var i = 0; i < list.length; i++) {
       var z = list[i];
       if (!z) continue;

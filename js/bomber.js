@@ -168,34 +168,55 @@
 
   function updateFormation(g, b, dt) {
     var slots = formationSlots();
-    var fx = Math.cos(b.heading), fy = Math.sin(b.heading);
+    // 编队航向滞后于长机航向：转弯时 V 形自然拉伸/压缩
+    if (b.formHeading == null) b.formHeading = b.heading;
+    var hd = b.heading - b.formHeading;
+    while (hd > Math.PI) hd -= Math.PI * 2;
+    while (hd < -Math.PI) hd += Math.PI * 2;
+    b.formHeading += hd * Math.min(1, dt * 4.2);
+    var fx = Math.cos(b.formHeading), fy = Math.sin(b.formHeading);
     var sx = -fy, sy = fx;
     var active = 0;
     for (var i = 0; i < b.formation.length; i++) {
       var p = b.formation[i];
       if (!p || !p.deployed) continue;
-      // 长机保持自己的轨迹，僚机只跟随长机形成的 V 形槽位
+      // 长机保持自己的轨迹，僚机围绕由长机形成的 V 形槽位
       if (active === 0) { active++; continue; }
       var s = slots[Math.min(active, slots.length - 1)];
-      var drift = Math.sin((g.time || 0) * 1.0 + (p.jitter || 0)) * 4;
-      var tx = b.groupX + fx * s.forward + sx * (s.lateral + drift);
-      var ty = b.groupY + fy * s.forward + sy * (s.lateral + drift);
+      var bank = b.bank || 0;
+      var inside = bank * s.lateral > 0;
+      var lateral = s.lateral * (inside ? 0.90 : 1.035);
+      var forward = s.forward - Math.abs(s.lateral) * Math.abs(bank) * 0.10;
+      var drift = Math.sin((g.time || 0) * 1.0 + (p.jitter || 0)) * 3;
+      var tx = b.groupX + fx * forward + sx * (lateral + drift);
+      var ty = b.groupY + fy * forward + sy * (lateral + drift);
       var dx = tx - p.x, dy = ty - p.y;
       var desired = Math.atan2(dy, dx);
       var diff = desired - (p.heading || 0);
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      var max = B.b17.turnRate * dt * 2.4;
+      var max = B.b17.turnRate * dt * 2.8;
       var step = U.clamp(diff, -max, max);
       p.heading += step;
       p.bank = U.clamp(step / Math.max(0.001, max) * 0.6, -0.6, 0.6);
       var dist = Math.hypot(dx, dy);
       var speed = B.b17.speed * (p.speedJitter || 1);
-      if (dist > 260) speed *= 1.38;
-      else if (dist > 110) speed *= 1.2;
-      else if (dist < 38) speed *= 0.9;
+      if (dist > 220) speed *= 1.45;
+      else if (dist > 90) speed *= 1.22;
+      else if (dist < 42) speed *= 0.9;
       p.x += Math.cos(p.heading) * speed * dt;
       p.y += Math.sin(p.heading) * speed * dt;
+      // 位置弹簧：比纯转向更硬地拉回槽位，但仍允许转弯时短暂形变
+      var ex = tx - p.x, ey = ty - p.y;
+      var ed = Math.hypot(ex, ey);
+      var pull = ed > 180 ? 0.42 : 0.26;
+      p.x += ex * pull;
+      p.y += ey * pull;
+      // 极限脱离时直接收回，避免僚机越飞越散
+      if (ed > 260) {
+        p.x = tx - ex / Math.max(1, ed) * 260;
+        p.y = ty - ey / Math.max(1, ed) * 260;
+      }
       // 保持机间距离，避免选中圈重叠
       for (var j = 0; j < b.formation.length; j++) {
         var q = b.formation[j];
@@ -357,6 +378,7 @@
     b.forcedReturn = false;
     b.bombing = false;
     b.nextPlane = 0;
+    b.formHeading = b.heading;
     applyFormation(g);
     for (var i = 0; i < b.formation.length; i++) {
       var p = b.formation[i];
