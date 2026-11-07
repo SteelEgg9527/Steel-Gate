@@ -102,7 +102,7 @@
         planeSeq: 0, bombSeq: 0, dropSeq: 0,
         leftMap: false,
         lastState: '',
-        tab: 'ship'
+        tab: g.naval ? 'ship' : 'bomber'
       };
       g.bomberDrops = g.bomberDrops || [];
       g.bomberFires = g.bomberFires || [];
@@ -1041,6 +1041,7 @@
     }
     if (refs.modeText) refs.modeText.textContent = b.bombMode === 'single' ? '单机投弹' : '编队投弹';
     if (refs.modeRange) refs.modeRange.value = b.bombMode === 'single' ? '0' : '1';
+    if (!g.naval) b.tab = 'bomber';
     if (refs.dock) {
       var activeTab = b.tab || 'ship';
       var tabs = refs.dock.querySelectorAll('.system-tab');
@@ -1053,6 +1054,7 @@
 
   function setTab(g, tab) {
     var b = ensure(g);
+    if (!g.naval) tab = 'bomber';
     b.tab = tab;
     // 切换到舰艇/轰炸机系统时，自动选中对应单位
     if (tab === 'ship' && !g.selectedShip && g.shipOf) {
