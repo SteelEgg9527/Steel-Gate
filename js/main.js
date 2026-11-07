@@ -121,23 +121,37 @@
     }
     var copy = document.getElementById('brief-copy');
     if (copy) {
-      copy.textContent = m.test
-        ? '训练场用于测试单位、武器、工事与占领机制；可选择任意测试卡，不受资源与波次限制。'
-        : actualMode === 'navalLastStand'
-          ? '背水一战。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站提供海面与空中搜索。' 
-          : actualMode === 'lastStand'
-          ? '防御模式。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
-          : actualMode === 'naval'
-            ? '1944 年 6 月，海岸线。蓝、红、绿三支合成部队在 4 km 海陆战场争夺黄圈；占领通讯塔与雷达站，购买战舰支援与舰船卡片，用舰炮火力打开局面。'
-            : '1944 年 6 月，西欧战场。蓝、红、绿三支合成部队在 2 km × 2 km 战场上争夺黄圈。' +
-            (diff.endless
-              ? '无限难度没有胜利条件。玩家累计50,000黄圈经验时红/绿一方召唤一次BOSS；此后AI每次全灭重生按时间概率召唤，45分钟达到峰值。'
-              : diff.id === 'easy'
-                ? '黄圈累计100,000经验者获胜；简单难度没有BOSS。'
-                : diff.id === 'hard'
-                  ? '黄圈累计100,000经验者获胜；50,000经验时红/绿一方召唤BOSS，90,000时红绿双方各召唤一位。'
-                  : '黄圈累计100,000经验者获胜；50,000与90,000经验时，红/绿其中一方各召唤一位BOSS。') +
-            'AI单位上限：简单14 / 普通20 / 困难26 / 无限32。黄圈与占领区提供经验、分数；分数可购买额外抽卡。';
+      var winText;
+      if (actualMode === 'lastStand' || actualMode === 'navalLastStand') {
+        winText = '守住黄圈至目标时间即获胜；黄圈被红队占领则失败。' +
+          (diff.holdTime === Infinity ? '无限难度无自动胜利时间，需持续防守。' : '本难度目标坚守时间：' + U.clock(diff.holdTime) + '。');
+      } else if (diff.endless) {
+        winText = '本难度没有自动胜利条件，持续作战并积累黄圈经验。';
+      } else {
+        winText = '黄圈经验达到 100,000 即获胜。';
+      }
+      var strongholds = [];
+      if (actualMode === 'naval' || actualMode === 'navalLastStand') {
+        strongholds.push('<li><b>黄圈</b>：主要争夺与防守目标，持续提供经验。</li>');
+        strongholds.push('<li><b>通讯塔</b>：提供舰炮校射与装填加成，是舰炮支援的重要节点。</li>');
+        strongholds.push('<li><b>雷达站</b>：定期搜索海面与空中目标。</li>');
+        strongholds.push('<li><b>海岸基地</b>：占领后可获得 406mm 岸防炮。</li>');
+        strongholds.push('<li><b>港口</b>：双岸湾地图的港湾，占领方可在港口附近生成舰艇。</li>');
+        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：提供占领区、掩护、经验与分数。</li>');
+      } else {
+        strongholds.push('<li><b>黄圈</b>：主要争夺目标，圈内优势单位持续获得经验与分数。</li>');
+        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：可占领区域，提供掩护、经验与分数。</li>');
+      }
+      var systems = [];
+      if (actualMode === 'naval' || actualMode === 'navalLastStand') {
+        systems.push('<li><b>舰船系统</b>：占领通讯塔后可购买或召唤战舰；战舰可执行舰炮压制、岸轰、水上飞机侦察和补给。</li>');
+      }
+      systems.push('<li><b>轰炸机系统</b>：购买 B-17 与航弹，拖入编组栏后起飞；返航后可在配备面板选择是否自动补充弹药。</li>');
+      copy.innerHTML =
+        '<h3>胜利条件</h3><p>' + winText + '</p>' +
+        '<h3>基本操作</h3><p>左键选择或框选，右键移动、攻击或占领；双击右键急行军；空格暂停；H 打开帮助；Esc 打开菜单。</p>' +
+        '<h3>据点作用</h3><ul>' + strongholds.join('') + '</ul>' +
+        '<h3>支援系统</h3><ul>' + systems.join('') + '</ul>';
     }
     var md = document.getElementById('mode-desc');
     if (md) md.textContent = m.test ? '训练场固定为单阵营测试模式。' : SL.MODES[actualMode].desc;

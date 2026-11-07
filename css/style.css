@@ -2437,3 +2437,25 @@ html, body {
   background: rgba(20,22,17,0.35);
 }
 .bomber-restock-row input { width: 14px; height: 14px; accent-color: #b99b58; }
+
+#brief-copy h3 {
+  margin: 14px 0 5px;
+  color: #d9c38b;
+  font: 700 12px var(--font-ui);
+  letter-spacing: 0.08em;
+}
+#brief-copy p {
+  margin: 0 0 8px;
+  color: #cfc7b2;
+  font-size: 12px;
+  line-height: 1.75;
+}
+#brief-copy ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: #cfc7b2;
+  font-size: 12px;
+  line-height: 1.75;
+}
+#brief-copy li { margin: 2px 0; }
+#brief-copy li b { color: #e1d2a9; font-weight: 600; }
