@@ -376,6 +376,29 @@
     }
   };
 
+  Game.prototype.supplySpawnPoint = function (side, yHint) {
+    var size = T.size || SL.CONFIG.mapSize || 2000;
+    var port = this.portOf ? this.portOf(side) : null;
+    if (port && SL.Naval && SL.Naval.nearestWaterPoint) {
+      var pw = SL.Naval.nearestWaterPoint(port.x, port.y);
+      if (pw && SL.Naval.isWater(pw.x, pw.y)) return pw;
+    }
+    var home = (T.spawns && T.spawns[side]) || { x: size / 2, y: size / 2 };
+    var best = null, bestD = Infinity;
+    for (var e = 0; e < 4; e++) {
+      for (var i = 1; i < 40; i++) {
+        var t = i / 40;
+        var x = e === 0 ? size * t : (e === 1 ? size * t : (e === 2 ? 24 : size - 24));
+        var y = e === 0 ? 24 : (e === 1 ? size - 24 : size * t);
+        if (!SL.Naval || !SL.Naval.isWater(x, y)) continue;
+        var d = U.dist2(x, y, home.x, home.y);
+        if (d < bestD) { bestD = d; best = { x: x, y: y }; }
+      }
+    }
+    if (best) return best;
+    return SL.Naval && SL.Naval.nearestWaterPoint ? SL.Naval.nearestWaterPoint(size - 90, yHint) : { x: size - 90, y: yHint };
+  };
+
   Game.prototype.updateAINavalReplenish = function (dt) {
     var cfg = SL.AI_NAVAL_REPLENISH || { interval: 24, cost: 120 };
     this.aiNavalReplenishTimer = (this.aiNavalReplenishTimer || 0) - dt;
@@ -575,7 +598,7 @@
         var sdx = targetShip.x - ss.x, sdy = targetShip.y - ss.y;
         var sdd = Math.hypot(sdx, sdy);
         ss.heading = Math.atan2(sdy, sdx);
-        if (sdd > (ss.r || SL.NAVAL.supplyRadius || 170)) { this.moveWaterToward(ss, targetShip.x, targetShip.y, 70, dt); }
+        if (sdd > (ss.r || SL.NAVAL.supplyRadius || 170)) { this.moveWaterToward(ss, targetShip.x, targetShip.y, 140, dt); }
         else {
           targetShip.hp = Math.min(targetShip.maxHp, targetShip.hp + 55 * dt);
           targetShip.supply = Math.max(0, (targetShip.supply || 0) - dt);
@@ -729,11 +752,7 @@
       this.shipSupportOwned = true;
       if (!this.spawnShip('blue', y)) return { ok: false, msg: '无法进入海域' };
       var ns = this.shipOf('blue');
-      if (ns && SL.Render) {
-        SL.Render.cam.zoom = Math.max(0.7, SL.Render.cam.zoom);
-        SL.Render.centerOn(ns.x, ns.y);
-        this.setSelectedShip(ns);
-      }
+      if (ns) this.setSelectedShip(ns);
       return { ok: true, msg: '战舰增援已出发' };
     }
     if (key === 'ship_prewarn') {
@@ -756,7 +775,7 @@
       var supplyCost = SL.NAVAL_CARDS.naval_supply.cost || 500;
       if (this.teams.blue.score < supplyCost) return { ok: false, msg: '积分不足，需要 ' + supplyCost };
       this.teams.blue.score -= supplyCost;
-      var swp = SL.Naval.nearestWaterPoint(T.size - 90, y); this.supplyShips.push({ side: 'blue', x: swp.x, y: swp.y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
+      var swp = this.supplySpawnPoint('blue', y); this.supplyShips.push({ side: 'blue', x: swp.x, y: swp.y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
       return { ok: true, msg: '补给舰已出发（' + supplyCost + ' 分）' };
     }
     if (key === 'naval_bombard') return this.navalBombard('blue', x, y);
@@ -831,11 +850,7 @@
       if (this.navalTowerCount('blue') < 1) return { ok: false, msg: '需要至少占领一座通讯塔' };
       if (!this.spawnShip('blue', y)) return { ok: false, msg: '无法进入海域' };
       var newShip = this.shipOf('blue');
-      if (newShip && SL.Render) {
-        SL.Render.cam.zoom = Math.max(0.7, SL.Render.cam.zoom);
-        SL.Render.centerOn(newShip.x, newShip.y);
-        this.setSelectedShip(newShip);
-      }
+      if (newShip) this.setSelectedShip(newShip);
     } else if (card.key === 'naval_bombard') {
       var r = this.navalBombard('blue', x, y);
       if (!r.ok) return r;
@@ -847,7 +862,7 @@
       ship.planeReserve--;
       this.seaplanes.push({ side: 'blue', ship: ship, x: ship.x, y: ship.y, tx: x, ty: y, t: 0, ready: false, hp: SL.NAVAL.seaplaneHp || 120 });
     } else if (card.key === 'naval_supply') {
-      var swp2 = SL.Naval.nearestWaterPoint(T.size - 90, y); this.supplyShips.push({ side: 'blue', x: swp2.x, y: swp2.y, tx: this.shipOf('blue') ? this.shipOf('blue').x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
+      var swp2 = this.supplySpawnPoint('blue', y); this.supplyShips.push({ side: 'blue', x: swp2.x, y: swp2.y, tx: this.shipOf('blue') ? this.shipOf('blue').x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
     } else if (card.key === 'naval_suppress') {
       var sr = this.navalSuppress('blue', x, y);
       if (!sr.ok) return sr;

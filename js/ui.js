@@ -990,9 +990,6 @@
         var picked = game.controlGroupUnits(grp);
         if (!picked.length) { UI.pushToast('该编组已无存活单位', 'info'); return; }
         game.setSelection(picked);
-        var cx = 0, cy = 0;
-        picked.forEach(function (u) { cx += u.x; cy += u.y; });
-        R.centerOn(cx / picked.length, cy / picked.length);
       });
       var actions = document.createElement('div');
       actions.className = 'control-actions';
