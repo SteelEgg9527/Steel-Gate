@@ -5875,17 +5875,9 @@
       if (ed <= estep + 2) {
         p.arrived = true;
         p.t = 0;
-        p.orbitPhase = p.orbitPhase == null ? p.ang : p.orbitPhase;
-        var arrivalSlot = p.formationSlot || 0;
-        var arrivalBack = arrivalSlot === 0 ? 0 : 55;
-        var arrivalLat = arrivalSlot === 1 ? -55 : (arrivalSlot === 2 ? 55 : 0);
-        var arrivalRadialX = Math.cos(p.orbitPhase);
-        var arrivalRadialY = Math.sin(p.orbitPhase);
-        var arrivalTangentX = -arrivalRadialY;
-        var arrivalTangentY = arrivalRadialX;
-        p.x = p.cx + arrivalRadialX * p.orbitR - arrivalTangentX * arrivalBack + arrivalRadialX * arrivalLat;
-        p.y = p.cy + arrivalRadialY * p.orbitR - arrivalTangentY * arrivalBack + arrivalRadialY * arrivalLat;
-        p.heading = p.orbitPhase + Math.PI / 2;
+        // 不瞬移到盘旋槽位：从当前位置的角度和半径切入，沿切线逐渐归位
+        p.orbitPhase = Math.atan2(p.y - p.cy, p.x - p.cx);
+        p.orbitRCurrent = Math.max(36, Math.hypot(p.x - p.cx, p.y - p.cy));
         p.mode = 'orbit';
       } else {
         p.x += ex / ed * estep;
@@ -5941,7 +5933,7 @@
         p.x += dx / d * Math.min(step, d);
         p.y += dy / d * Math.min(step, d);
       }
-      p.heading = Math.atan2(t.y - p.y, t.x - p.x);
+      this.turnPlaneHeading(p, Math.atan2(t.y - p.y, t.x - p.x), dt, 5.5);
       if (p.gunCd <= 0 && U.dist(p.x, p.y, t.x, t.y) <= cfg.radius) {
         p.gunCd = cfg.interval;
         this.effects.push({
@@ -5975,6 +5967,8 @@
       }
       // 无目标：三机品字形沿制空圈盘旋，不叠在同一位置
       p.orbitPhase = (p.orbitPhase == null ? p.ang : p.orbitPhase) + cfg.orbitSpeed * dt;
+      if (p.orbitRCurrent == null) p.orbitRCurrent = p.orbitR;
+      p.orbitRCurrent += (p.orbitR - p.orbitRCurrent) * Math.min(1, dt * 2.4);
       var slot = p.formationSlot || 0;
       var back = slot === 0 ? 0 : 55;
       var lat = slot === 1 ? -55 : (slot === 2 ? 55 : 0);
@@ -5982,20 +5976,55 @@
       var radialY = Math.sin(p.orbitPhase);
       var tangentX = -radialY;
       var tangentY = radialX;
-      desiredX = p.cx + radialX * p.orbitR - tangentX * back + radialX * lat;
-      desiredY = p.cy + radialY * p.orbitR - tangentY * back + radialY * lat;
+      desiredX = p.cx + radialX * p.orbitRCurrent - tangentX * back + radialX * lat;
+      desiredY = p.cy + radialY * p.orbitRCurrent - tangentY * back + radialY * lat;
       var rdx = desiredX - p.x, rdy = desiredY - p.y;
       var rd = Math.hypot(rdx, rdy);
       if (rd > 2) {
         var rstep = cfg.chaseSpeed * dt;
         p.x += rdx / rd * Math.min(rstep, rd);
         p.y += rdy / rd * Math.min(rstep, rd);
-      } else {
-        p.x = desiredX; p.y = desiredY;
       }
-      p.heading = p.orbitPhase + Math.PI / 2;
+      this.turnPlaneHeading(p, p.orbitPhase + Math.PI / 2, dt, 4.5);
     }
     return true;
+  };
+
+  Game.prototype.turnPlaneHeading = function (p, target, dt, rate) {
+    var diff = target - (p.heading || 0);
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    p.heading = (p.heading || 0) + diff * Math.min(1, dt * (rate || 4));
+  };
+
+  Game.prototype.separatePlanes = function () {
+    var ms = SL.CONFIG.mapSize;
+    for (var i = 0; i < this.planes.length; i++) {
+      var a = this.planes[i];
+      if (!a || a.hp <= 0) continue;
+      for (var j = i + 1; j < this.planes.length; j++) {
+        var b = this.planes[j];
+        if (!b || b.hp <= 0) continue;
+        var min = (a.kind === 'b17' || b.kind === 'b17') ? 58 : 28;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d = Math.hypot(dx, dy);
+        if (d >= min) continue;
+        if (a.kind === 'b17' && b.kind === 'b17') continue;
+        if (d < 0.001) { dx = 1; dy = 0; d = 1; }
+        var push = (min - d) * (a.kind === 'b17' || b.kind === 'b17' ? 1 : 0.5);
+        var ux = dx / d, uy = dy / d;
+        if (a.kind === 'b17') {
+          b.x += ux * push; b.y += uy * push;
+        } else if (b.kind === 'b17') {
+          a.x -= ux * push; a.y -= uy * push;
+        } else {
+          a.x -= ux * push; a.y -= uy * push;
+          b.x += ux * push; b.y += uy * push;
+        }
+        a.x = U.clamp(a.x, -120, ms + 120); a.y = U.clamp(a.y, -120, ms + 120);
+        b.x = U.clamp(b.x, -120, ms + 120); b.y = U.clamp(b.y, -120, ms + 120);
+      }
+    }
   };
 
   Game.prototype.updatePlanes = function (dt) {
@@ -6016,10 +6045,10 @@
           p.heading = Math.atan2(rdy, rdx);
           var rstep = (p.ferrySpeed || 280) * dt;
           if (rd <= rstep + 2) {
-            p.x = p.cx; p.y = p.cy;
             p.arrived = true;
             p.t = 0;
             p.ang = Math.atan2(p.y - p.cy, p.x - p.cx);
+            p.radCurrent = Math.max(35, Math.hypot(p.x - p.cx, p.y - p.cy));
             this.recons.push({
               x: p.cx, y: p.cy, side: p.side, r: SL.RECON_PLANE.radius,
               until: this.time + SL.RECON_PLANE.duration, plane: p
@@ -6031,9 +6060,11 @@
           continue;
         }
         p.ang += p.speed * dt;
-        p.x = p.cx + Math.cos(p.ang) * p.rad;
-        p.y = p.cy + Math.sin(p.ang) * p.rad;
-        p.heading = p.ang + Math.PI / 2;
+        if (p.radCurrent == null) p.radCurrent = p.rad;
+        p.radCurrent += (p.rad - p.radCurrent) * Math.min(1, dt * 2.2);
+        p.x = p.cx + Math.cos(p.ang) * p.radCurrent;
+        p.y = p.cy + Math.sin(p.ang) * p.radCurrent;
+        this.turnPlaneHeading(p, p.ang + Math.PI / 2, dt, 4.2);
         if (p.t >= p.dur) this.planes.splice(i, 1);
         continue;
       }
@@ -6065,6 +6096,7 @@
         if (p.x < -160 || p.x > ms + 160 || p.y < -160 || p.y > ms + 160) this.planes.splice(i, 1);
       }
     }
+    this.separatePlanes();
   };
 
   Game.prototype.updateStrikes = function (dt) {
