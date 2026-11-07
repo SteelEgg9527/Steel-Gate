@@ -2232,8 +2232,10 @@ html, body {
   top: 334px !important;
   bottom: auto !important;
   width: 218px !important;
-  max-height: 132px !important;
+  max-height: 180px !important;
   padding: 8px 9px 7px !important;
+  display: flex !important;
+  flex-direction: column !important;
   overflow: hidden !important;
 }
 #roster-list {
@@ -2256,7 +2258,7 @@ html, body {
 #selpanel {
   display: flex !important;
   flex-direction: column !important;
-  max-height: 22vh !important;
+  max-height: 38vh !important;
   overflow: hidden !important;
 }
 #sel-detail {
@@ -2296,4 +2298,23 @@ html, body {
     height: 16px !important;
     max-width: 16px !important;
   }
+}
+
+/* unified panel scrollbars */
+#roster-list, #sel-detail, #sel-list {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(196,178,134,0.28) transparent;
+}
+#roster-list::-webkit-scrollbar, #sel-detail::-webkit-scrollbar, #sel-list::-webkit-scrollbar {
+  width: 5px;
+}
+#roster-list::-webkit-scrollbar-track, #sel-detail::-webkit-scrollbar-track, #sel-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+#roster-list::-webkit-scrollbar-thumb, #sel-detail::-webkit-scrollbar-thumb, #sel-list::-webkit-scrollbar-thumb {
+  background: rgba(196,178,134,0.25);
+  border-radius: 3px;
+}
+#roster-list::-webkit-scrollbar-thumb:hover, #sel-detail::-webkit-scrollbar-thumb:hover, #sel-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(216,196,148,0.42);
 }

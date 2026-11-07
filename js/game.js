@@ -5519,10 +5519,17 @@
     var airRange = phase2 ? (cfg.low2GunAirRange || 800) : (cfg.low1GunAirRange || 650);
     var ap = phase2 ? (cfg.low2GunAP || 2.8) : (cfg.low1GunAP || 0.3);
     var interval = phase2 ? (cfg.low2GunInterval || 3.5) : (cfg.low1GunInterval || 0.55);
+    var gunDmg = dmg / Math.max(1, count);
     var spread = phase2 ? 8 : (cfg.low1GunSpread || 80);
-    p.gunCd -= dt;
-    if (p.gunCd > 0) return;
-    p.gunCd = interval;
+    if (!p.hellGuns || p.hellGuns.length < count) {
+      var mounts = phase2
+        ? [{ x: -13, y: -7 }, { x: 15, y: 7 }]
+        : [{ x: -20, y: -9 }, { x: -7, y: 9 }, { x: 9, y: -7 }, { x: 23, y: 8 }];
+      p.hellGuns = [];
+      for (var gi0 = 0; gi0 < count; gi0++) {
+        p.hellGuns.push({ x: mounts[gi0].x, y: mounts[gi0].y, cd: Math.random() * interval, target: null });
+      }
+    }
     var ground = [], air = [];
     for (var i = 0; i < this.units.length; i++) {
       var u = this.units[i];
@@ -5535,43 +5542,58 @@
       if (!pl || pl === p || pl.side === p.side || pl.hp <= 0) continue;
       if (U.dist(pl.x, pl.y, p.x, p.y) <= airRange) air.push(pl);
     }
-    var usePlane = air.length > 0 && (ground.length === 0 || Math.random() < 0.35);
-    var target = usePlane ? air[Math.floor(Math.random() * air.length)]
-      : (ground.length ? ground[Math.floor(Math.random() * ground.length)] : null);
-    var tx, ty;
-    if (target) {
-      tx = target.x; ty = target.y;
-    } else {
-      var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (y.r || 260);
-      tx = y.x + Math.cos(a) * r; ty = y.y + Math.sin(a) * r;
-    }
-    if (!usePlane && !phase2) {
-      tx += (Math.random() - 0.5) * spread * 2;
-      ty += (Math.random() - 0.5) * spread * 2;
-    }
-    var credit = { side: p.side, name: phase2 ? '地狱轰炸机 88mm' : '地狱轰炸机 30mm', kills: 0, score: 0 };
-    for (var k = 0; k < count; k++) {
-      var ox = (Math.random() - 0.5) * (phase2 ? 18 : 45);
-      var oy = (Math.random() - 0.5) * (phase2 ? 18 : 45);
+    for (var g = 0; g < count; g++) {
+      var gun = p.hellGuns[g];
+      gun.cd -= dt;
+      if (gun.cd > 0) continue;
+      gun.cd = interval * (0.8 + Math.random() * 0.4);
+      var usePlane = air.length > 0 && (ground.length === 0 || Math.random() < 0.35);
+      var list = usePlane ? air : ground;
+      var target = null;
+      if (list.length) {
+        target = list[Math.floor(Math.random() * list.length)];
+        // 每门炮独立索敌，优先打还没有被其他炮塔锁定的目标
+        for (var tries = 0; tries < 5; tries++) {
+          var cand = list[Math.floor(Math.random() * list.length)];
+          var taken = false;
+          for (var og = 0; og < count; og++) {
+            if (og !== g && p.hellGuns[og].target === cand) { taken = true; break; }
+          }
+          if (!taken) { target = cand; break; }
+        }
+      }
+      gun.target = target;
+      var tx, ty;
+      if (target) { tx = target.x; ty = target.y; }
+      else {
+        var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (y.r || 260);
+        tx = y.x + Math.cos(a) * r; ty = y.y + Math.sin(a) * r;
+      }
+      if (!usePlane && !phase2) {
+        tx += (Math.random() - 0.5) * spread * 2;
+        ty += (Math.random() - 0.5) * spread * 2;
+      }
+      var gx = p.x + gun.x, gy = p.y + gun.y;
+      var credit = { side: p.side, name: phase2 ? '地狱轰炸机 88mm' : '地狱轰炸机 30mm', kills: 0, score: 0 };
       this.effects.push({
-        kind: 'tracer', x1: p.x, y1: p.y, x2: tx + ox, y2: ty + oy,
+        kind: 'tracer', x1: gx, y1: gy, x2: tx, y2: ty,
         t: 0, dur: phase2 ? 0.18 : 0.1, side: p.side, heavy: phase2
       });
-    }
-    if (usePlane) {
-      this.damagePlane(target, dmg, credit);
-      this.effects.push({ kind: 'blast', x: target.x, y: target.y, t: 0, dur: 0.35, r: splash, side: p.side });
-    } else {
-      for (var m = 0; m < this.units.length; m++) {
-        var su = this.units[m];
-        if (!su.alive || su.side === p.side) continue;
-        var sd = U.dist(su.x, su.y, tx, ty);
-        if (sd > splash) continue;
-        this.damage(su, dmg * (1 - 0.45 * sd / Math.max(1, splash)), credit, ap);
+      if (usePlane && target) {
+        this.damagePlane(target, gunDmg, credit);
+        this.effects.push({ kind: 'blast', x: target.x, y: target.y, t: 0, dur: 0.35, r: splash, side: p.side });
+      } else {
+        for (var m = 0; m < this.units.length; m++) {
+          var su = this.units[m];
+          if (!su.alive || su.side === p.side) continue;
+          var sd = U.dist(su.x, su.y, tx, ty);
+          if (sd > splash) continue;
+          this.damage(su, gunDmg * (1 - 0.45 * sd / Math.max(1, splash)), credit, ap);
+        }
+        this.effects.push({ kind: 'blast', x: tx, y: ty, t: 0, dur: 0.38, r: splash, side: p.side });
       }
-      this.effects.push({ kind: 'blast', x: tx, y: ty, t: 0, dur: 0.38, r: splash, side: p.side });
+      this.effects.push({ kind: 'muzzle', x: gx, y: gy, a: Math.atan2(ty - gy, tx - gx), t: 0, dur: 0.12, size: phase2 ? 16 : 9, side: p.side, heavy: phase2, smoke: true });
     }
-    this.effects.push({ kind: 'muzzle', x: p.x, y: p.y, a: Math.atan2(ty - p.y, tx - p.x), t: 0, dur: 0.12, size: phase2 ? 16 : 9, side: p.side, heavy: phase2, smoke: true });
   };
 
   Game.prototype.hellBomb = function (x, y, side, plane) {

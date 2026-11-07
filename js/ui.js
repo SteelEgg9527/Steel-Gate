@@ -1087,6 +1087,21 @@
     }
   }
 
+  function layoutLeftPanels() {
+    var map = $('minimap-panel'), roster = $('roster-panel'), sel = $('selpanel'), hud = $('hud-scale');
+    if (!map || !roster || !sel) return;
+    var mapBottom = map.offsetTop + map.offsetHeight;
+    var layoutH = (hud && hud.offsetHeight) || window.innerHeight;
+    // 已选面板高度随内容变化，但预留至少 170px 给部队清单
+    var selMax = Math.max(150, layoutH - mapBottom - 16 - 170);
+    sel.style.maxHeight = selMax + 'px';
+    var selTop = sel.offsetTop;
+    var available = selTop - mapBottom - 14;
+    roster.style.top = (mapBottom + 8) + 'px';
+    roster.style.height = 'auto';
+    roster.style.maxHeight = Math.max(64, available) + 'px';
+  }
+
   function renderDefenseHud(g) {
     if (!el.defenseHud) return;
     if (!(g.mode === 'lastStand' || g.mode === 'navalLastStand') || !g.defense) {
@@ -1504,6 +1519,7 @@
       el.scaleLine.style.width = w + 'px';
       el.scaleLabel.textContent = best + ' m';
     }
+    layoutLeftPanels();
     if (SL.Bomber) SL.Bomber.refresh(g);
   };
 

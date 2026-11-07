@@ -535,7 +535,7 @@
 
   /* 舰炮轰鸣(背水一战) */
   SL.NAVAL_LAST_STAND = {
-    enemyMultiplier: 2.0,
+    enemyMultiplier: 1.5,
     maxWaveUnits: 80,
     airMultiplier: 1.5,
     heavyEvery: 5,
