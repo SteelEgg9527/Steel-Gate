@@ -1486,16 +1486,20 @@
       }
     }
 
-    var meters = [50, 100, 200, 250, 500];
+    // 战术图比例尺按小地图自身比例计算，不再误用主视角 zoom
+    var mapMeters = (SL.CONFIG && SL.CONFIG.mapSize) || 5000;
+    var mmWidth = (el.minimap && (el.minimap.clientWidth || el.minimap.width)) || 196;
+    var meters = [100, 200, 500, 1000, 2000];
     var best = 200, bestDiff = Infinity;
     for (i = 0; i < meters.length; i++) {
-      var px = meters[i] * R.cam.zoom;
+      var px = meters[i] / mapMeters * mmWidth;
       var diff = Math.abs(px - 120);
       if (diff < bestDiff) { bestDiff = diff; best = meters[i]; }
     }
-    var w = Math.round(best * R.cam.zoom);
-    if (uiCache.scaleW !== w || uiCache.scaleText !== best) {
-      uiCache.scaleW = w;
+    var w = Math.round(best / mapMeters * mmWidth * 10) / 10;
+    var scaleKey = best + ':' + w + ':' + mapMeters;
+    if (uiCache.scaleW !== scaleKey) {
+      uiCache.scaleW = scaleKey;
       uiCache.scaleText = best;
       el.scaleLine.style.width = w + 'px';
       el.scaleLabel.textContent = best + ' m';
