@@ -2748,3 +2748,6 @@ html, body {
 #roster-panel::before, #roster-panel::after { display: none !important; }
 .roster-actions { background: transparent !important; }
 #sel-empty p::before { content: "·" !important; color: #6d6853 !important; }
+
+/* 部队清单不再显示标题和数量 */
+#roster-panel .panel-head { display: none !important; }
