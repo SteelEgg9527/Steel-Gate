@@ -1876,7 +1876,7 @@
       ctx.stroke();
 
       // 圈顶倒计时：随视角缩放并加底框，保持醒目
-      if (game.mode !== 'lastStand') {
+      if (game.mode !== 'lastStand' && game.mode !== 'navalLastStand' && isFinite(yz.activeUntil)) {
       var yLeft = Math.max(0, yz.activeUntil - game.time);
       var yScale = U.clamp(cam.zoom, 0.9, 3.6);
       var yFont = Math.round(13 * yScale);
