@@ -396,8 +396,8 @@
       desc: '5km 海陆战场：占领通讯塔与雷达站，召唤战列舰进行岸轰支援；黄圈经验决定胜负。'
     },
     navalLastStand: {
-      id: 'navalLastStand', name: '舰炮背水（试做）',
-      desc: '试做版：舰炮轰鸣地图上的背水一战。红队波次与进攻密度提高，包含BOSS、敌方战舰和重型轰炸机；雷达站提供全图搜索。'
+      id: 'navalLastStand', name: '舰炮轰鸣(背水一战)',
+      desc: '舰炮轰鸣(背水一战)：舰炮轰鸣地图上的背水一战。红队波次与进攻密度提高，包含BOSS、敌方战舰和重型轰炸机；雷达站提供全图搜索。'
     }
   };
 
@@ -533,7 +533,7 @@
     air: { tier: 5, baseMin: 2, baseMax: 2, maxPerWave: 10, delayMin: 8, delayMax: 50 }
   };
 
-  /* 舰炮轰鸣版背水一战（试做） */
+  /* 舰炮轰鸣(背水一战) */
   SL.NAVAL_LAST_STAND = {
     enemyMultiplier: 2.0,
     maxWaveUnits: 80,

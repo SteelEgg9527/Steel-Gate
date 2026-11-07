@@ -407,7 +407,7 @@
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
       var aside = SL.SIDE_ORDER[ai];
       if (aside === 'blue') continue;
-      // 舰炮背水试做：第 10 波前禁止 AI 购买/补充舰艇
+      // 舰炮轰鸣(背水一战)：第 10 波前禁止 AI 购买/补充舰艇
       if (this.mode === 'navalLastStand' && (!this.defense || this.defense.wave < 10)) continue;
       if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
       if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
@@ -851,7 +851,35 @@
 
   /* ---------------- 背水一战 ---------------- */
 
+  Game.prototype.findTrialEdgeSpawn = function (ax, ay, minDist, avoidX, avoidY, avoidDist) {
+    var ms = SL.CONFIG.mapSize, margin = 240;
+    var need = Math.max(minDist || 0, 1100);
+    var picks = [];
+    for (var tries = 0; tries < 320; tries++) {
+      var edge = Math.floor(Math.random() * 4);
+      var x, y;
+      if (edge === 0) { x = margin + Math.random() * (ms - margin * 2); y = margin; }
+      else if (edge === 1) { x = margin + Math.random() * (ms - margin * 2); y = ms - margin; }
+      else if (edge === 2) { x = margin; y = margin + Math.random() * (ms - margin * 2); }
+      else { x = ms - margin; y = margin + Math.random() * (ms - margin * 2); }
+      if (U.dist(x, y, ax, ay) < need) continue;
+      if (avoidDist && U.dist(x, y, avoidX, avoidY) < avoidDist) continue;
+      if (this.naval && SL.Naval && SL.Naval.isWater(x, y)) {
+        var lp = SL.Naval.nearestLandPoint(x, y);
+        x = lp.x; y = lp.y;
+        if (U.dist(x, y, ax, ay) < need) continue;
+        if (avoidDist && U.dist(x, y, avoidX, avoidY) < avoidDist) continue;
+        if (SL.Naval.isWater(x, y)) continue;
+      }
+      picks.push({ x: x, y: y });
+      if (picks.length >= 12) break;
+    }
+    if (picks.length) return picks[Math.floor(Math.random() * picks.length)];
+    return { x: margin + Math.random() * (ms - margin * 2), y: ms - margin };
+  };
+
   Game.prototype.findDefenseEdgeSpawn = function (ax, ay, minDist, avoidX, avoidY, avoidDist) {
+    if (this.mode === 'navalLastStand') return this.findTrialEdgeSpawn(ax, ay, minDist, avoidX, avoidY, avoidDist);
     var ms = SL.CONFIG.mapSize, margin = 260;
     var fallback = { x: margin, y: margin };
     for (var tries = 0; tries < 240; tries++) {
@@ -871,6 +899,21 @@
   Game.prototype.findDefenseBlueSpawn = function () {
     var ms = SL.CONFIG.mapSize, margin = 260;
     var y = this.yellow;
+    if (this.mode === 'navalLastStand') {
+      for (var bt = 0; bt < 120; bt++) {
+        var ba = Math.random() * Math.PI * 2;
+        var bd = y.r + 75 + Math.random() * 145;
+        var bx = U.clamp(y.x + Math.cos(ba) * bd, 40, ms - 40);
+        var by = U.clamp(y.y + Math.sin(ba) * bd, 40, ms - 40);
+        if (this.naval && SL.Naval && SL.Naval.isWater(bx, by)) {
+          var bp = SL.Naval.nearestLandPoint(bx, by);
+          bx = bp.x; by = bp.y;
+        }
+        if (U.dist(bx, by, y.x, y.y) < y.r + 45) continue;
+        if (this.naval && SL.Naval && SL.Naval.isWater(bx, by)) continue;
+        return { x: bx, y: by };
+      }
+    }
     var edges = [
       { side: 0, d: y.y },
       { side: 1, d: ms - y.y },
@@ -925,7 +968,7 @@
     var d = SL.LAST_STAND;
     var diff = d.difficulties[this.difficulty];
     if (this.mode === 'navalLastStand' && this.pickTrialYellowNearRadar()) {
-      this.log('试做版：黄圈固定在雷达站区域（本局随机位置）', 'order');
+      this.log('舰炮轰鸣(背水一战)：黄圈固定在雷达站区域（本局随机位置）', 'order');
     }
     this.yellow.active = true;
     this.yellow.nextSpawn = Infinity;
@@ -946,11 +989,11 @@
     this.teams.blue.respawnAt = 0;
     this.teams.red.airTimer = 18 + Math.random() * 12;
     if (this.mode === 'navalLastStand') {
-      // 试做版：前 9 波不出动舰艇，第 10 波才投入敌方战舰
+      // 舰炮轰鸣(背水一战)：前 9 波不出动舰艇，第 10 波才投入敌方战舰
       this.aiShipRespawn.red = false;
       this.aiShipUsed.red = true;
       this.aiShipTimer.red = 20;
-      this.log('试做版：敌方战舰将在第 10 波出动', 'info');
+      this.log('舰炮轰鸣(背水一战)：敌方战舰将在第 10 波出动', 'info');
     }
     // 只有蓝红两方；没有中立单位和绿色单位
     this.drawCard();

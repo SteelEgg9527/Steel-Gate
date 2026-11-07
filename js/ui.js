@@ -1849,7 +1849,7 @@
   function recordRecentResult(g) {
     if (!g || g._recentSaved || g.testMode || g.demo) return;
     g._recentSaved = true;
-    var mode = g.mode === 'navalLastStand' ? '舰炮背水（试做）' : (g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '背水一战' : '三军混战'));
+    var mode = g.mode === 'navalLastStand' ? '舰炮轰鸣(背水一战)' : (g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '背水一战' : '三军混战'));
     var diff = '普通';
     if (g.mode === 'lastStand' || g.mode === 'navalLastStand') {
       var ld = SL.LAST_STAND && SL.LAST_STAND.difficulties && SL.LAST_STAND.difficulties[g.difficulty];
@@ -1887,7 +1887,11 @@
     uiCache.draftOpen = false;
     hideDraftAlert();
     if (g.winner) {
-      if (g.mode === 'naval' && g.navalSettled) {
+      if (g.mode === 'navalLastStand') {
+        $('result-title').textContent = g.defense && g.defense.settled
+          ? '舰炮轰鸣(背水一战) · 已结算'
+          : (g.winner === 'blue' ? '舰炮轰鸣(背水一战) · 防守成功' : '舰炮轰鸣(背水一战) · 防线失守');
+      } else if (g.mode === 'naval' && g.navalSettled) {
         $('result-title').textContent = '舰炮轰鸣 · 已结算';
       } else if (g.mode === 'lastStand') {
         $('result-title').textContent = g.defense && g.defense.settled

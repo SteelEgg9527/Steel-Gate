@@ -101,7 +101,7 @@
     var diff = diffTable[difficulty] || diffTable.normal;
     if (el && m) {
       el.textContent = m.test ? '训练场 · 无敌人'
-        : actualMode === 'navalLastStand' ? '舰炮背水（试做） · ' + diff.name + ' · ' + m.name
+        : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战) · ' + diff.name + ' · ' + m.name
         : actualMode === 'lastStand' ? '背水一战 · ' + diff.name + ' · ' + m.name
           : actualMode === 'naval' ? '舰炮轰鸣 · ' + diff.name + ' · ' + m.name
             : '三军混战 · ' + diff.name + ' · ' + m.name;
@@ -111,20 +111,20 @@
     var title = document.getElementById('brief-title');
     if (title && m) title.textContent = '作战简报 · ' + m.name;
     var stamp = document.getElementById('brief-stamp');
-    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮背水·试做' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战)' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var missionTag = document.getElementById('mission-tag');
-    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮背水·试做' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战)' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var sub = document.getElementById('brief-sub');
     if (sub) {
       sub.textContent = '1944 年 6 月 10 日 · ' +
-        (m.test ? '训练场 · 无敌人' : actualMode === 'navalLastStand' ? '试做防守战 · ' + diff.name + '难度' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : actualMode === 'naval' ? '海陆协同 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
+        (m.test ? '训练场 · 无敌人' : actualMode === 'navalLastStand' ? '海陆防守战 · ' + diff.name + '难度' : actualMode === 'lastStand' ? '防守战 · ' + diff.name + '难度' : actualMode === 'naval' ? '海陆协同 · ' + diff.name + '难度' : '三军混战 · ' + diff.name + (diff.endless ? ' · 无胜利条件' : '难度'));
     }
     var copy = document.getElementById('brief-copy');
     if (copy) {
       copy.textContent = m.test
         ? '训练场用于测试单位、武器、工事与占领机制；可选择任意测试卡，不受资源与波次限制。'
         : actualMode === 'navalLastStand'
-          ? '舰炮轰鸣·背水一战（试做）。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站改为全图搜索。' 
+          ? '舰炮轰鸣(背水一战)。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站改为全图搜索。' 
           : actualMode === 'lastStand'
           ? '背水一战。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
           : actualMode === 'naval'
