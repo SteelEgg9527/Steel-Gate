@@ -311,7 +311,7 @@
     ship.heading = best.inward;
     ship.speed = 0;
     if (side === 'blue') { this.playerShipSummoned = true; this.shipSupportOwned = true; }
-    this.log(SL.SIDES[side].name + ' 战列舰进入海域：' + ship.name, side === 'blue' ? 'win' : 'loss');
+    this.log(SL.SIDES[side].name + ' 重型巡洋舰进入海域：' + ship.name, side === 'blue' ? 'win' : 'loss');
     return ship;
   };
 
@@ -719,7 +719,7 @@
 
   Game.prototype.navalBombard = function (side, x, y) {
     var ship = this.shipOf(side);
-    if (!ship) return { ok: false, msg: '没有可用的战列舰' };
+    if (!ship) return { ok: false, msg: '没有可用的重型巡洋舰' };
     if (!this.navalCanBombard(side)) return { ok: false, msg: '需要通讯塔、近岸支援或水上飞机侦察圈' };
     if (!this.navalTargetVisible(side, x, y, ship.nearShore)) return { ok: false, msg: '目标区域没有视野，需要雷达、飞机或侦察单位' };
     ship.bombard = { x: x, y: y, until: this.time + 20, radius: 260 };
@@ -756,7 +756,7 @@
       return { ok: true, msg: '战舰增援已出发' };
     }
     if (key === 'ship_prewarn') {
-      if (!ship) return { ok: false, msg: '没有战列舰' };
+      if (!ship) return { ok: false, msg: '没有重型巡洋舰' };
       ship.prewarn = { x: x, y: y };
       return { ok: true, msg: '预先瞄准：全舰炮塔转向目标' };
     }
@@ -764,7 +764,7 @@
       return this.navalSuppress('blue', x, y);
     }
     if (key === 'seaplane') {
-      if (!ship) return { ok: false, msg: '没有战列舰' };
+      if (!ship) return { ok: false, msg: '没有重型巡洋舰' };
       if (U.dist(x, y, ship.x, ship.y) > 2000) return { ok: false, msg: '目标超出战舰 2km' };
       if (ship.planeReserve <= 0) return { ok: false, msg: '水上飞机全部损失，等待补充' };
       ship.planeReserve--;
@@ -800,7 +800,7 @@
 
   Game.prototype.navalSuppress = function (side, x, y) {
     var ship = this.shipOf(side);
-    if (!ship) return { ok: false, msg: '没有可用的战列舰' };
+    if (!ship) return { ok: false, msg: '没有可用的重型巡洋舰' };
     // 无通讯塔时，舰炮压制只能打海面，或依赖水上飞机侦察圈；近岸支援不受限制
     if (SL.Naval && SL.Naval.isLand(x, y) && !ship.nearShore &&
       this.navalTowerCount(side) <= 0 && !this.seaplaneSees(side, x, y)) {
@@ -846,7 +846,7 @@
   Game.prototype.useNavalCard = function (card, x, y) {    var idx = this.navalCards.indexOf(card);
     if (idx < 0) return { ok: false, msg: '舰船卡不存在' };
     if (card.key === 'ship_support') {
-      if (this.shipOf('blue')) return { ok: false, msg: '本阵营已经拥有战列舰' };
+      if (this.shipOf('blue')) return { ok: false, msg: '本阵营已经拥有重型巡洋舰' };
       if (this.navalTowerCount('blue') < 1) return { ok: false, msg: '需要至少占领一座通讯塔' };
       if (!this.spawnShip('blue', y)) return { ok: false, msg: '无法进入海域' };
       var newShip = this.shipOf('blue');
@@ -856,7 +856,7 @@
       if (!r.ok) return r;
     } else if (card.key === 'seaplane') {
       var ship = this.shipOf('blue');
-      if (!ship) return { ok: false, msg: '没有战列舰' };
+      if (!ship) return { ok: false, msg: '没有重型巡洋舰' };
       if (U.dist(x, y, ship.x, ship.y) > 2000) return { ok: false, msg: '目标超出战舰 2km' };
       if (ship.planeReserve <= 0) return { ok: false, msg: '水上飞机全部损失，等待补充' };
       ship.planeReserve--;
@@ -5432,7 +5432,7 @@
         if (!inside()) { res.msg = '请拖到地图海域'; break; }
         var eship = this.spawnShip('red', ty);
         res.ok = !!eship;
-        res.msg = eship ? '敌方战列舰已进入海域' : '敌方战列舰已存在或无法进入';
+        res.msg = eship ? '敌方重型巡洋舰已进入海域' : '敌方重型巡洋舰已存在或无法进入';
         break;
       case 'enemy_bomber':
         if (!this.testMode) { res.msg = '敌方轰炸机卡仅限训练场'; break; }

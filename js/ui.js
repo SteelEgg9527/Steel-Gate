@@ -1611,7 +1611,7 @@
       primaryId = null;
       var sh = g.selectedShip;
       el.detail.classList.remove('hidden');
-      el.dType.textContent = sh.entering ? '战列舰 · 驶入海域' : (sh.nearShore ? '战列舰 · 近岸支援' : '战列舰');
+      el.dType.textContent = sh.nearShore ? '重型巡洋舰 · 近岸支援' : '重型巡洋舰';
       el.dName.textContent = sh.name;
       el.dVision.textContent = (sh.vision || 1000) + ' m';
       el.dStRow.style.display = 'none';

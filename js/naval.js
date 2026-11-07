@@ -1595,7 +1595,7 @@ return null;
 
   NAVAL.Base = Base;
 
-  /* ---------------- 战列舰 ---------------- */
+  /* ---------------- 重型巡洋舰 ---------------- */
 
   function normAngle(a) {
     while (a > Math.PI) a -= Math.PI * 2;

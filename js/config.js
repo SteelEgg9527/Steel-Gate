@@ -393,7 +393,7 @@
     },
     naval: {
       id: 'naval', name: '舰炮轰鸣',
-      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤战列舰进行岸轰支援；黄圈经验决定胜负。'
+      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤重型巡洋舰进行岸轰支援；黄圈经验决定胜负。'
     },
     navalLastStand: {
       id: 'navalLastStand', name: '背水一战',
@@ -950,7 +950,7 @@
     boss_hell: { key: 'boss_hell', name: 'Boss · 地狱轰炸机', icon: 'B', color: '#8c3b2e', use: 'point', desc: '仅试验场：召唤地狱轰炸机' },
     boss_tank: { key: 'boss_tank', name: 'Boss · 超级重坦', icon: 'B', color: '#6d5630', use: 'point', desc: '仅试验场：召唤超级重坦' },
     boss_ghost: { key: 'boss_ghost', name: 'Boss · 幽灵兵团', icon: 'B', color: '#4b6a5a', use: 'point', desc: '仅试验场：召唤幽灵兵团' },
-    enemy_ship: { key: 'enemy_ship', name: '敌方战舰', icon: 'ES', color: '#a35448', use: 'point', desc: '仅海岸训练场：召唤敌方战列舰' },
+    enemy_ship: { key: 'enemy_ship', name: '敌方战舰', icon: 'ES', color: '#a35448', use: 'point', desc: '仅海岸训练场：召唤敌方重型巡洋舰' },
     enemy_bomber: { key: 'enemy_bomber', name: '敌方轰炸机', icon: 'EB', color: '#8c3b2e', use: 'point', desc: '仅海岸训练场：召唤敌方普通轰炸机' },
     unit: { key: 'unit', name: '单位卡', icon: '▣', color: '#5c7fa8', use: 'unit', desc: '拖到地图：在友军 200m 内生成单位' },
     equip: { key: 'equip', name: '装备卡', icon: '✦', color: '#8a7a4a', use: 'equip', desc: '拖到步兵班：直接装备武器' }
