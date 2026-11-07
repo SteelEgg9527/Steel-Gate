@@ -2134,6 +2134,7 @@
       facing: side === 'blue' ? -0.9 : 2.2,
       turret: side === 'blue' ? -0.9 : 2.2,
       cd: 0.4 + Math.random() * 1.2,
+      mgCd: 0.2 + Math.random() * 0.8,
       scan: Math.random() * 0.3,
       coverTimer: 0,
       target: null,
@@ -3382,6 +3383,7 @@
       u = this.units[i];
       if (!u.alive) continue;
       u.cd -= dt;
+      if (u.mgCd > 0) u.mgCd -= dt;
       if (u.def.weapon.mag && u.magLeft <= 0 && u.cd <= 0) u.magLeft = u.def.weapon.mag;
       u.scan -= dt;
       if (u.flash > 0) u.flash -= dt;
@@ -3597,7 +3599,7 @@
           var ba = U.angle(u.x, u.y, bar.x, bar.y);
           u.turret = U.lerpAngle(u.turret, ba, Math.min(1, dt * 2.6));
           u.facing = U.lerpAngle(u.facing, ba, Math.min(1, dt * 3));
-          if ((u.fireMode || 'free') !== 'hold' && u.cd <= 0) this.tryFire(u, bd);
+          if ((u.fireMode || 'free') !== 'hold') this.tryFire(u, bd);
         }
         return;
       }
@@ -4591,9 +4593,46 @@
 
   Game.prototype.tryFire = function (u, d) {
     if (!u.target) return;
-    var pick = this.pickWeapon(u, u.target, d);
-    if (!pick) return;
-    this.fire(u, u.target, pick.weapon, pick.item, pick.secondary);
+    var target = u.target;
+    var bonus = 1 + (u.cover.rangeBonus || 0);
+    var realD = U.dist(u.x, u.y, target.x, target.y);
+    // 主武器独立冷却
+    var base = u.def.weapon;
+    if (base && u.cd <= 0 && u.ammo > 0 && (!base.mag || u.magLeft > 0) &&
+      realD <= (u.def.range || base.range) * bonus && realD >= (u.def.minRange || 0) &&
+      !(base.requiresStop && (u.moving || u.sprinting))) {
+      this.fire(u, target, base, null, false);
+    }
+    // 每件装备武器独立冷却、独立索敌判定
+    for (var i = 0; i < u.items.length; i++) {
+      var it = u.items[i];
+      var eq = SL.EQUIP[it.key];
+      if (!eq || !eq.weapon) continue;
+      if (!it._seeded) { it._seeded = true; if (it.cd <= 0) it.cd = Math.random() * 0.65; }
+      var w = eq.weapon;
+      if (it.cd > 0) continue;
+      if ((it.key === 'grenade' || it.key === 'atgrenade' || it.key === 'bazooka') &&
+        (u.grenadeMode || 'auto') === 'manual') continue;
+      if (w.requiresStop && (u.moving || u.sprinting)) continue;
+      if (w.usesUnitAmmo) { if (u.ammo <= 0) continue; }
+      else if (it.ammo <= 0) continue;
+      if (w.antiArmor && !target.def.armor) continue;
+      if (w.sniper && target.def.armor) {
+        if (target.type === 'heavy_tank') continue;
+        if (realD > (w.antiArmorRange || 400)) continue;
+      }
+      var itemBonus = w.noRangeBonus ? 1 : bonus;
+      if (realD > w.range * itemBonus || realD < (w.minRange || 0)) continue;
+      this.fire(u, target, w, it, false);
+    }
+    // 坦克/装甲车的并列机枪独立工作
+    if ((u.type === 'tank' || u.type === 'heavy_tank' || u.type === 'armored') &&
+      u.mgAmmo > 0 && !target.def.armor && u.mgCd <= 0) {
+      var mgw = SL.EQUIP.mg.weapon;
+      if (realD <= mgw.range * bonus && realD >= (mgw.minRange || 0)) {
+        this.fire(u, target, mgw, null, true);
+      }
+    }
   };
 
   Game.prototype.fire = function (u, target, w, item, secondary) {
@@ -4630,11 +4669,16 @@
     }
     if (w.mag && !item && u.magLeft <= 0) return false;
     var shotDist = U.dist(u.x, u.y, target.x, target.y);
-    u.cd = item ? u.cd : (w.rockets ? w.reload : w.interval * (0.86 + Math.random() * 0.28));
-    if (item) item.cd = w.interval * (0.86 + Math.random() * 0.28);
-    if (u.bossKind === 'ghost') {
-      u.cd *= SL.BOSS.ghost.fireRateScale;
-      if (item) item.cd *= SL.BOSS.ghost.fireRateScale;
+    if (secondary) {
+      u.mgCd = w.interval * (0.86 + Math.random() * 0.28);
+      if (u.bossKind === 'ghost') u.mgCd *= SL.BOSS.ghost.fireRateScale;
+    } else {
+      u.cd = item ? u.cd : (w.rockets ? w.reload : w.interval * (0.86 + Math.random() * 0.28));
+      if (item) item.cd = w.interval * (0.86 + Math.random() * 0.28);
+      if (u.bossKind === 'ghost') {
+        u.cd *= SL.BOSS.ghost.fireRateScale;
+        if (item) item.cd *= SL.BOSS.ghost.fireRateScale;
+      }
     }
     // 弹夹炮：打空后进入长装填
     if (w.mag && !item) {

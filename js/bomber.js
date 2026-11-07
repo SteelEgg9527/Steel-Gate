@@ -478,11 +478,18 @@
         if (p && p.bombs.length) { b.nextPlane = pi; break; }
       }
     }
+    var leadSet = false;
     for (var i = 0; i < b.formation.length; i++) {
       var pl = b.formation[i];
-      if (pl) pl._dropCd = Math.max(0.1, pl._dropCd || 0);
+      if (!pl || !pl.bombs.length) continue;
+      if (!leadSet) {
+        pl._dropCd = 0.05;
+        leadSet = true;
+      } else {
+        pl._dropCd = 0.35 + Math.random() * 0.65;
+      }
     }
-    toast(b.bombMode === 'single' ? '单机投弹开始' : '编队同时投弹开始', 'order');
+    toast(b.bombMode === 'single' ? '单机投弹开始' : '编队依次投弹开始', 'order');
   }
 
   function bombTypeOf(g, p) {
@@ -622,7 +629,7 @@
           var t = bombTypeOf(g, pl);
           var iv = t ? B.bombs[t].interval : 0.8;
           dropBomb(g, pl);
-          pl._dropCd = iv;
+          pl._dropCd = iv * (0.9 + Math.random() * 0.2);
         }
       }
       if (!any) b.bombing = false;
