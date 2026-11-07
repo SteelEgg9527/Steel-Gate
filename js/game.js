@@ -388,7 +388,7 @@
       if (this.radarScanNext[rside] <= 0) {
         this.radarScanNext[rside] = SL.NAVAL.radarScanInterval || 30;
         this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 5);
-        this.log(SL.SIDES[rside].name + ' 雷达全图搜索：发现全图目标', rside === 'blue' ? 'order' : 'loss');
+        this.log(SL.SIDES[rside].name + ' 雷达对海搜索：发现海面目标', rside === 'blue' ? 'order' : 'loss');
       }
     }
     // 记录玩家战舰最后被 AI 发现的位置，供岸基火力盲射
@@ -4126,7 +4126,7 @@
       if (U.dist2(ship.x, ship.y, x, y) <= ship.vision * ship.vision) return true;
     }
     // 雷达每 30 秒扫描一次，扫描期间提供海面视野
-    if (this.naval && this.radarScanActive(side)) return true;
+    if (this.naval && this.radarScanActive(side) && SL.Naval && SL.Naval.isWater(x, y)) return true;
     for (var k = 0; k < this.recons.length; k++) {
       var r = this.recons[k];
       if (r.side !== side || this.time >= r.until) continue;
@@ -6811,11 +6811,11 @@
       if (!bs.alive || bs.side !== 'blue') continue;
       this.revealFogCircle(bs.x, bs.y, bs.vision || 800);
     }
-    // 雷达扫描期间进行全图搜索，不再只照亮海面
+    // 雷达扫描期间照亮海面
     if (this.naval && this.radarScanActive('blue')) {
-      for (var sy = 0; sy < SL.CONFIG.mapSize; sy += 400) {
-        for (var sx = 0; sx < SL.CONFIG.mapSize; sx += 400) {
-          this.revealFogCircle(sx, sy, 360);
+      for (var sy = 0; sy < SL.CONFIG.mapSize; sy += 500) {
+        for (var sx = 0; sx < SL.CONFIG.mapSize; sx += 500) {
+          if (SL.Naval && SL.Naval.isWater(sx, sy)) this.revealFogCircle(sx, sy, 420);
         }
       }
     }
