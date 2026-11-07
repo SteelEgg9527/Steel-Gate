@@ -142,16 +142,27 @@
         strongholds.push('<li><b>黄圈</b>：主要争夺目标，圈内优势单位持续获得经验与分数。</li>');
         strongholds.push('<li><b>村庄 / 林地 / 工事</b>：可占领区域，提供掩护、经验与分数。</li>');
       }
+      var formation = [
+        '<li><b>编队系统</b>：选中部队后点击“+”；点击编队可选中全部成员，“←”把当前选择存入编组，“×”删除编组。</li>',
+        '<li><b>自动编队</b>：点击部队清单下方的“自动编队”，按单位类型自动重建编组。</li>',
+        '<li><b>自动部署</b>：点击“快速部署”，使用一张单位卡在友军附近自动放置单位。</li>'
+      ];
       var systems = [];
       if (actualMode === 'naval' || actualMode === 'navalLastStand') {
-        systems.push('<li><b>舰船系统</b>：占领通讯塔后可购买或召唤战舰；战舰可执行舰炮压制、岸轰、水上飞机侦察和补给。</li>');
+        systems.push('<li><b>舰船系统</b>：点击“舰船系统”购买舰船或支援卡；选择卡片后在海面使用。战舰可执行舰炮压制、岸轰、水上飞机侦察和补给。</li>');
       }
-      systems.push('<li><b>轰炸机系统</b>：购买 B-17 与航弹，拖入编组栏后起飞；返航后可在配备面板选择是否自动补充弹药。</li>');
+      systems.push('<li><b>轰炸机系统</b>：打开空中系统购买 B-17 与航弹，拖入编组栏后起飞；返航后可重新配备，或在配备面板选择是否自动补充弹药。</li>');
+      var purchases = [
+        '<li><b>购买抽卡</b>：点击“卡片增援”消耗分数增加一次抽卡机会；抽卡可获得单位、装备、工事或舰船卡。</li>',
+        '<li><b>购买单位</b>：点击“单位增援”消耗分数，在友军附近召唤一个随机单位。</li>'
+      ];
       copy.innerHTML =
         '<h3>胜利条件</h3><p>' + winText + '</p>' +
         '<h3>基本操作</h3><p>左键选择或框选，右键移动、攻击或占领；双击右键急行军；空格暂停；H 打开帮助；Esc 打开菜单。</p>' +
+        '<h3>编队与部署</h3><ul>' + formation.join('') + '</ul>' +
         '<h3>据点作用</h3><ul>' + strongholds.join('') + '</ul>' +
-        '<h3>支援系统</h3><ul>' + systems.join('') + '</ul>';
+        '<h3>舰船与轰炸机</h3><ul>' + systems.join('') + '</ul>' +
+        '<h3>购买与补充</h3><ul>' + purchases.join('') + '</ul>';
     }
     var md = document.getElementById('mode-desc');
     if (md) md.textContent = m.test ? '训练场固定为单阵营测试模式。' : SL.MODES[actualMode].desc;

@@ -177,6 +177,7 @@
     el.rosterCount = $('roster-count');
     el.controlGroups = $('control-groups');
     el.controlAdd = $('control-add');
+  el.controlAuto = $('control-auto');
     el.rangeTools = $('range-tools');
     el.rangeFogBtn = $('range-fog-btn');
     el.rangeConsole = $('range-console');
@@ -449,6 +450,7 @@
     if (el.quickFort) el.quickFort.addEventListener('click', function () { UI.quickFort(); });
     if (el.quickDeploy) el.quickDeploy.addEventListener('click', function () { UI.quickDeploy(); });
     if (el.controlAdd) el.controlAdd.addEventListener('click', function () { UI.addControlGroup(); });
+    if (el.controlAuto) el.controlAuto.addEventListener('click', function () { UI.autoFormControlGroups(); });
     if (el.fireModeBtn) el.fireModeBtn.addEventListener('click', function () { UI.cycleFireMode(); });
     if (el.grenadeModeBtn) el.grenadeModeBtn.addEventListener('click', function () { UI.cycleGrenadeMode(); });
     if (el.btnFireSupport) el.btnFireSupport.addEventListener('click', function () { UI.beginCommand('fireSupport'); });
@@ -993,6 +995,15 @@
       el.controlGroups.appendChild(box);
     });
   }
+
+  UI.autoFormControlGroups = function () {
+    if (!game) return;
+    var count = game.autoFormControlGroups ? game.autoFormControlGroups() : 0;
+    uiCache.controlSig = null;
+    renderControlGroups(game);
+    if (count) UI.pushToast('自动编队完成 · ' + count + ' 个编组', 'win');
+    else UI.pushToast('当前没有可编组的单位', 'info');
+  };
 
   UI.addControlGroup = function () {
     if (!game) return;

@@ -2266,6 +2266,34 @@
     for (var k = 0; k < this.selected.length; k++) this.selected[k].selected = true;
   };
 
+  Game.prototype.autoFormControlGroups = function () {
+    var byType = {}, order = [];
+    for (var i = 0; i < this.units.length; i++) {
+      var u = this.units[i];
+      if (!u.alive || u.side !== 'blue') continue;
+      var type = u.type || 'infantry';
+      if (!byType[type]) { byType[type] = []; order.push(type); }
+      byType[type].push(u);
+    }
+    var rank = {
+      infantry: 0, armored: 1, tank: 2, heavy_tank: 3, at_gun: 4, aa: 5,
+      artillery: 6, heavy_arty: 7, rocket_arty: 8, command: 9, engineer_vehicle: 10
+    };
+    order.sort(function (a, b) { return (rank[a] == null ? 99 : rank[a]) - (rank[b] == null ? 99 : rank[b]); });
+    this.controlGroups = [];
+    if (!this.controlGroups) this.controlGroups = [];
+    if (!this.nextControlGroupId) this.nextControlGroupId = 1;
+    for (var k = 0; k < order.length; k++) {
+      var list = byType[order[k]];
+      if (!list || !list.length) continue;
+      this.controlGroups.push({
+        id: this.nextControlGroupId++,
+        unitIds: list.map(function (u) { return u.id; })
+      });
+    }
+    return this.controlGroups.length;
+  };
+
   Game.prototype.addControlGroup = function (units) {
     var valid = (units || []).filter(function (u) { return u && u.alive && u.side === 'blue'; });
     if (!valid.length) return null;
