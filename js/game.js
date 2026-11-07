@@ -2270,19 +2270,23 @@
   Game.prototype.autoAssignUnitToGroup = function (u) {
     if (!u || u.side !== 'blue' || !u.alive) return;
     if (!this.controlGroups) this.controlGroups = [];
+    var hasTypeGroup = false;
     for (var i = 0; i < this.controlGroups.length; i++) {
-      var list = this.controlGroupUnits(this.controlGroups[i]);
+      var grp = this.controlGroups[i];
+      var list = this.controlGroupUnits(grp);
       if (!list.length) continue;
-      var same = true;
-      for (var k = 0; k < list.length; k++) {
-        if (list[k].type !== u.type) { same = false; break; }
+      var pure = true;
+      for (var k = 1; k < list.length; k++) {
+        if (list[k].type !== list[0].type) { pure = false; break; }
       }
-      if (!same) continue;
-      this.controlGroups[i].unitIds.push(u.id);
-      return;
+      if (!pure || list[0].type !== u.type) continue;
+      hasTypeGroup = true;
+      if ((grp.unitIds || []).indexOf(u.id) < 0) grp.unitIds.push(u.id);
     }
-    if (!this.nextControlGroupId) this.nextControlGroupId = 1;
-    this.controlGroups.push({ id: this.nextControlGroupId++, unitIds: [u.id] });
+    if (!hasTypeGroup) {
+      if (!this.nextControlGroupId) this.nextControlGroupId = 1;
+      this.controlGroups.push({ id: this.nextControlGroupId++, unitIds: [u.id] });
+    }
   };
 
   Game.prototype.autoFormControlGroups = function () {
@@ -2299,16 +2303,35 @@
       artillery: 6, heavy_arty: 7, rocket_arty: 8, command: 9, engineer_vehicle: 10
     };
     order.sort(function (a, b) { return (rank[a] == null ? 99 : rank[a]) - (rank[b] == null ? 99 : rank[b]); });
-    this.controlGroups = [];
     if (!this.controlGroups) this.controlGroups = [];
     if (!this.nextControlGroupId) this.nextControlGroupId = 1;
+    var pureByType = {};
+    for (var g = 0; g < this.controlGroups.length; g++) {
+      var grp = this.controlGroups[g];
+      var list = this.controlGroupUnits(grp);
+      if (!list.length) continue;
+      var pure = true;
+      for (var p = 1; p < list.length; p++) {
+        if (list[p].type !== list[0].type) { pure = false; break; }
+      }
+      if (!pure) continue; // 保留混编队伍，不做清理
+      var t = list[0].type;
+      (pureByType[t] || (pureByType[t] = [])).push(grp);
+    }
     for (var k = 0; k < order.length; k++) {
-      var list = byType[order[k]];
-      if (!list || !list.length) continue;
-      this.controlGroups.push({
-        id: this.nextControlGroupId++,
-        unitIds: list.map(function (u) { return u.id; })
-      });
+      var type = order[k];
+      var units = byType[type];
+      var ids = units.map(function (x) { return x.id; });
+      var targets = pureByType[type] || [];
+      if (!targets.length) {
+        this.controlGroups.push({ id: this.nextControlGroupId++, unitIds: ids.slice() });
+      } else {
+        for (var t2 = 0; t2 < targets.length; t2++) {
+          for (var n = 0; n < ids.length; n++) {
+            if ((targets[t2].unitIds || []).indexOf(ids[n]) < 0) targets[t2].unitIds.push(ids[n]);
+          }
+        }
+      }
     }
     return this.controlGroups.length;
   };

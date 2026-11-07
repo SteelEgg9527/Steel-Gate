@@ -2727,3 +2727,12 @@ html, body {
 
 /* 部队清单不显示滚动条，内容完整浮空 */
 #roster-panel { overflow: hidden !important; }
+
+/* 已选信息回到左下，和上方部队清单自适应 */
+#selpanel {
+  left: 16px !important;
+  right: auto !important;
+  bottom: 16px !important;
+  width: 300px !important;
+  max-height: 170px !important;
+}
