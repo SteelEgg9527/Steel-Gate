@@ -2930,3 +2930,12 @@ html, body {
   line-height: 1.25 !important;
   padding: 6px 3px 0 !important;
 }
+
+/* 耐久/弹药数值不换行，和进度条保持同一行 */
+.dt-bar {
+  grid-template-columns: 28px minmax(0, 1fr) 60px !important;
+}
+.dt-bar b {
+  white-space: nowrap !important;
+  font-size: 9px !important;
+}
