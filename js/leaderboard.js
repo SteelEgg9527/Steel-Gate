@@ -6,6 +6,7 @@
   var L = (SL.Leaderboard = {});
   var API = window.SL_LEADERBOARD_API || '';
   var MODES = [
+    { id: 'overall', name: '总榜' },
     { id: 'melee', name: '三军混战' },
     { id: 'lastStand', name: '防御模式' },
     { id: 'naval', name: '舰炮轰鸣' },
@@ -17,7 +18,7 @@
     { id: 'hard', name: '困难' },
     { id: 'endless', name: '无限' }
   ];
-  var currentMode = 'melee';
+  var currentMode = 'overall';
   var currentDiff = 'normal';
   var lbOverlay = null;
   var lbBody = null;
@@ -167,7 +168,7 @@
         g._lbUploaded = true;
         if (btn) { btn.textContent = '已上传'; btn.disabled = true; }
         toast('战绩已上传到公共排行榜', 'win');
-        openLeaderboard(g.mode, g.difficulty);
+        openLeaderboard();
       }).catch(function (err) {
         if (btn) { btn.disabled = false; btn.textContent = '上传战绩'; }
         toast(errorText(err.status, err.data), 'loss');
@@ -183,7 +184,7 @@
     lbOverlay.className = 'overlay hidden';
     lbOverlay.innerHTML = '<div class="sheet lb-sheet">' +
       '<div class="sheet-head"><div><div class="sheet-kicker">PUBLIC RANKING</div>' +
-      '<h2>公共排行榜</h2><p class="sheet-sub">按模式与难度分开统计，每人只显示最好的一局</p></div>' +
+      '<h2>公共排行榜</h2><p class="sheet-sub">总榜综合全部模式与难度；可继续按模式、难度细分。每人只显示最好的一局</p></div>' +
       '<div class="lb-head-actions"><button id="lb-recent" class="lb-recent-btn" type="button">近期战绩</button>' +
       '<button id="lb-close" class="icon-btn" type="button">×</button></div></div>' +
       '<div class="sheet-body">' +
@@ -227,6 +228,7 @@
         });
       })(MODES[i]);
     }
+    lbDiffTabs.style.display = currentMode === 'overall' ? 'none' : 'flex';
     lbDiffTabs.innerHTML = '';
     for (var j = 0; j < DIFFS.length; j++) {
       (function (d) {
@@ -240,9 +242,12 @@
   function headRow() {
     var head = lbOverlay.querySelector('#lb-head');
     head.innerHTML = '';
-    var fields = isStand(currentMode)
-      ? ['名次', '玩家', '波次', '坚守', '击杀', '难度']
-      : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度'];
+    var fields = currentMode === 'overall'
+      ? ['名次', '玩家', '综合分', '模式', '难度', '得分']
+      : (isStand(currentMode)
+        ? ['名次', '玩家', '波次', '坚守', '击杀', '难度']
+        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度']);
+    head.className = 'lb-row lb-head-row' + (currentMode === 'overall' ? ' lb-overall-row' : '');
     for (var i = 0; i < fields.length; i++) {
       var s = document.createElement('span');
       s.textContent = fields[i];
@@ -262,10 +267,12 @@
       for (var i = 0; i < data.entries.length; i++) {
         var r = data.entries[i];
         var row = document.createElement('div');
-        row.className = 'lb-row' + (i < 3 ? ' top' : '');
-        var vals = isStand(currentMode)
-          ? [r.rank, r.nickname, r.wave + ' 波', clock(r.holdSec), r.kills, diffName(r.difficulty)]
-          : [r.rank, r.nickname, r.yellowXp, r.score, r.kills, diffName(r.difficulty)];
+        row.className = 'lb-row' + (i < 3 ? ' top' : '') + (currentMode === 'overall' ? ' lb-overall-row' : '');
+        var vals = currentMode === 'overall'
+          ? [r.rank, r.nickname, r.points, modeName(r.mode), diffName(r.difficulty), r.score]
+          : (isStand(currentMode)
+            ? [r.rank, r.nickname, r.wave + ' 波', clock(r.holdSec), r.kills, diffName(r.difficulty)]
+            : [r.rank, r.nickname, r.yellowXp, r.score, r.kills, diffName(r.difficulty)]);
         for (var j = 0; j < vals.length; j++) {
           var s = document.createElement('span');
           s.textContent = String(vals[j]);
@@ -282,11 +289,16 @@
     lbStatus.textContent = '加载中…';
     lbBody.innerHTML = '';
     headRow();
-    requestJSON('/api/leaderboard?mode=' + encodeURIComponent(currentMode) +
-      '&difficulty=' + encodeURIComponent(currentDiff) +
-      '&limit=50&playerId=' + encodeURIComponent(playerId()))
+    var url = currentMode === 'overall'
+      ? '/api/leaderboard?scope=overall&limit=50&playerId=' + encodeURIComponent(playerId())
+      : '/api/leaderboard?mode=' + encodeURIComponent(currentMode) +
+        '&difficulty=' + encodeURIComponent(currentDiff) +
+        '&limit=50&playerId=' + encodeURIComponent(playerId());
+    requestJSON(url)
       .then(function (data) {
-        lbStatus.textContent = modeName(currentMode) + ' · ' + diffName(currentDiff) + ' · TOP 50';
+        lbStatus.textContent = currentMode === 'overall'
+          ? '总榜 · 全部模式与难度 · TOP 50'
+          : modeName(currentMode) + ' · ' + diffName(currentDiff) + ' · TOP 50';
         renderRows(data);
       })
       .catch(function (err) {
@@ -298,9 +310,9 @@
 
   function openLeaderboard(mode, diff) {
     ensureOverlay();
-    currentMode = mode || (SL.UI.currentGame && SL.UI.currentGame() ? SL.UI.currentGame().mode : 'melee');
+    currentMode = mode || 'overall';
     currentDiff = diff || (SL.UI.currentGame && SL.UI.currentGame() ? SL.UI.currentGame().difficulty : 'normal');
-    if (!modeName(currentMode)) currentMode = 'melee';
+    if (!modeName(currentMode)) currentMode = 'overall';
     if (!diffName(currentDiff)) currentDiff = 'normal';
     renderTabs();
     lbOverlay.classList.remove('hidden');
