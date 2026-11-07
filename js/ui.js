@@ -2200,7 +2200,7 @@
         stop.dataset.navyAction = 'stop';
         stop.style.setProperty('--c', '#c9b37d');
         stop.title = '停止战舰当前指令；点击或拖动均可触发';
-        stop.innerHTML = '<div class="ic">停</div><div class="nm">停止行动</div>';
+        stop.innerHTML = '<div class="ic">ST</div><div class="nm">停止行动</div>';
         el.navyCards.appendChild(stop);
       }
     }
