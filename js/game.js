@@ -508,7 +508,7 @@
         if (playerShip && ((playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.radarScanActive(s.side) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
         if (!target) {
           var lastPos = this.navalShipLastSeen && this.navalShipLastSeen[s.side];
-          if (lastPos && this.time - lastPos.t <= 25 && U.dist(s.x, s.y, lastPos.x, lastPos.y) <= 3000) target = lastPos;
+          if (lastPos && this.time - lastPos.t <= (SL.NAVAL.lastSeenMemory || 12) && U.dist(s.x, s.y, lastPos.x, lastPos.y) <= 3000) target = lastPos;
         }
         if (!target) target = this.nearestSpottedEnemy(s, 3000);
         // 水上飞机发现目标后，进行 2~3 轮连续压制
@@ -643,7 +643,7 @@
       }
       if (!target) {
         var gl = this.navalShipLastSeen && this.navalShipLastSeen[gun.side];
-        if (gl && this.time - gl.t <= 25 && U.dist(gun.x, gun.y, gl.x, gl.y) <= gun.range) target = gl;
+        if (gl && this.time - gl.t <= (SL.NAVAL.lastSeenMemory || 12) && U.dist(gun.x, gun.y, gl.x, gl.y) <= gun.range) target = gl;
       }
       if (!target) continue;
       gun.cd = gun.interval;
@@ -6800,7 +6800,7 @@
     // 舰炮轰鸣：用任何射程内的武器压制玩家战舰最后出现的位置
     if (this.naval && u.side !== 'blue') {
       var shipLast = this.navalShipLastSeen && this.navalShipLastSeen[u.side];
-      if (shipLast && this.time - shipLast.t <= 25) {
+      if (shipLast && this.time - shipLast.t <= (SL.NAVAL.lastSeenMemory || 12)) {
         var shipD = U.dist(u.x, u.y, shipLast.x, shipLast.y);
         var shipRange = u.maxRangeNow || u.def.range || 0;
         if (shipD <= shipRange && shipD >= (u.def.minRange || 0)) {
@@ -6808,7 +6808,7 @@
             u.order = { kind: 'rocketStrike', x: shipLast.x, y: shipLast.y };
             u.target = null;
           } else if (u.type !== 'rocket_arty') {
-            u.order = { kind: 'suppress', x: shipLast.x, y: shipLast.y, until: this.time + 15 };
+            u.order = { kind: 'suppress', x: shipLast.x, y: shipLast.y, until: this.time + (SL.NAVAL.shipSuppressTime || 8) };
             u.target = null;
             u.rocketQueue = [];
           }

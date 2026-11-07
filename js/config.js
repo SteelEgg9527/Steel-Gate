@@ -409,6 +409,8 @@
     bombardCost: 0,
     supplyCost: 0,
     supplyRadius: 170,
+    lastSeenMemory: 12,
+    shipSuppressTime: 8,
     prewarnRadius: 170,
     suppressRadius: 260,
     calibrationShots: 10, killCalibrationBonus: 0.25,
@@ -419,7 +421,7 @@
     seaplaneHp: 120,
     seaplaneRadius: 250,
     seaplaneSpeed: 220,
-    coastGun: { range: 2000, spread: 500, splash: 300, dmg: 1500, interval: 12, hp: 1200 },
+    coastGun: { range: 2000, spread: 500, splash: 300, dmg: 1000, interval: 18, hp: 1200 },
     hull: {
       name: '欧根亲王号', hp: 5000, armor: 4, vision: 1000,
       length: 212.5, beam: 21.8, maxSpeed: 17, accel: 1.6,
