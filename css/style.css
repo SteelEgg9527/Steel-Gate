@@ -2428,3 +2428,12 @@ html, body {
   color: #eee4cc; padding: 3px 6px; font: 11px var(--font-ui); outline: none;
 }
 #set-leaderboard-nickname:focus { border-color: #e8c47a; }
+
+.bomber-restock-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 9px; padding: 7px 9px;
+  border: 1px solid rgba(196,178,134,0.2);
+  color: #c8bfa4; font: 11px var(--font-ui); cursor: pointer;
+  background: rgba(20,22,17,0.35);
+}
+.bomber-restock-row input { width: 14px; height: 14px; accent-color: #b99b58; }

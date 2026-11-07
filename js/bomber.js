@@ -430,6 +430,22 @@
     toast('B-17 编队已离开战场，返回基地需要 1 分钟', 'info');
   }
 
+  var RESTOCK_KEY = 'steel_bomber_auto_restock';
+  function restockEnabled() {
+    try { return localStorage.getItem(RESTOCK_KEY) === '1'; } catch (e) { return false; }
+  }
+  function setRestock(v) {
+    try { localStorage.setItem(RESTOCK_KEY, v ? '1' : '0'); } catch (e) {}
+  }
+  function syncRemainingBombGroups(p) {
+    var counts = {}, paid = {};
+    for (var i = 0; i < p.bombGroups.length; i++) paid[p.bombGroups[i].type] = p.bombGroups[i].paid || B.bombGroupCost;
+    for (var j = 0; j < p.bombs.length; j++) counts[p.bombs[j]] = (counts[p.bombs[j]] || 0) + 1;
+    p.bombGroups = [];
+    for (var k in counts) p.bombGroups.push({ type: k, count: counts[k], paid: paid[k] || B.bombGroupCost });
+    rebuildBombs(p);
+  }
+
   function finishBase(g) {
     var b = ensure(g);
     b.state = 'base';
@@ -440,9 +456,10 @@
       if (!b.formation[i]) continue;
       b.formation[i].hp = b.formation[i].maxHp;
       b.formation[i].deployed = false;
-      restoreLoadout(b.formation[i]);
+      if (restockEnabled()) restoreLoadout(b.formation[i]);
+      else syncRemainingBombGroups(b.formation[i]);
     }
-    toast('B-17 编队返回基地，可以重新配备或起飞', 'win');
+    toast(restockEnabled() ? 'B-17 编队返回基地，航弹已自动补充' : 'B-17 编队返回基地，剩余航弹保留', 'win');
   }
 
   function startBombing(g) {
@@ -924,6 +941,7 @@
     var b = ensure(g);
     if (!b) return;
     if (refs.configScore) refs.configScore.textContent = '可用积分 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
+    if (refs.autoRestock) refs.autoRestock.checked = restockEnabled();
     if (refs.slots) {
       var html = '';
       for (var i = 0; i < b.formation.length; i++) {
@@ -959,16 +977,23 @@
     }
   }
 
+  var configWasPaused = false;
   function openConfig(g) {
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法打开配备', 'loss'); return; }
     if (!refs || !refs.config) return;
+    if (window.__STEEL && window.__STEEL.isPaused && window.__STEEL.pause) {
+      configWasPaused = !!window.__STEEL.isPaused();
+      window.__STEEL.pause(true);
+    }
     renderConfig(g);
     refs.config.classList.remove('hidden');
   }
 
   function closeConfig() {
     if (refs && refs.config) refs.config.classList.add('hidden');
+    if (window.__STEEL && window.__STEEL.pause && !configWasPaused) window.__STEEL.pause(false);
+    configWasPaused = false;
   }
 
   function isConfigOpen() {
@@ -1363,6 +1388,9 @@
         if (ev.target === refs.config) closeConfig();
       });
     }
+    if (refs.autoRestock) refs.autoRestock.addEventListener('change', function () {
+      setRestock(refs.autoRestock.checked);
+    });
     bindDrag();
     // 初次隐藏，等 UI.update 在游戏中显示
     refs.dock.classList.add('hidden');
