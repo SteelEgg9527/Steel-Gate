@@ -2499,3 +2499,6 @@ html, body {
 }
 #roster-list { max-height: 58px !important; }
 #control-groups { max-height: 160px !important; }
+
+/* 已选单位只显示当前主单位详情，不再显示下方重复单位列表 */
+#sel-list { display: none !important; }
