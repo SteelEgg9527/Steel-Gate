@@ -2473,3 +2473,20 @@ html, body {
   cursor: pointer;
 }
 #control-auto:hover { border-color: #e0c274; color: #f3dfa4; background: rgba(66,58,34,0.8); }
+
+/* 部队清单优先显示：3 行单位、最多 7 个编组 */
+#roster-panel {
+  max-height: 460px !important;
+  height: auto;
+  z-index: 20;
+  overflow: hidden;
+}
+#roster-list {
+  flex: 0 0 auto;
+  max-height: 84px !important;
+}
+#control-groups {
+  flex: 0 0 auto;
+  max-height: 220px !important;
+  overflow-y: auto;
+}
