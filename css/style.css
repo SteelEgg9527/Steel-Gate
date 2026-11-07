@@ -2272,3 +2272,28 @@ html, body {
     width: 190px !important;
   }
 }
+
+/* keep roster panel size, fit six unit slots per row */
+#roster-panel .roster-row {
+  width: 30px !important;
+  height: 25px !important;
+}
+#roster-panel .roster-row .rt-img {
+  width: 18px !important;
+  height: 18px !important;
+  max-width: 18px !important;
+}
+#roster-list {
+  gap: 3px;
+}
+@media (max-width: 960px) {
+  #roster-panel .roster-row {
+    width: 25px !important;
+    height: 23px !important;
+  }
+  #roster-panel .roster-row .rt-img {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px !important;
+  }
+}
