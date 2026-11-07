@@ -4150,21 +4150,39 @@
 
 
   Game.prototype.resolveSeparation = function () {
-    for (var i = 0; i < this.units.length; i++) {
-      var a = this.units[i];
+    var cell = 64;
+    var grid = {};
+    var i, j, a, b;
+    for (i = 0; i < this.units.length; i++) {
+      a = this.units[i];
       if (!a.alive) continue;
-      for (var j = i + 1; j < this.units.length; j++) {
-        var b = this.units[j];
-        if (!b.alive || b.side !== a.side) continue;
-        var minD = a.def.radius + b.def.radius + 2;
-        var dx = b.x - a.x, dy = b.y - a.y;
-        var d2 = dx * dx + dy * dy;
-        if (d2 < minD * minD && d2 > 0.0001) {
-          var d = Math.sqrt(d2);
-          var push = (minD - d) * 0.5;
-          var nx = dx / d, ny = dy / d;
-          a.x -= nx * push; a.y -= ny * push;
-          b.x += nx * push; b.y += ny * push;
+      var ck = Math.floor(a.x / cell) + ',' + Math.floor(a.y / cell);
+      (grid[ck] || (grid[ck] = [])).push(i);
+    }
+    for (i = 0; i < this.units.length; i++) {
+      a = this.units[i];
+      if (!a.alive) continue;
+      var cx = Math.floor(a.x / cell), cy = Math.floor(a.y / cell);
+      for (var ox = -1; ox <= 1; ox++) {
+        for (var oy = -1; oy <= 1; oy++) {
+          var arr = grid[(cx + ox) + ',' + (cy + oy)];
+          if (!arr) continue;
+          for (var k = 0; k < arr.length; k++) {
+            j = arr[k];
+            if (j <= i) continue;
+            b = this.units[j];
+            if (!b.alive || b.side !== a.side) continue;
+            var minD = a.def.radius + b.def.radius + 2;
+            var dx = b.x - a.x, dy = b.y - a.y;
+            var d2 = dx * dx + dy * dy;
+            if (d2 < minD * minD && d2 > 0.0001) {
+              var d = Math.sqrt(d2);
+              var push = (minD - d) * 0.5;
+              var nx = dx / d, ny = dy / d;
+              a.x -= nx * push; a.y -= ny * push;
+              b.x += nx * push; b.y += ny * push;
+            }
+          }
         }
       }
     }
@@ -4235,6 +4253,21 @@
 
   // 单位是否对某阵营可见（隐蔽中的步兵只能被侦察机或 50m 内的敌人发现）
   Game.prototype.unitVisibleTo = function (side, u) {
+    if (!u || !u.alive) return false;
+    var bucket = Math.floor(this.time * 8);
+    var key = side + ':' + u.id;
+    var cache = this._visCache;
+    if (!cache) cache = this._visCache = {};
+    var hit = cache[key];
+    if (hit && hit.b === bucket) return hit.v;
+    var vis = this.unitVisibleToRaw(side, u);
+    cache[key] = { b: bucket, v: vis };
+    this._visCacheN = (this._visCacheN || 0) + 1;
+    if (this._visCacheN > 1200) { this._visCache = {}; this._visCacheN = 1; }
+    return vis;
+  };
+
+  Game.prototype.unitVisibleToRaw = function (side, u) {
     if (!u || !u.alive) return false;
     if (u.side === side) return true;
     // 近岸支援每次开火有概率向全图暴露；暴露期间任何敌方都能看到
