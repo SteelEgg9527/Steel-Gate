@@ -1029,6 +1029,10 @@
   };
 
   T.drawLabels = function (ctx, proj, zoom, isSeen) {
+    var mapSize = T.size || SIZE;
+    var X0 = (T.origin == null ? ORIGIN : T.origin), Y0 = X0;
+    var E = T.extent || (mapSize - X0 * 2);
+    var one = 1;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     var seen = function (x, y) { return !isSeen || isSeen(x, y); };
