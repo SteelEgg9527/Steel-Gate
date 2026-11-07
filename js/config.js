@@ -654,13 +654,13 @@
   /* ---------------- 强化工事 ---------------- */
   SL.FORT = {
     buildTime: 12,      // 工兵进入已占领区后构筑时间（秒）
-    maxHp: 1500,        // 强化工事区血量
+    maxHp: 2250,        // 强化工事区血量
     repairRate: 8,      // 工兵每秒修复量
     reconRadius: 150,
-    bunkerHp: 1000,     // 机枪碉堡血量
-    mortarHp: 875,      // 迫击炮阵地血量
-    atNestHp: 950,      // 反坦克炮阵地血量
-    flak88Hp: 1050,     // 88 防空炮阵地血量
+    bunkerHp: 1500,     // 机枪碉堡血量
+    mortarHp: 1300,     // 迫击炮阵地血量
+    atNestHp: 1450,     // 反坦克炮阵地血量
+    flak88Hp: 1600,     // 88 防空炮阵地血量
     bunkerAmmo: 400,
     mortarAmmo: 72,
     atNestAmmo: 30,
@@ -768,9 +768,9 @@
     cost: { mine_ap: 8, mine_at: 14, wire: 12, hedgehog: 12 },
     connectRange: 52,
     edgeSnap: 36,
-    nodeHp: 1500,
-    wireHp: 1000,
-    hedgehogHp: 1500,
+    nodeHp: 2250,
+    wireHp: 1500,
+    hedgehogHp: 2250,
     mineTrigger: 16,
     mineSplash: { mine_ap: 34, mine_at: 48 },
     mineDamage: { mine_ap: 190, mine_at: 520 },

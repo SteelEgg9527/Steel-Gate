@@ -1196,7 +1196,7 @@
     else if (m === dtp) { sx = center.x; sy = -180; ex = center.x; ey = ms + 220; }
     else { sx = center.x; sy = ms + 180; ex = center.x; ey = -220; }
     this.planes.push({
-      kind: 'hellBomber', boss: !heavyOnly, name: heavyOnly ? '重型轰炸机' : cfg.name,
+      kind: 'hellBomber', boss: !heavyOnly, heavyOnly: heavyOnly, name: heavyOnly ? '重型轰炸机' : cfg.name,
       x: sx, y: sy, tx: center.x, ty: center.y, ex: ex, ey: ey,
       center: center, side: side, speed: cfg.speed, t: 0, dropped: false, bombRadius: cfg.bombRadius,
       hp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
@@ -5721,6 +5721,25 @@
   Game.prototype.updateHellBomber = function (p, dt) {
     var cfg = SL.BOSS.hell, y = p.center || this.yellow;
     var yx = y.x, yy = y.y;
+    // 普通重型轰炸机完成投弹后离场，不在战场上无限盘旋
+    if (p.heavyOnly && p.dropped) {
+      if (p.hellState !== 'leave') {
+        p.hellState = 'leave';
+        p.altitude = 'low';
+        p.heading = Math.atan2((p.ey || 0) - p.y, (p.ex || 0) - p.x);
+      }
+      var lx = (p.ex != null ? p.ex : -200) - p.x;
+      var ly = (p.ey != null ? p.ey : -200) - p.y;
+      var ld = Math.hypot(lx, ly) || 1;
+      p.heading = Math.atan2(ly, lx);
+      p.x += lx / ld * (p.speed || 60) * dt;
+      p.y += ly / ld * (p.speed || 60) * dt;
+      if (p.x < -160 || p.x > SL.CONFIG.mapSize + 160 || p.y < -160 || p.y > SL.CONFIG.mapSize + 160) {
+        var hi = this.planes.indexOf(p);
+        if (hi >= 0) this.planes.splice(hi, 1);
+      }
+      return;
+    }
     // 第一次盘旋后：半血或45秒时再次爬升
     if (!p.secondTriggered && p.dropped && p.hellState === 'orbit' && !p.phase2 &&
       (p.hp <= p.maxHp * 0.5 || this.time >= (p.firstBombAt + (cfg.secondRunDelay || 45)))) {
@@ -6080,6 +6099,7 @@
         if (d <= step + 2) {
           p.x = p.tx; p.y = p.ty;
           p.dropped = true;
+          p.droppedAt = this.time;
           if (p.kind === 'supply') this.deploySupply(p.tx, p.ty, p.side);
           else this.airstrikeBomb(p.bombTx != null ? p.bombTx : p.tx,
             p.bombTy != null ? p.bombTy : p.ty, p.side, !!p.antiShip);
@@ -6088,6 +6108,10 @@
           p.y += dy / d * step;
         }
       } else {
+        if (p.droppedAt != null && this.time - p.droppedAt > 24) {
+          this.planes.splice(i, 1);
+          continue;
+        }
         var ex = p.ex - p.x, ey = p.ey - p.y;
         var ed = U.len(ex, ey);
         p.heading = Math.atan2(ey, ex);
