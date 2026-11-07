@@ -2794,3 +2794,43 @@ html, body {
 #roster-panel {
   top: 46% !important;
 }
+
+/* 功能键两列紧凑显示；部队清单完整展开不滚动 */
+.dt-action-pair {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.dt-action-pair .fire-mode-row {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 5px;
+  gap: 4px;
+}
+.dt-action-pair .fire-mode-row > span {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.dt-action-pair .fire-mode-btn {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 3px 4px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+#roster-panel {
+  max-height: none !important;
+  overflow: visible !important;
+}
+#roster-list {
+  max-height: none !important;
+  overflow: visible !important;
+}
+#control-groups {
+  max-height: none !important;
+  overflow: visible !important;
+}
+.roster-actions { position: static !important; }
