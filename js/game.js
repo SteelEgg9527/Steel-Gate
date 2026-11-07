@@ -5721,6 +5721,18 @@
   Game.prototype.updateHellBomber = function (p, dt) {
     var cfg = SL.BOSS.hell, y = p.center || this.yellow;
     var yx = y.x, yy = y.y;
+    if (!isFinite(p.orbitR) || p.orbitR < 90) p.orbitR = Math.max(150, (y.r || 300) + 60);
+    if (!isFinite(p.orbitAng)) p.orbitAng = 0;
+    // 防御性解卡：极端情况下轰炸机停在黄圈中心，重新建立盘旋切入目标
+    if (U.dist(p.x, p.y, yx, yy) < 14 && p.hellState !== 'entry' && p.hellState !== 'leave') {
+      p.hellState = 'toOrbitFirst';
+      p.orbitEntryAng = Math.random() * Math.PI * 2;
+      p.orbitTarget = this.hellOrbitPoint(p, y, p.orbitEntryAng);
+    } else if ((p.hellState === 'toOrbitFirst' || p.hellState === 'toOrbitSecond') &&
+      p.orbitTarget && U.dist(p.orbitTarget.x, p.orbitTarget.y, yx, yy) < 20) {
+      p.orbitEntryAng = p.orbitEntryAng != null ? p.orbitEntryAng : 0;
+      p.orbitTarget = this.hellOrbitPoint(p, y, p.orbitEntryAng);
+    }
     // 普通重型轰炸机完成投弹后离场，不在战场上无限盘旋
     if (p.heavyOnly && p.dropped) {
       if (p.hellState !== 'leave') {
