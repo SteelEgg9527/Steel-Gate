@@ -2886,3 +2886,8 @@ html, body {
   outline: 1px solid #e8c47a;
   outline-offset: 2px;
 }
+
+/* 编组块文字稍微放大 */
+#control-groups .control-num { font-size: 8px !important; }
+#control-groups .control-type { font-size: 8px !important; }
+#control-groups .control-count { font-size: 8px !important; }
