@@ -1133,23 +1133,11 @@
   }
 
   function layoutLeftPanels() {
-    var map = $('minimap-panel'), roster = $('roster-panel'), sel = $('selpanel');
-    if (!map || !roster) return;
-    var scale = (roster.getBoundingClientRect().width / (roster.offsetWidth || 1)) || 1;
-    var mapBottom = map.getBoundingClientRect().bottom;
-    var selHidden = !sel || sel.classList.contains('selpanel-hidden') || sel.offsetHeight === 0;
-    var selReserve = selHidden ? 0 : Math.min(window.innerHeight * 0.3, 190);
-    var selTop = selHidden ? window.innerHeight : Math.min(sel.getBoundingClientRect().top, window.innerHeight - 16 - selReserve);
-    var available = Math.max(120, selTop - mapBottom - 18);
-    roster.style.setProperty('top', ((mapBottom + 14) / scale) + 'px', 'important');
-    roster.style.setProperty('bottom', 'auto', 'important');
-    roster.style.height = 'auto';
-    roster.style.setProperty('max-height', (available / scale) + 'px', 'important');
-    if (sel) {
-      sel.style.setProperty('left', '16px', 'important');
-      sel.style.setProperty('right', 'auto', 'important');
-      sel.style.setProperty('bottom', '16px', 'important');
-    }
+    var sel = $('selpanel');
+    if (!sel) return;
+    sel.style.setProperty('left', '16px', 'important');
+    sel.style.setProperty('right', 'auto', 'important');
+    sel.style.setProperty('bottom', '16px', 'important');
   }
 
   function renderDefenseHud(g) {
