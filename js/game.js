@@ -256,9 +256,9 @@
     }
   };
 
-  Game.prototype.spawnShip = function (side, yHint) {
+  Game.prototype.spawnShip = function (side, yHint, force) {
     if (!this.naval) return null;
-    if (this.shipOf(side)) return null;
+    if (!force && this.shipOf(side)) return null;
     var sumX = 0, sumY = 0, n = 0;
     for (var i = 0; i < this.units.length; i++) {
       var uu = this.units[i];
@@ -389,7 +389,7 @@
       if (this.radarScanNext[rside] <= 0) {
         this.radarScanNext[rside] = SL.NAVAL.radarScanInterval || 30;
         this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 5);
-        this.log(SL.SIDES[rside].name + ' 雷达对海搜索：发现海面目标', rside === 'blue' ? 'order' : 'loss');
+        this.log(SL.SIDES[rside].name + ' 雷达搜索：发现海面与空中目标', rside === 'blue' ? 'order' : 'loss');
       }
     }
     // 记录玩家战舰最后被 AI 发现的位置，供岸基火力盲射
@@ -668,6 +668,10 @@
 
   Game.prototype.radarScanActive = function (side) {
     return !!(this.radarScanUntil && this.time < (this.radarScanUntil[side] || 0));
+  };
+
+  Game.prototype.radarAirContact = function (side, plane) {
+    return !!(plane && plane.hp > 0 && plane.side !== side && this.radarScanActive(side));
   };
 
   Game.prototype.quickNavalCard = function (key, x, y) {
@@ -1060,11 +1064,14 @@
       u.aggressive = true;
     }
     this.log('第 ' + wave + ' 波敌军抵达（' + count + ' 个单位）', 'loss');
-    if (this.mode === 'navalLastStand' && wave === 10 && !this.shipOf('red')) {
-      this.spawnShip('red');
+    if (this.mode === 'navalLastStand' && wave >= 10 && wave % 5 === 0) {
+      var waveShips = Math.min(3, 1 + Math.floor((wave - 10) / 10));
+      for (var ws = 0; ws < waveShips; ws++) {
+        this.spawnShip('red', 260 + Math.random() * (T.size - 520), true);
+      }
       this.aiShipUsed.red = true;
       this.aiShipRespawn.red = true;
-      this.log('第 10 波：敌方战舰出动', 'loss');
+      this.log('第 ' + wave + ' 波：敌方舰艇出动 ' + waveShips + ' 艘', 'loss');
     }
     var airCfg = SL.LAST_STAND.air;
     var airCount = Math.min(airCfg.maxPerWave,

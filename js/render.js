@@ -2240,6 +2240,17 @@
       c.arc(u.x * s, u.y * s, u.side === 'blue' ? 2.4 : 2.1, 0, Math.PI * 2);
       c.fill();
     }
+    // 雷达扫描期间显示空中目标（海面目标已按迷雾正常显示）
+    if (game.radarScanActive && game.radarScanActive('blue')) {
+      for (var pi = 0; pi < game.planes.length; pi++) {
+        var p = game.planes[pi];
+        if (!p || p.hp <= 0 || p.side === 'blue') continue;
+        c.fillStyle = 'rgba(238,170,120,0.95)';
+        c.beginPath();
+        c.arc(p.x * s, p.y * s, 2.4, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
     // 视野框
     var wl = (cam.x - W / 2 / cam.zoom) * s;
     var wt = (cam.y - H / 2 / cam.zoom) * s;
