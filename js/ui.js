@@ -2194,8 +2194,7 @@
             (qcost ? '<br><small>' + qcost + '</small>' : '') + '</div>' + slotsHtml;
           el.navyCards.appendChild(nd);
         }
-        var stop = document.createElement('button');
-        stop.type = 'button';
+        var stop = document.createElement('div');
         stop.className = 'card navy-stop-card';
         stop.dataset.navyAction = 'stop';
         stop.style.setProperty('--c', '#c9b37d');
