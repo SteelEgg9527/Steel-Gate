@@ -247,6 +247,7 @@
   Game.prototype.setSelectedShip = function (ship) {
     this.selectedShip = ship;
     this.selectedBomber = null;
+    if (ship && SL.Bomber && SL.Bomber.setTab) SL.Bomber.setTab(this, 'ship');
     for (var s = 0; s < this.battleships.length; s++) this.battleships[s].selected = false;
     if (ship) {
       ship.selected = true;

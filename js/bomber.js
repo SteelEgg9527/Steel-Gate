@@ -710,6 +710,8 @@
     g.selectedShip = null;
     g.selected = [];
     for (var i = 0; i < g.units.length; i++) g.units[i].selected = false;
+    b.tab = 'bomber';
+    refresh(g);
     toast('已选中 B-17 轰炸机编队，右键地图指挥飞行', 'order');
     return true;
   }
@@ -998,6 +1000,13 @@
   function setTab(g, tab) {
     var b = ensure(g);
     b.tab = tab;
+    // 切换到舰艇/轰炸机系统时，自动选中对应单位
+    if (tab === 'ship' && !g.selectedShip && g.shipOf) {
+      var ship = g.shipOf('blue');
+      if (ship && g.setSelectedShip) g.setSelectedShip(ship);
+    } else if (tab === 'bomber' && !g.selectedBomber && b.state === 'over') {
+      selectGroup(g);
+    }
     refresh(g);
   }
 
