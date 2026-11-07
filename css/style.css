@@ -2524,3 +2524,61 @@ html, body {
   gap: 5px !important;
   max-height: 78px !important;
 }
+
+/* 编组三列单行显示，自动编队始终可见 */
+#roster-panel { width: 300px !important; overflow-y: auto !important; }
+#control-groups {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  max-height: 72px !important;
+  flex: 0 1 auto !important;
+  min-height: 28px;
+  overflow-y: auto !important;
+}
+.control-group {
+  display: flex !important;
+  align-items: stretch !important;
+  position: relative !important;
+  height: 32px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.control-main {
+  gap: 2px !important;
+  padding: 0 3px !important;
+  font-size: 8px !important;
+}
+.control-num { width: 12px !important; height: 18px !important; font-size: 8px !important; }
+.control-type-img {
+  width: 22px !important;
+  height: 22px !important;
+  max-width: 22px !important;
+  flex: none;
+  object-fit: contain;
+}
+.control-type {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #d8cda9;
+  font: 700 8px var(--font-ui);
+}
+.control-count { flex: none; color: #aeb99e; font: 600 8px var(--mono) !important; }
+.control-actions {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  display: none; align-items: center;
+  background: rgba(22,28,21,0.96);
+  border-left: 1px solid rgba(196,178,134,0.25);
+}
+.control-group:hover .control-actions { display: flex; }
+.control-save, .control-del { width: 15px !important; height: 100% !important; font-size: 10px !important; }
+#control-auto {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 5;
+  flex: 0 0 auto;
+}
+#control-add { flex: 0 0 auto; }

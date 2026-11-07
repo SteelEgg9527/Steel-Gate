@@ -952,25 +952,34 @@
     if (sig === uiCache.controlSig) return;
     uiCache.controlSig = sig;
     el.controlGroups.innerHTML = '';
-    var abbr = {
-      infantry: '步', armored: '装', tank: '坦', heavy_tank: '重',
-      at_gun: '反', aa: '防', artillery: '炮', heavy_arty: '炮',
-      rocket_arty: '火', command: '指', engineer_vehicle: '工'
-    };
     groups.forEach(function (grp, idx) {
       var units = g.controlGroupUnits ? g.controlGroupUnits(grp) : [];
+      var first = units[0] || null;
+      var sameType = true;
+      for (var ui = 1; first && ui < units.length; ui++) {
+        if (units[ui].type !== first.type) { sameType = false; break; }
+      }
+      var typeKey = first ? first.type : 'infantry';
+      var shortType = {
+        infantry: '步兵', armored: '装甲', tank: '中坦', heavy_tank: '重坦',
+        at_gun: '反坦', aa: '防空', artillery: '火炮', heavy_arty: '重炮',
+        rocket_arty: '火箭', command: '指挥', engineer_vehicle: '工程',
+        boss_super: 'BOSS', boss_ghost: 'BOSS', target: '标靶',
+        armor_target: '装靶', heavy_target: '重靶'
+      };
+      var typeLabel = first
+        ? (sameType ? (shortType[typeKey] || SL.TYPE_LABEL[typeKey] || first.name || typeKey) : '混编')
+        : '空编组';
       var box = document.createElement('div');
       box.className = 'control-group';
       var main = document.createElement('button');
       main.type = 'button';
       main.className = 'control-main';
       main.title = units.length ? units.map(function (u) { return u.name; }).join('、') : '该编组暂无存活单位';
-      var unitIcons = units.length
-        ? units.slice(0, 8).map(function (u) { return '<img class="control-unit-img" src="assets/units/roster/' + u.type + '.svg" alt="" draggable="false">'; }).join('')
-        : '<span class="control-empty">空</span>';
       main.innerHTML = '<span class="control-num">' + (idx + 1) + '</span>' +
-        '<span class="control-units">' + unitIcons + '</span>' +
-        '<span class="control-count">' + units.length + '</span>';
+        '<img class="control-type-img" src="assets/units/roster/' + typeKey + '.svg" alt="" draggable="false">' +
+        '<span class="control-type">' + typeLabel + '</span>' +
+        '<span class="control-count">×' + units.length + '</span>';
       main.addEventListener('click', function () {
         var picked = game.controlGroupUnits(grp);
         if (!picked.length) { UI.pushToast('该编组已无存活单位', 'info'); return; }
@@ -979,19 +988,22 @@
         picked.forEach(function (u) { cx += u.x; cy += u.y; });
         R.centerOn(cx / picked.length, cy / picked.length);
       });
+      var actions = document.createElement('div');
+      actions.className = 'control-actions';
       var save = document.createElement('button');
       save.type = 'button';
       save.className = 'control-save';
       save.textContent = '←';
       save.title = '将当前选中的部队存入该编组';
-      save.addEventListener('click', function () { UI.saveControlGroup(grp.id); });
+      save.addEventListener('click', function (e) { e.stopPropagation(); UI.saveControlGroup(grp.id); });
       var del = document.createElement('button');
       del.type = 'button';
       del.className = 'control-del';
       del.textContent = '×';
       del.title = '删除该编组';
-      del.addEventListener('click', function () { UI.deleteControlGroup(grp.id); });
-      box.appendChild(main); box.appendChild(save); box.appendChild(del);
+      del.addEventListener('click', function (e) { e.stopPropagation(); UI.deleteControlGroup(grp.id); });
+      actions.appendChild(save); actions.appendChild(del);
+      box.appendChild(main); box.appendChild(actions);
       el.controlGroups.appendChild(box);
     });
   }
@@ -1120,7 +1132,9 @@
     var scale = (roster.getBoundingClientRect().width / (roster.offsetWidth || 1)) || 1;
     var mapBottom = map.getBoundingClientRect().bottom;
     var selHidden = sel.classList.contains('selpanel-hidden') || sel.offsetHeight === 0;
-    var selTop = selHidden ? window.innerHeight : sel.getBoundingClientRect().top;
+    // 预留已选信息面板的最大高度，避免详情展开后与部队清单重叠
+    var selReserve = selHidden ? 0 : Math.min(window.innerHeight * 0.38, 240);
+    var selTop = selHidden ? window.innerHeight : Math.min(sel.getBoundingClientRect().top, window.innerHeight - 16 - selReserve);
     var available = Math.max(90, selTop - mapBottom - 12);
     roster.style.setProperty('top', ((mapBottom + 8) / scale) + 'px', 'important');
     roster.style.setProperty('bottom', 'auto', 'important');
