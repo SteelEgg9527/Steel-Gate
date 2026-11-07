@@ -282,7 +282,7 @@
     if (port) {
       var pwater = SL.Naval.nearestWaterPoint(port.x, port.y);
       if (SL.Naval.isWater(pwater.x, pwater.y)) {
-        best = { x: pwater.x, y: pwater.y, inward: Math.atan2(port.y - pwater.y, port.x - pwater.x) };
+        best = { x: pwater.x, y: pwater.y, inward: Math.atan2(pwater.y - port.y, pwater.x - port.x) };
       }
     }
     if (!best) {
