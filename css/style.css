@@ -2582,3 +2582,93 @@ html, body {
   flex: 0 0 auto;
 }
 #control-add { flex: 0 0 auto; }
+
+/* 部队清单与战术图同宽、留出间隔、统一滚动条 */
+#roster-panel {
+  width: 218px !important;
+  overflow-y: auto !important;
+}
+#roster-list { max-height: 72px !important; }
+#control-groups {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  max-height: 68px !important;
+}
+.control-group { height: 30px !important; }
+.control-main { gap: 1px !important; padding: 0 2px !important; }
+.control-num { width: 10px !important; height: 16px !important; font-size: 7px !important; }
+.control-type-img { width: 19px !important; height: 19px !important; max-width: 19px !important; }
+.control-type { font-size: 7px !important; }
+.control-count { font-size: 7px !important; }
+.control-actions { background: rgba(22,28,21,0.98); }
+.control-save, .control-del { width: 13px !important; font-size: 9px !important; }
+
+#roster-panel, #roster-list, #control-groups, #sel-detail, #sel-list,
+.sheet-body, .lb-sheet .sheet-body {
+  scrollbar-width: thin;
+  scrollbar-color: #8f7d52 #171b15;
+}
+#roster-panel::-webkit-scrollbar, #roster-list::-webkit-scrollbar,
+#control-groups::-webkit-scrollbar, #sel-detail::-webkit-scrollbar,
+#sel-list::-webkit-scrollbar, .sheet-body::-webkit-scrollbar,
+.lb-sheet .sheet-body::-webkit-scrollbar {
+  width: 6px;
+}
+#roster-panel::-webkit-scrollbar-track, #roster-list::-webkit-scrollbar-track,
+#control-groups::-webkit-scrollbar-track, #sel-detail::-webkit-scrollbar-track,
+#sel-list::-webkit-scrollbar-track, .sheet-body::-webkit-scrollbar-track,
+.lb-sheet .sheet-body::-webkit-scrollbar-track {
+  background: #171b15;
+  border-radius: 3px;
+}
+#roster-panel::-webkit-scrollbar-thumb, #roster-list::-webkit-scrollbar-thumb,
+#control-groups::-webkit-scrollbar-thumb, #sel-detail::-webkit-scrollbar-thumb,
+#sel-list::-webkit-scrollbar-thumb, .sheet-body::-webkit-scrollbar-thumb,
+.lb-sheet .sheet-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #a38e5c, #6f613e);
+  border-radius: 3px;
+  border: 1px solid #171b15;
+}
+#roster-panel::-webkit-scrollbar-thumb:hover, #roster-list::-webkit-scrollbar-thumb:hover,
+#control-groups::-webkit-scrollbar-thumb:hover, #sel-detail::-webkit-scrollbar-thumb:hover,
+#sel-list::-webkit-scrollbar-thumb:hover, .sheet-body::-webkit-scrollbar-thumb:hover,
+.lb-sheet .sheet-body::-webkit-scrollbar-thumb:hover {
+  background: #c0a86b;
+}
+
+/* 已选信息压缩，给部队清单和自动编队留足空间 */
+#selpanel { max-height: 140px !important; }
+#roster-panel .roster-row { width: 38px !important; height: 38px !important; }
+#roster-panel .roster-row .rt-img { width: 34px !important; height: 34px !important; max-width: 34px !important; }
+#roster-list { max-height: 82px !important; }
+/* 全局统一滚动条 */
+* { scrollbar-width: thin; scrollbar-color: #8f7d52 #171b15; }
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: #171b15; }
+*::-webkit-scrollbar-thumb { background: #7f6d47; border-radius: 3px; border: 1px solid #171b15; }
+*::-webkit-scrollbar-thumb:hover { background: #b39a60; }
+
+/* 强制统一部队清单滚动条（含 Chromium） */
+#roster-panel::-webkit-scrollbar, #roster-list::-webkit-scrollbar,
+#control-groups::-webkit-scrollbar, #sel-detail::-webkit-scrollbar {
+  width: 6px !important; background: #171b15 !important;
+}
+#roster-panel::-webkit-scrollbar-track, #roster-list::-webkit-scrollbar-track,
+#control-groups::-webkit-scrollbar-track, #sel-detail::-webkit-scrollbar-track {
+  background: #171b15 !important;
+}
+#roster-panel::-webkit-scrollbar-thumb, #roster-list::-webkit-scrollbar-thumb,
+#control-groups::-webkit-scrollbar-thumb, #sel-detail::-webkit-scrollbar-thumb {
+  background: #8f7d52 !important; border-radius: 3px !important; border: 1px solid #171b15 !important;
+}
+#roster-panel { scrollbar-color: #8f7d52 #171b15 !important; }
+
+/* 已选信息固定到右侧系统栏上方 */
+#selpanel {
+  left: auto !important;
+  right: 16px !important;
+  bottom: 190px !important;
+  width: 300px !important;
+  max-height: 38vh !important;
+}
+
+#control-groups .control-type-img { width: 22px !important; height: 22px !important; max-width: 22px !important; }
