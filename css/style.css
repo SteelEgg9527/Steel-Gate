@@ -2517,3 +2517,12 @@ html, body {
 @media (max-width: 720px) {
   .brief-preview-head { font-size: 9px; }
 }
+
+/* 已选信息隐藏 + 部队清单尺寸 */
+#selpanel.selpanel-hidden { display: none !important; }
+#roster-panel {
+  top: auto !important;
+  bottom: auto !important;
+}
+#roster-list { max-height: 58px !important; }
+#control-groups { max-height: 160px !important; }

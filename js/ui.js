@@ -1231,18 +1231,17 @@
   }
 
   function layoutLeftPanels() {
-    var map = $('minimap-panel'), roster = $('roster-panel'), sel = $('selpanel'), hud = $('hud-scale');
+    var map = $('minimap-panel'), roster = $('roster-panel'), sel = $('selpanel');
     if (!map || !roster || !sel) return;
-    var mapBottom = map.offsetTop + map.offsetHeight;
-    var layoutH = (hud && hud.offsetHeight) || window.innerHeight;
-    // 已选面板高度随内容变化，但预留至少 170px 给部队清单
-    var selMax = Math.max(150, layoutH - mapBottom - 16 - 170);
-    sel.style.maxHeight = selMax + 'px';
-    var selTop = sel.offsetTop;
-    var available = selTop - mapBottom - 14;
-    roster.style.top = (mapBottom + 8) + 'px';
+    var scale = (roster.getBoundingClientRect().width / (roster.offsetWidth || 1)) || 1;
+    var mapBottom = map.getBoundingClientRect().bottom;
+    var selHidden = sel.classList.contains('selpanel-hidden') || sel.offsetHeight === 0;
+    var selTop = selHidden ? window.innerHeight : sel.getBoundingClientRect().top;
+    var available = Math.max(90, selTop - mapBottom - 12);
+    roster.style.setProperty('top', ((mapBottom + 8) / scale) + 'px', 'important');
+    roster.style.setProperty('bottom', 'auto', 'important');
     roster.style.height = 'auto';
-    roster.style.maxHeight = Math.max(64, available) + 'px';
+    roster.style.setProperty('max-height', (available / scale) + 'px', 'important');
   }
 
   function renderDefenseHud(g) {
@@ -1545,7 +1544,6 @@
     } else {
       updateBars();
     }
-    layoutRosterAboveSelection();
     var selN = g.selected.length + (g.selectedShip ? 1 : 0) + (g.selectedBomber ? 1 : 0);
     if (uiCache.selCount !== selN) {
       uiCache.selCount = selN;
@@ -1682,6 +1680,8 @@
 
   function rebuildSelection(g) {
     var i;
+    var selPanel = document.getElementById('selpanel');
+    if (selPanel) selPanel.classList.remove('selpanel-hidden');
     if (g.selectedBomber) {
       primaryId = null;
       var bg = g.selectedBomber;
@@ -1753,6 +1753,21 @@
       el.list.innerHTML = '';
       rows = [];
       return;
+    }
+    if (g.selected.length > 1) {
+      var firstType = g.selected[0].type;
+      var mixedTypes = false;
+      for (i = 1; i < g.selected.length; i++) {
+        if (g.selected[i].type !== firstType) { mixedTypes = true; break; }
+      }
+      if (mixedTypes) {
+        primaryId = null;
+        el.detail.classList.add('hidden');
+        el.list.innerHTML = '';
+        rows = [];
+        if (selPanel) selPanel.classList.add('selpanel-hidden');
+        return;
+      }
     }
     var primary = null;
     for (i = 0; i < g.selected.length; i++) {
