@@ -2214,7 +2214,8 @@
     c.drawImage(R.minimapCache, 0, 0, size, size);
     if (game.fog.canvas) c.drawImage(game.fog.canvas, 0, 0, size, size);
 
-    var s = size / SL.CONFIG.mapSize;
+    var mapSize = T.size || SL.CONFIG.mapSize || 2000;
+    var s = size / mapSize;
     // 黄圈
     if (game.yellow && game.yellow.active) {
       c.fillStyle = 'rgba(232,200,70,0.16)';
@@ -2240,14 +2241,60 @@
       c.arc(u.x * s, u.y * s, u.side === 'blue' ? 2.4 : 2.1, 0, Math.PI * 2);
       c.fill();
     }
-    // 雷达扫描期间显示空中目标（海面目标已按迷雾正常显示）
-    if (game.radarScanActive && game.radarScanActive('blue')) {
-      for (var pi = 0; pi < game.planes.length; pi++) {
-        var p = game.planes[pi];
-        if (!p || p.hp <= 0 || p.side === 'blue') continue;
-        c.fillStyle = 'rgba(238,170,120,0.95)';
+    // 舰艇：己方始终显示；敌方只有在被发现时显示
+    if (game.battleships) {
+      for (var bi = 0; bi < game.battleships.length; bi++) {
+        var bs = game.battleships[bi];
+        if (!bs || !bs.alive) continue;
+        if (bs.side !== 'blue' && !game.unitVisibleTo('blue', bs)) continue;
+        var bsc = SL.SIDES[bs.side] || SL.SIDES.blue;
+        c.fillStyle = bsc.light;
+        c.strokeStyle = 'rgba(10,18,20,0.85)';
+        c.lineWidth = 1;
         c.beginPath();
-        c.arc(p.x * s, p.y * s, 2.4, 0, Math.PI * 2);
+        c.moveTo(bs.x * s, bs.y * s - 4);
+        c.lineTo(bs.x * s + 3.2, bs.y * s);
+        c.lineTo(bs.x * s, bs.y * s + 4);
+        c.lineTo(bs.x * s - 3.2, bs.y * s);
+        c.closePath();
+        c.fill();
+        c.stroke();
+      }
+    }
+    // 补给舰
+    if (game.supplyShips) {
+      for (var si = 0; si < game.supplyShips.length; si++) {
+        var ss = game.supplyShips[si];
+        if (!ss) continue;
+        if (ss.side !== 'blue' && !game.unitVisibleTo('blue', ss)) continue;
+        c.fillStyle = '#e8d28b';
+        c.fillRect(ss.x * s - 2.2, ss.y * s - 2.2, 4.4, 4.4);
+      }
+    }
+    // 飞机：己方轰炸机、战斗机、侦察机始终显示；敌机在雷达扫描期间显示
+    var radarAir = game.radarScanActive && game.radarScanActive('blue');
+    for (var pi = 0; pi < game.planes.length; pi++) {
+      var p = game.planes[pi];
+      if (!p || p.hp <= 0) continue;
+      if (p.side !== 'blue' && !radarAir) continue;
+      var psc = SL.SIDES[p.side] || SL.SIDES.blue;
+      c.fillStyle = p.side === 'blue' ? '#b9d8e8' : 'rgba(238,170,120,0.95)';
+      c.beginPath();
+      c.moveTo(p.x * s, p.y * s - 3.4);
+      c.lineTo(p.x * s + 2.8, p.y * s + 2.2);
+      c.lineTo(p.x * s - 2.8, p.y * s + 2.2);
+      c.closePath();
+      c.fill();
+    }
+    // 水上飞机
+    if (game.seaplanes) {
+      for (var spi = 0; spi < game.seaplanes.length; spi++) {
+        var sp = game.seaplanes[spi];
+        if (!sp) continue;
+        if (sp.side !== 'blue' && !radarAir) continue;
+        c.fillStyle = sp.side === 'blue' ? '#9fc9dc' : 'rgba(238,170,120,0.9)';
+        c.beginPath();
+        c.arc(sp.x * s, sp.y * s, 2.1, 0, Math.PI * 2);
         c.fill();
       }
     }
