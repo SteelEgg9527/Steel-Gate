@@ -2781,3 +2781,16 @@ html, body {
   scrollbar-width: none;
 }
 #roster-panel::-webkit-scrollbar { display: none !important; }
+
+/* 已选单位信息完整显示；部队清单上移 */
+#selpanel {
+  max-height: none !important;
+  overflow: visible !important;
+}
+#sel-detail {
+  max-height: none !important;
+  overflow: visible !important;
+}
+#roster-panel {
+  top: 46% !important;
+}
