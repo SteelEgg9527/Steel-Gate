@@ -273,6 +273,12 @@
       if (el.setAudioArtillery) el.setAudioArtillery.value = a.artillery == null ? 1 : a.artillery;
       if (el.setAudioExplosion) el.setAudioExplosion.value = a.explosion == null ? 1 : a.explosion;
       if (el.setAudioUi) el.setAudioUi.value = a.ui == null ? 1 : a.ui;
+      if (el.setLeaderboardNickname) {
+        try { el.setLeaderboardNickname.value = localStorage.getItem('steel_nickname') || ''; } catch (e) {}
+      }
+      if (el.setAutoUpload) {
+        try { el.setAutoUpload.checked = localStorage.getItem('steel_auto_upload') === '1'; } catch (e) {}
+      }
       applyUIScale();
     }
     function openSettings() {
@@ -375,6 +381,13 @@
     if (el.setRangeKeep) el.setRangeKeep.addEventListener('change', function () {
       SL.SETTINGS.shipRanges.keep = el.setRangeKeep.checked; saveSettings();
     });
+    if (el.setLeaderboardNickname) el.setLeaderboardNickname.addEventListener('input', function () {
+      try { localStorage.setItem('steel_nickname', String(el.setLeaderboardNickname.value || '').slice(0, 24)); } catch (e) {}
+    });
+    if (el.setAutoUpload) el.setAutoUpload.addEventListener('change', function () {
+      try { localStorage.setItem('steel_auto_upload', el.setAutoUpload.checked ? '1' : '0'); } catch (e) {}
+    });
+
     function audioSettingsChanged() {
       SL.SETTINGS.audio.master = parseFloat(el.setAudioMaster.value);
       SL.SETTINGS.audio.artillery = parseFloat(el.setAudioArtillery.value);
@@ -1904,6 +1917,7 @@
 
   function showResult(g) {
     recordRecentResult(g);
+    if (SL.Leaderboard && SL.Leaderboard.onGameEnd) SL.Leaderboard.onGameEnd(g);
     renderResultLeaderboard(g);
     var win = g.state === 'won';
     hideDraft();

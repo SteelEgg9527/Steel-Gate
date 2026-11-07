@@ -55,6 +55,61 @@
   function setNickname(v) {
     try { localStorage.setItem('steel_nickname', String(v || '').slice(0, 24)); } catch (e) {}
   }
+  function autoUploadEnabled() {
+    try { return localStorage.getItem('steel_auto_upload') === '1'; } catch (e) { return false; }
+  }
+  function setAutoUpload(v) {
+    try { localStorage.setItem('steel_auto_upload', v ? '1' : '0'); } catch (e) {}
+  }
+  function promptDisabled() {
+    try { return localStorage.getItem('steel_nickname_prompt_disabled') === '1'; } catch (e) { return false; }
+  }
+
+  function maybeAskOnEntry() {
+    if (nickname() || promptDisabled()) return;
+    var ov = document.createElement('div');
+    ov.className = 'lb-modal';
+    ov.innerHTML = '<div class="lb-modal-box lb-entry-box">' +
+      '<h3>设置排行榜昵称</h3>' +
+      '<p>用于公共排行榜显示。可在“游戏设置 → 排行榜”中随时修改。</p>' +
+      '<input id="lb-entry-nick" maxlength="24" placeholder="输入昵称">' +
+      '<label class="lb-check"><input id="lb-entry-auto" type="checkbox"> 自动上传战绩</label>' +
+      '<label class="lb-check"><input id="lb-entry-hide" type="checkbox"> 不再弹出</label>' +
+      '<p class="lb-entry-hint">自动上传会在对局结束后把战绩上传到公共排行榜。</p>' +
+      '<div class="lb-modal-actions"><button type="button" id="lb-entry-later">稍后设置</button>' +
+      '<button type="button" id="lb-entry-save" class="primary">保存</button></div>' +
+      '</div>';
+    document.body.appendChild(ov);
+    var input = ov.querySelector('#lb-entry-nick');
+    var auto = ov.querySelector('#lb-entry-auto');
+    var hide = ov.querySelector('#lb-entry-hide');
+    input.focus();
+    function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+    function save() {
+      var v = String(input.value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 24);
+      if (!v) { input.focus(); return; }
+      setNickname(v);
+      setAutoUpload(auto.checked);
+      if (hide.checked) {
+        try { localStorage.setItem('steel_nickname_prompt_disabled', '1'); } catch (e) {}
+      }
+      close();
+      toast('排行榜昵称已保存', 'win');
+    }
+    ov.querySelector('#lb-entry-save').addEventListener('click', save);
+    ov.querySelector('#lb-entry-later').addEventListener('click', function () {
+      if (hide.checked) {
+        try { localStorage.setItem('steel_nickname_prompt_disabled', '1'); } catch (e) {}
+      }
+      close();
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') save();
+      if (e.key === 'Escape') close();
+    });
+    ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
+  }
+
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -151,7 +206,8 @@
     };
   }
 
-  function uploadCurrent(btn) {
+  function uploadCurrent(btn, options) {
+    options = options || {};
     var g = SL.UI && SL.UI.currentGame ? SL.UI.currentGame() : null;
     if (!g || g.testMode || g.demo) { toast('当前对局不能上传', 'loss'); return; }
     if (g._lbUploaded) { toast('这一局已经上传过了', 'info'); return; }
@@ -168,13 +224,21 @@
         g._lbUploaded = true;
         if (btn) { btn.textContent = '已上传'; btn.disabled = true; }
         toast('战绩已上传到公共排行榜', 'win');
-        openLeaderboard();
+        if (options.openAfter !== false) openLeaderboard();
       }).catch(function (err) {
         if (btn) { btn.disabled = false; btn.textContent = '上传战绩'; }
         toast(errorText(err.status, err.data), 'loss');
       });
     });
   }
+
+  function onGameEnd(g) {
+    if (!autoUploadEnabled() || !g || g.testMode || g.demo || g._lbAutoTried || g._lbUploaded) return;
+    g._lbAutoTried = true;
+    uploadCurrent(null, { openAfter: false });
+  }
+
+  L.onGameEnd = onGameEnd;
 
   /* ---------------- 排行榜界面 ---------------- */
   function ensureOverlay() {
@@ -347,6 +411,7 @@
     injectButtons();
     if (!lbOverlay) ensureOverlay();
     lbOverlay.classList.add('hidden');
+    setTimeout(maybeAskOnEntry, 650);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else setTimeout(boot, 80);

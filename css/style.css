@@ -2413,3 +2413,18 @@ html, body {
     gap: 4px;
   }
 }
+
+.lb-entry-box input[type="text"] { margin-bottom: 10px; }
+.lb-check {
+  display: flex; align-items: center; gap: 7px;
+  margin: 8px 0; color: #c9c1a7;
+  font: 11px var(--font-ui); cursor: pointer;
+}
+.lb-check input { width: 14px; height: 14px; accent-color: #b99b58; }
+.lb-entry-hint { color: #8f8974 !important; font-size: 10px !important; line-height: 1.5 !important; margin-top: 8px !important; }
+#set-leaderboard-nickname {
+  width: 140px; box-sizing: border-box;
+  background: #11130f; border: 1px solid rgba(196,178,134,0.35);
+  color: #eee4cc; padding: 3px 6px; font: 11px var(--font-ui); outline: none;
+}
+#set-leaderboard-nickname:focus { border-color: #e8c47a; }
