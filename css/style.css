@@ -2939,3 +2939,8 @@ html, body {
   white-space: nowrap !important;
   font-size: 9px !important;
 }
+
+/* 停止行动文字与舰船卡统一为 8px */
+#ship-system #navy-cards .navy-stop-card .nm {
+  font-size: 8px !important;
+}
