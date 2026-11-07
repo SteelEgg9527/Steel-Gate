@@ -2502,3 +2502,25 @@ html, body {
 
 /* 已选单位只显示当前主单位详情，不再显示下方重复单位列表 */
 #sel-list { display: none !important; }
+
+/* 部队清单放大与高辨识度图标 */
+#roster-panel {
+  width: 250px !important;
+}
+#roster-panel .panel-head {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+#roster-panel .roster-row {
+  width: 38px !important;
+  height: 36px !important;
+}
+#roster-panel .roster-row .rt-img {
+  width: 30px !important;
+  height: 30px !important;
+  max-width: 30px !important;
+}
+#roster-list {
+  gap: 5px !important;
+  max-height: 78px !important;
+}
