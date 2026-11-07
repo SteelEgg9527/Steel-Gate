@@ -2197,15 +2197,10 @@
         var stop = document.createElement('button');
         stop.type = 'button';
         stop.className = 'card navy-stop-card';
-        stop.title = '停止战舰当前指令，等同 F 键';
+        stop.dataset.navyAction = 'stop';
+        stop.style.setProperty('--c', '#c9b37d');
+        stop.title = '停止战舰当前指令；点击或拖动均可触发';
         stop.innerHTML = '<div class="ic">停</div><div class="nm">停止行动</div>';
-        stop.addEventListener('click', function () {
-          if (!game || !game.selectedShip) return;
-          game.pendingCommand = null;
-          game.stopShip(game.selectedShip);
-          UI.pushToast('已停止舰船当前指令', 'info');
-          UI.update(game, 0.016);
-        });
         el.navyCards.appendChild(stop);
       }
     }
@@ -2228,13 +2223,16 @@
 
     if (el.navyCards) el.navyCards.addEventListener('pointerdown', function (ev) {
       var node = ev.target && ev.target.closest ? ev.target.closest('.card') : null;
-      if (!node || !node.dataset.navyKey || !game) return;
-      var qd = SL.NAVAL_CARDS[node.dataset.navyKey];
+      if (!node || !game) return;
+      var isStop = node.dataset.navyAction === 'stop';
+      var qd = isStop
+        ? { key: 'naval_stop', name: '停止行动', icon: '停', color: '#c9b37d', desc: '停止战舰当前指令' }
+        : SL.NAVAL_CARDS[node.dataset.navyKey];
       if (!qd) return;
       ev.preventDefault();
       node.classList.add('dragging');
       cardDrag = {
-        card: qd, navy: true, node: node, x: ev.clientX, y: ev.clientY, moved: false,
+        card: qd, navy: true, stop: isStop, node: node, x: ev.clientX, y: ev.clientY, moved: false,
         ghost: makeGhost(qd.icon, qd.name, qd.color)
       };
       moveGhost(cardDrag.ghost, ev.clientX, ev.clientY);
@@ -2261,6 +2259,26 @@
         el.discard.classList.remove('hot');
         if (!game) return;
         if (d.navy) {
+          if (d.stop) {
+            if (!game.selectedShip) { UI.pushToast('没有选中的战舰', 'info'); return; }
+            game.pendingCommand = null;
+            game.stopShip(game.selectedShip);
+            UI.pushToast('已停止舰船当前指令', 'info');
+            UI.update(game, 0.016);
+            return;
+          }
+          if (!d.moved) {
+            if (d.card.key === 'naval_supply') {
+              var nship = game.shipOf ? game.shipOf('blue') : null;
+              var tx = nship ? nship.x : (SL.CONFIG.mapSize / 2);
+              var ty = nship ? nship.y : (SL.CONFIG.mapSize / 2);
+              var rq = game.quickNavalCard(d.card.key, tx, ty);
+              UI.pushToast(rq.msg, rq.ok ? 'order' : 'loss');
+              renderCards();
+              return;
+            }
+            return;
+          }
           var underN = document.elementFromPoint(ev.clientX, ev.clientY);
           if (!underN || underN.id !== 'world') return;
           var wn = worldAt(ev.clientX, ev.clientY);

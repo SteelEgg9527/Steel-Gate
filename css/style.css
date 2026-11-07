@@ -2896,3 +2896,18 @@ html, body {
 #control-groups .control-num { font-size: 9px !important; }
 #control-groups .control-type { font-size: 9px !important; }
 #control-groups .control-count { font-size: 9px !important; }
+
+/* 停止行动键与舰船卡统一 */
+#ship-system #navy-cards .navy-stop-card {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  background: linear-gradient(180deg, #1e231b 0%, #14180f 100%) !important;
+  border: 1px solid rgba(214,196,150,0.22) !important;
+  border-top: 3px solid var(--c) !important;
+  color: #ddd3b8 !important;
+}
+#ship-system #navy-cards .navy-stop-card .ic { font-size: 19px; padding-top: 12px; color: var(--c); }
+#ship-system #navy-cards .navy-stop-card .nm { font-size: 8px; }
