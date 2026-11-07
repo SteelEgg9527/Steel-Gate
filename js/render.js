@@ -238,6 +238,19 @@
     });
 
     var t1 = performance.now();
+    // 地图范围外保持黑色，不显示纸张底色
+    stage('map-mask', function () {
+      var left = proj.x(T.origin);
+      var top = proj.y(T.origin);
+      var right = proj.x(T.end);
+      var bottom = proj.y(T.end);
+      ctx.fillStyle = '#0b0e0c';
+      if (top > 0) ctx.fillRect(0, 0, W, Math.min(H, top));
+      if (bottom < H) ctx.fillRect(0, Math.max(0, bottom), W, H - Math.max(0, bottom));
+      if (left > 0) ctx.fillRect(0, 0, Math.min(W, left), H);
+      if (right < W) ctx.fillRect(Math.max(0, right), 0, W - Math.max(0, right), H);
+    });
+
     stage('labels', function () {
       T.drawLabels(ctx, proj, cam.zoom, function (x, y) { return game.isSeen(x, y); });
     });
