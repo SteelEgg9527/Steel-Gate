@@ -2490,3 +2490,30 @@ html, body {
   max-height: 220px !important;
   overflow-y: auto;
 }
+
+/* 选择界面：战术图预览 */
+.brief-preview {
+  margin: 5px 0 12px;
+  border: 1px solid rgba(196,178,134,0.28);
+  background: rgba(13,16,12,0.55);
+  overflow: hidden;
+}
+.brief-preview-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 9px;
+  color: #c9b981;
+  font: 600 10px var(--font-ui);
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(196,178,134,0.16);
+}
+.brief-preview-head b {
+  color: #a8a18a; font-weight: 500; font-size: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#brief-map-preview {
+  display: block; width: 100%; height: auto; aspect-ratio: 2 / 1;
+  background: #a59a6f;
+}
+@media (max-width: 720px) {
+  .brief-preview-head { font-size: 9px; }
+}

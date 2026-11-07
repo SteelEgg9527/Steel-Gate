@@ -478,7 +478,6 @@
         </div>
       </div>
       <div class="sheet-body">
-        <div class="brief" id="brief-copy"></div>
         <div class="map-pick mode-pick">
           <span class="mp-label">模式</span>
           <div id="mode-buttons"></div>
@@ -489,12 +488,17 @@
           <div id="difficulty-buttons"></div>
           <span id="difficulty-current" class="mp-current"></span>
         </div>
-        <p class="mode-desc" id="mode-desc"></p>
         <div class="map-pick">
           <span class="mp-label">战场</span>
           <div id="map-buttons"></div>
           <span id="map-current" class="mp-current"></span>
         </div>
+        <div class="brief-preview">
+          <div class="brief-preview-head"><span>战术图预览</span><b id="brief-preview-name">—</b></div>
+          <canvas id="brief-map-preview" width="520" height="260"></canvas>
+        </div>
+        <p class="mode-desc" id="mode-desc"></p>
+        <div class="brief" id="brief-copy"></div>
 
       </div>
       <div class="sheet-foot">

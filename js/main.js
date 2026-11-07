@@ -209,6 +209,7 @@
           '<li><span class="chip"></span>难度越高：敌方经验、火力与进攻欲望越强</li>';
       }
     }
+    if (UI.updateBriefPreview) UI.updateBriefPreview();
   }
 
   function renderModeButtons() {
