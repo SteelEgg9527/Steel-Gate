@@ -2751,3 +2751,20 @@ html, body {
 
 /* 部队清单不再显示标题和数量 */
 #roster-panel .panel-head { display: none !important; }
+
+/* 战术图：去掉面板底框、标题、比例尺和边框，直接浮空显示小地图 */
+#minimap-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
+}
+#minimap-panel::before, #minimap-panel::after { display: none !important; }
+#minimap-panel .panel-head { display: none !important; }
+#minimap-panel #scale-line, #minimap-panel #scale-label { display: none !important; }
+#minimap-panel #minimap {
+  border: 0 !important;
+  box-shadow: none !important;
+}
