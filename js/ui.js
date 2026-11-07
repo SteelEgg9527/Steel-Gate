@@ -904,25 +904,31 @@
 
   // 左侧部队清单
   function renderRoster(g) {
-    var list = g.units.filter(function (u) { return u.alive && u.side === 'blue'; });
+    var all = g.units.filter(function (u) { return u.alive && u.side === 'blue'; });
+    var grouped = {};
+    (g.controlGroups || []).forEach(function (grp) {
+      (grp.unitIds || []).forEach(function (id) { grouped[id] = true; });
+    });
+    var list = all.filter(function (u) { return !grouped[u.id]; });
     var rank = { infantry: 0, armored: 1, tank: 2, heavy_tank: 3, at_gun: 4, aa: 5, artillery: 6, heavy_arty: 7 };
     list.sort(function (a, b) {
       var diff = (rank[a.type] || 0) - (rank[b.type] || 0);
       return diff || a.name.localeCompare(b.name, 'zh-CN');
     });
-    var sig = list.map(function (u) { return u.id + ':' + (u.selected ? 1 : 0); }).join('|');
+    var sig = all.map(function (u) { return u.id + ':' + (u.selected ? 1 : 0); }).join('|') +
+      '|g:' + (g.controlGroups || []).map(function (grp) {
+        return grp.id + ':' + (grp.unitIds || []).join(',');
+      }).join(',');
     if (sig === rosterSig) return;
     rosterSig = sig;
-    if (el.rosterCount) el.rosterCount.textContent = list.length;
+    if (el.rosterCount) el.rosterCount.textContent = all.length;
     if (!el.rosterList) return;
     el.rosterList.innerHTML = '';
     if (!list.length) {
-      var empty = document.createElement('div');
-      empty.id = 'roster-empty';
-      empty.textContent = '没有存活单位';
-      el.rosterList.appendChild(empty);
+      el.rosterList.style.display = 'none';
       return;
     }
+    el.rosterList.style.display = '';
     var abbr = {
       infantry: '步', armored: '装', tank: '坦', heavy_tank: '重',
       at_gun: '反', aa: '防', artillery: '炮', heavy_arty: '炮',
@@ -961,10 +967,10 @@
       }
       var typeKey = first ? first.type : 'infantry';
       var shortType = {
-        infantry: '步兵', armored: '装甲', tank: '中坦', heavy_tank: '重坦',
-        at_gun: '反坦', aa: '防空', artillery: '火炮', heavy_arty: '重炮',
-        rocket_arty: '火箭', command: '指挥', engineer_vehicle: '工程',
-        boss_super: 'BOSS', boss_ghost: 'BOSS', target: '标靶',
+        infantry: '步', armored: '装', tank: '坦', heavy_tank: '重',
+        at_gun: '反', aa: '防', artillery: '炮', heavy_arty: '重炮',
+        rocket_arty: '火', command: '指', engineer_vehicle: '工',
+        boss_super: 'B', boss_ghost: 'B', target: '靶',
         armor_target: '装靶', heavy_target: '重靶'
       };
       var typeLabel = first

@@ -2672,3 +2672,58 @@ html, body {
 }
 
 #control-groups .control-type-img { width: 22px !important; height: 22px !important; max-width: 22px !important; }
+
+/* 部队清单：无底框、编组在上、零散单位在下、按钮并排 */
+#roster-panel {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  width: 218px !important;
+}
+#roster-panel::before, #roster-panel::after { display: none !important; }
+#roster-panel .panel-head {
+  padding: 0 2px 5px !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+#control-groups {
+  margin-top: 0 !important;
+  max-height: 68px !important;
+}
+#roster-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px !important;
+  max-height: 80px !important;
+  margin-top: 5px;
+  padding: 0;
+  background: transparent !important;
+  border: 0 !important;
+}
+#roster-panel .roster-row {
+  background: rgba(28,42,52,0.92) !important;
+  border: 1px solid rgba(143,188,228,0.35) !important;
+}
+.roster-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+  padding-top: 2px;
+  background: linear-gradient(180deg, rgba(18,24,20,0), rgba(18,24,20,0.96) 35%);
+}
+#control-add, #control-auto {
+  position: static !important;
+  flex: 1 1 0 !important;
+  width: auto !important;
+  height: 24px !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+}
+#control-add { font-size: 16px !important; }
+
+/* 部队清单不显示滚动条，内容完整浮空 */
+#roster-panel { overflow: hidden !important; }

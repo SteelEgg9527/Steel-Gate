@@ -2175,6 +2175,7 @@
       });
     }
     this.units.push(u);
+    if (side === 'blue') this.autoAssignUnitToGroup(u);
     if ((side === 'red' || side === 'green') && typeKey === 'infantry') this.rollAIEquipment(u);
     return u;
   };
@@ -2264,6 +2265,24 @@
     this.selectedBomber = null;
     for (var i = 0; i < this.units.length; i++) this.units[i].selected = false;
     for (var k = 0; k < this.selected.length; k++) this.selected[k].selected = true;
+  };
+
+  Game.prototype.autoAssignUnitToGroup = function (u) {
+    if (!u || u.side !== 'blue' || !u.alive) return;
+    if (!this.controlGroups) this.controlGroups = [];
+    for (var i = 0; i < this.controlGroups.length; i++) {
+      var list = this.controlGroupUnits(this.controlGroups[i]);
+      if (!list.length) continue;
+      var same = true;
+      for (var k = 0; k < list.length; k++) {
+        if (list[k].type !== u.type) { same = false; break; }
+      }
+      if (!same) continue;
+      this.controlGroups[i].unitIds.push(u.id);
+      return;
+    }
+    if (!this.nextControlGroupId) this.nextControlGroupId = 1;
+    this.controlGroups.push({ id: this.nextControlGroupId++, unitIds: [u.id] });
   };
 
   Game.prototype.autoFormControlGroups = function () {
