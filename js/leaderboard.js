@@ -184,7 +184,8 @@
     lbOverlay.innerHTML = '<div class="sheet lb-sheet">' +
       '<div class="sheet-head"><div><div class="sheet-kicker">PUBLIC RANKING</div>' +
       '<h2>公共排行榜</h2><p class="sheet-sub">按模式与难度分开统计，每人只显示最好的一局</p></div>' +
-      '<button id="lb-close" class="icon-btn" type="button">×</button></div>' +
+      '<div class="lb-head-actions"><button id="lb-recent" class="lb-recent-btn" type="button">近期战绩</button>' +
+      '<button id="lb-close" class="icon-btn" type="button">×</button></div></div>' +
       '<div class="sheet-body">' +
       '<div class="lb-tabs" id="lb-mode-tabs"></div>' +
       '<div class="lb-tabs lb-diff-tabs" id="lb-diff-tabs"></div>' +
@@ -199,6 +200,10 @@
     lbDiffTabs = lbOverlay.querySelector('#lb-diff-tabs');
     lbMy = lbOverlay.querySelector('#lb-my');
     lbOverlay.querySelector('#lb-close').addEventListener('click', function () { lbOverlay.classList.add('hidden'); });
+    lbOverlay.querySelector('#lb-recent').addEventListener('click', function () {
+      lbOverlay.classList.add('hidden');
+      if (SL.UI && SL.UI.openRecentResults) SL.UI.openRecentResults();
+    });
     lbOverlay.addEventListener('click', function (e) { if (e.target === lbOverlay) lbOverlay.classList.add('hidden'); });
     renderTabs();
   }
@@ -323,15 +328,6 @@
       open.textContent = '公共排行榜';
       open.addEventListener('click', function () { openLeaderboard(); });
       foot.insertBefore(open, $('btn-again'));
-    }
-    var footer = document.querySelector('.main-menu-footer');
-    if (footer && !$('lb-open-menu')) {
-      var a = document.createElement('a');
-      a.id = 'lb-open-menu';
-      a.href = '#';
-      a.textContent = '公共排行榜';
-      a.addEventListener('click', function (e) { e.preventDefault(); openLeaderboard(); });
-      footer.insertBefore(a, footer.firstChild);
     }
   }
 

@@ -348,7 +348,10 @@
       if (ev.target === el.recentResults) UI.closeRecentResults();
     });
     var mmLeaderboard = document.getElementById('mm-leaderboard');
-    if (mmLeaderboard) mmLeaderboard.addEventListener('click', function () { UI.openRecentResults(); });
+    if (mmLeaderboard) mmLeaderboard.addEventListener('click', function () {
+  if (SL.Leaderboard && SL.Leaderboard.open) SL.Leaderboard.open();
+  else UI.openRecentResults();
+});
 
     loadSettings();
     syncSettingsUI();

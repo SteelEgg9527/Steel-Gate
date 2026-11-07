@@ -2392,3 +2392,14 @@ html, body {
   .lb-row { grid-template-columns: 42px minmax(82px,1.4fr) repeat(4, minmax(46px,.8fr)); gap: 5px; font-size: 10px; }
   .lb-head-row { font-size: 9px; }
 }
+
+.lb-head-actions { display: flex; align-items: flex-start; gap: 8px; }
+.lb-recent-btn {
+  border: 1px solid rgba(196,178,134,0.32);
+  background: rgba(30,32,25,0.8);
+  color: #bdb69d;
+  padding: 5px 9px;
+  font: 600 11px var(--font-ui);
+  cursor: pointer;
+}
+.lb-recent-btn:hover { border-color: rgba(232,196,112,0.65); color: #f0e2bd; }
