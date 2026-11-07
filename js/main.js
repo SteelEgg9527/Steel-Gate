@@ -101,8 +101,8 @@
     var diff = diffTable[difficulty] || diffTable.normal;
     if (el && m) {
       el.textContent = m.test ? '训练场 · 无敌人'
-        : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战) · ' + diff.name + ' · ' + m.name
-        : actualMode === 'lastStand' ? '背水一战 · ' + diff.name + ' · ' + m.name
+        : actualMode === 'navalLastStand' ? '背水一战 · ' + diff.name + ' · ' + m.name
+        : actualMode === 'lastStand' ? '防御模式 · ' + diff.name + ' · ' + m.name
           : actualMode === 'naval' ? '舰炮轰鸣 · ' + diff.name + ' · ' + m.name
             : '三军混战 · ' + diff.name + ' · ' + m.name;
     }
@@ -111,9 +111,9 @@
     var title = document.getElementById('brief-title');
     if (title && m) title.textContent = '作战简报 · ' + m.name;
     var stamp = document.getElementById('brief-stamp');
-    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战)' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (stamp) stamp.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '背水一战' : actualMode === 'lastStand' ? '防御模式' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var missionTag = document.getElementById('mission-tag');
-    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '舰炮轰鸣(背水一战)' : actualMode === 'lastStand' ? '背水一战' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
+    if (missionTag) missionTag.textContent = m.test ? '训练' : actualMode === 'navalLastStand' ? '背水一战' : actualMode === 'lastStand' ? '防御模式' : actualMode === 'naval' ? '舰炮轰鸣' : '车轮战';
     var sub = document.getElementById('brief-sub');
     if (sub) {
       sub.textContent = '1944 年 6 月 10 日 · ' +
@@ -124,9 +124,9 @@
       copy.textContent = m.test
         ? '训练场用于测试单位、武器、工事与占领机制；可选择任意测试卡，不受资源与波次限制。'
         : actualMode === 'navalLastStand'
-          ? '舰炮轰鸣(背水一战)。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站提供海面与空中搜索。' 
+          ? '背水一战。海陆防守战：红队波次数量提高，岸上部队、BOSS、敌方战舰与重型轰炸机同时进攻。雷达站提供海面与空中搜索。' 
           : actualMode === 'lastStand'
-          ? '背水一战。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
+          ? '防御模式。黄圈开局固定；蓝队守住黄圈直至目标时间。红队分波进攻，黄圈被红队占领即失败。每5波加入BOSS：第30波双BOSS，第50波起三BOSS。红队空袭第1波2架，每5波+1，第50波达到10架，以三角形编队随机轰炸黄圈。'
           : actualMode === 'naval'
             ? '1944 年 6 月，海岸线。蓝、红、绿三支合成部队在 4 km 海陆战场争夺黄圈；占领通讯塔与雷达站，购买战舰支援与舰船卡片，用舰炮火力打开局面。'
             : '1944 年 6 月，西欧战场。蓝、红、绿三支合成部队在 2 km × 2 km 战场上争夺黄圈。' +
@@ -198,7 +198,7 @@
         b.className = 'map-btn' + (gameMode === id ? ' on' : '');
         b.textContent = SL.MODES[id].name;
         b.disabled = isTest && isStandMode(id);
-        if (b.disabled) b.title = '训练场不支持背水一战';
+        if (b.disabled) b.title = '训练场不支持防御模式';
         b.addEventListener('click', function () { selectMode(id); });
         modeBox.appendChild(b);
       });

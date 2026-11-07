@@ -7,9 +7,9 @@
   var API = window.SL_LEADERBOARD_API || '';
   var MODES = [
     { id: 'melee', name: '三军混战' },
-    { id: 'lastStand', name: '背水一战' },
+    { id: 'lastStand', name: '防御模式' },
     { id: 'naval', name: '舰炮轰鸣' },
-    { id: 'navalLastStand', name: '舰炮轰鸣(背水一战)' }
+    { id: 'navalLastStand', name: '背水一战' }
   ];
   var DIFFS = [
     { id: 'easy', name: '简单' },

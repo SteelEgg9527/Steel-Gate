@@ -11,7 +11,7 @@
    4. SL.FORT / SL.SUPPORT         工事、炮火支援
    5. SL.PLANE / SL.AIRSTRIKE      飞机与空袭
    6. SL.BOSS                      三位 BOSS 与击杀奖励
-   7. SL.LAST_STAND                背水一战波次、难度、敌军权重
+   7. SL.LAST_STAND                防御模式波次、难度、敌军权重
    8. SL.MELEE_DIFFICULTIES        混战难度
    9. SL.NEUTRAL / SL.COMPANY      中立单位、基础连队
    10. SL.CARD_DEFS / SL.CARD_POOL 卡牌定义与抽卡权重
@@ -388,7 +388,7 @@
       desc: '蓝、红、绿三军混战；普通/困难以100,000黄圈经验获胜，无限无胜利条件。BOSS与AI单位上限随难度变化。'
     },
     lastStand: {
-      id: 'lastStand', name: '背水一战',
+      id: 'lastStand', name: '防御模式',
       desc: '蓝队固守随机黄圈，红队分波进攻；守住目标时间即胜，黄圈被红队占领即败。'
     },
     naval: {
@@ -396,8 +396,8 @@
       desc: '5km 海陆战场：占领通讯塔与雷达站，召唤战列舰进行岸轰支援；黄圈经验决定胜负。'
     },
     navalLastStand: {
-      id: 'navalLastStand', name: '舰炮轰鸣(背水一战)',
-      desc: '舰炮轰鸣(背水一战)：舰炮轰鸣地图上的背水一战。红队波次与进攻密度提高，包含BOSS、敌方战舰和重型轰炸机；雷达站提供海面与空中搜索。'
+      id: 'navalLastStand', name: '背水一战',
+      desc: '背水一战：舰炮轰鸣地图上的防守战。红队波次与进攻密度提高，包含BOSS、敌方战舰和重型轰炸机；雷达站提供海面与空中搜索。'
     }
   };
 
@@ -533,7 +533,7 @@
     air: { tier: 5, baseMin: 2, baseMax: 2, maxPerWave: 10, delayMin: 8, delayMax: 50 }
   };
 
-  /* 舰炮轰鸣(背水一战) */
+  /* 背水一战（舰炮轰鸣防守） */
   SL.NAVAL_LAST_STAND = {
     enemyMultiplier: 1.5,
     maxWaveUnits: 80,

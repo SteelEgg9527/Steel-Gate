@@ -408,7 +408,7 @@
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
       var aside = SL.SIDE_ORDER[ai];
       if (aside === 'blue') continue;
-      // 舰炮轰鸣(背水一战)：第 10 波前禁止 AI 购买/补充舰艇
+      // 背水一战：第 10 波前禁止 AI 购买/补充舰艇
       if (this.mode === 'navalLastStand' && (!this.defense || this.defense.wave < 10)) continue;
       if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
       if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
@@ -854,7 +854,7 @@
     this.log('三军混战：蓝 / 红 / 绿 无限重生', 'info');
   };
 
-  /* ---------------- 背水一战 ---------------- */
+  /* ---------------- 防御 / 背水一战 ---------------- */
 
   Game.prototype.findTrialEdgeSpawn = function (ax, ay, minDist, avoidX, avoidY, avoidDist) {
     var ms = SL.CONFIG.mapSize, margin = 240;
@@ -973,7 +973,7 @@
     var d = SL.LAST_STAND;
     var diff = d.difficulties[this.difficulty];
     if (this.mode === 'navalLastStand' && this.pickTrialYellowNearRadar()) {
-      this.log('舰炮轰鸣(背水一战)：黄圈固定在雷达站区域（本局随机位置）', 'order');
+      this.log('背水一战：黄圈固定在雷达站区域（本局随机位置）', 'order');
     }
     this.yellow.active = true;
     this.yellow.nextSpawn = Infinity;
@@ -994,16 +994,16 @@
     this.teams.blue.respawnAt = 0;
     this.teams.red.airTimer = 18 + Math.random() * 12;
     if (this.mode === 'navalLastStand') {
-      // 舰炮轰鸣(背水一战)：前 9 波不出动舰艇，第 10 波才投入敌方战舰
+      // 背水一战：前 9 波不出动舰艇，第 10 波才投入敌方战舰
       this.aiShipRespawn.red = false;
       this.aiShipUsed.red = true;
       this.aiShipTimer.red = 20;
-      this.log('舰炮轰鸣(背水一战)：敌方战舰将在第 10 波出动', 'info');
+      this.log('背水一战：敌方战舰将在第 10 波出动', 'info');
     }
     // 只有蓝红两方；没有中立单位和绿色单位
     this.drawCard();
     this.drawCard();
-    this.log('背水一战：守住黄圈 ' + (diff.holdTime === Infinity ? '直至最后' : U.clock(diff.holdTime)), 'order');
+    this.log((this.mode === 'navalLastStand' ? '背水一战' : '防御模式') + '：守住黄圈 ' + (diff.holdTime === Infinity ? '直至最后' : U.clock(diff.holdTime)), 'order');
   };
 
   Game.prototype.defenseWeights = function (wave) {
@@ -2547,7 +2547,7 @@
   Game.prototype.updateYellow = function (dt) {
     var y = this.yellow;
     if (!y) return;
-    // 背水一战：黄圈固定，不换点、不按经验决胜
+    // 防御模式 / 背水一战：黄圈固定，不换点、不按经验决胜
     if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) {
       y.active = true;
     } else {
@@ -6430,7 +6430,7 @@
   };
 
   Game.prototype.updateAIReinforcements = function () {
-    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return; // 背水一战仍按波次强化
+    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return; // 防御模式 / 背水一战仍按波次强化
     if (this.time < (this.aiReinforceAtGlobal || 0)) return;
     this.aiReinforceAtGlobal = this.time + 10;
     var sides = ['red', 'green'];
