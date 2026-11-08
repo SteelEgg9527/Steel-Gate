@@ -6241,6 +6241,26 @@
       p.t += dt;
       if (p.hitFlash > 0) p.hitFlash -= dt;
       if (p.kind === 'b17') continue;
+      // 敌方飞机异常滞留保护：正常飞行每帧都会有位移
+      if (p.side !== 'blue') {
+        if (p._lastPX != null) {
+          var moved = Math.hypot(p.x - p._lastPX, p.y - p._lastPY);
+          p._stuckT = moved < 0.35 ? (p._stuckT || 0) + dt : 0;
+        }
+        p._lastPX = p.x; p._lastPY = p.y;
+        if ((p._stuckT || 0) > 4) {
+          p._stuckT = 0;
+          if (p.kind === 'airstrike') {
+            p.dropped = true;
+            p.droppedAt = this.time;
+            if (p.ex == null) p.ex = p.x < ms / 2 ? ms + 220 : -220;
+            if (p.ey == null) p.ey = p.y;
+          } else if (p.kind === 'hellBomber' && p.heavyOnly) {
+            p.dropped = true;
+            p.hellState = 'leave';
+          }
+        }
+      }
       if (p.kind === 'fighter') {
         if (!this.updateFighter(p, dt)) this.planes.splice(i, 1);
         continue;
