@@ -2280,6 +2280,7 @@
       fireMode: (typeKey === 'rocket_arty' && side === 'blue') ? 'hold' : 'free',
       engaging: false,
       sprinting: false,
+    sprintRecovering: false,
       stamina: 100,
       ammo: def.weapon.ammo,
       ammoMax: def.weapon.ammo,
@@ -2615,8 +2616,8 @@
       speedCap = Infinity;
       for (var si = 0; si < count; si++) {
         var su = units[si];
-        var canS = sprint && su.def.canSprint && su.stamina > CB.sprintMin;
-        var sp = su.def.speed * (canS ? CB.sprintMul : 1);
+        var wantS = !!(sprint && su.def.canSprint);
+        var sp = su.def.speed * (wantS ? CB.sprintMul : 1);
         if (sp < speedCap) speedCap = sp;
       }
     }
@@ -2628,15 +2629,16 @@
       var oy = (row - (rows - 1) / 2) * gap;
       var tx = U.clamp(x + ox, 14, ms - 14);
       var ty = U.clamp(y + oy, 14, ms - 14);
-      var canRun = sprint && units[i].def.canSprint && units[i].stamina > CB.sprintMin;
-      if (canRun) anySprint = true;
-      units[i].order = { kind: 'move', x: tx, y: ty, sprint: !!canRun, speedCap: speedCap };
+      var wantRun = !!(sprint && units[i].def.canSprint);
+      if (wantRun) anySprint = true;
+      units[i].order = { kind: 'move', x: tx, y: ty, sprint: !!wantRun, speedCap: speedCap };
+      units[i].sprintRecovering = wantRun && units[i].stamina < CB.sprintMin;
       units[i].target = null;
       units[i].path = null;
       units[i].noPath = false;
       units[i].rocketQueue = [];
     }
-    if (sprint && !anySprint) this.log('体力不足，无法急行军', 'order');
+    if (sprint && !anySprint) this.log('没有可急行军的单位', 'order');
     else this.log((anySprint ? '急行军' : '移动') + '指令 · ' + units.length + ' 个单位', 'order');
   };
 
@@ -3790,11 +3792,21 @@
 
     // 体力与急行军
     var sprinting = false;
-    if (u.order && u.order.sprint && def.canSprint && u.stamina > 0.5) {
-      sprinting = true;
+    var wantSprint = !!(u.order && u.order.sprint && def.canSprint);
+    if (!wantSprint) {
+      u.sprintRecovering = false;
+    } else {
+      // 体力耗尽后等待恢复到80%，再自动继续急行军
       if (u.stamina <= 0.5) {
-        u.order.sprint = false;
+        u.sprintRecovering = true;
         sprinting = false;
+      } else if (u.sprintRecovering) {
+        if (u.stamina >= (CB.sprintResumeAt || 80)) {
+          u.sprintRecovering = false;
+          sprinting = true;
+        }
+      } else {
+        sprinting = true;
       }
     }
     if (!sprinting) u.stamina = Math.min(100, u.stamina + CB.staminaRegen * dt);
@@ -4007,8 +4019,8 @@
     // 急行军按实际移动距离扣体力：满体力正好约 300m
     if (u.sprinting) {
       u.stamina = Math.max(0, u.stamina - step * (100 / CB.sprintMeters));
-      if (u.stamina <= 0.5 && u.order) {
-        u.order.sprint = false;
+      if (u.stamina <= 0.5) {
+        u.sprintRecovering = true;
         u.sprinting = false;
       }
     }

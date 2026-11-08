@@ -44,6 +44,7 @@
     sprintDrain: 4.45,      // 旧版按秒消耗，保留未用
     staminaRegen: 12,       // 体力恢复 / 秒
     sprintMin: 8,           // 低于该体力无法起跑
+    sprintResumeAt: 80,    // 体力耗尽后恢复到该值再次自动急行军
     coverDRCap: 0.65,       // 减伤上限
     coverEvadeCap: 0.55,    // 闪避上限
   splashFalloff: 0.80,    // 普通溅射伤害距离衰减
