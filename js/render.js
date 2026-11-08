@@ -1041,6 +1041,28 @@
       }
     }
 
+    // 拖拽火炮：行军/收放列状态显示装饰性拖车，架设完成后消失
+    if ((u.type === 'at_gun' || u.type === 'artillery' || u.type === 'heavy_arty') &&
+      u.deployState && u.deployState !== 'deployed') {
+      var towx = sx - Math.cos(u.facing || 0) * w * 0.72;
+      var towy = sy - Math.sin(u.facing || 0) * w * 0.72;
+      ctx.save();
+      ctx.translate(towx, towy);
+      ctx.rotate(u.facing || 0);
+      ctx.fillStyle = 'rgba(30,38,30,0.92)';
+      ctx.strokeStyle = 'rgba(174,188,146,0.9)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(-w * 0.24, -h * 0.14, w * 0.48, h * 0.28);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(14,18,14,0.95)';
+      ctx.beginPath();
+      ctx.arc(-w * 0.16, h * 0.18, h * 0.08, 0, Math.PI * 2);
+      ctx.arc(w * 0.16, h * 0.18, h * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // 幽灵兵团：骷髅头直接画在单位棋子上
     if (u.bossKind === 'ghost') {
       var skullSize = U.clamp(Math.min(w, h) * 0.62, 9, 18);

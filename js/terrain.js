@@ -54,7 +54,12 @@
   T.setMap = function (id) {
     var m = SL.MAP_BY_ID[id] || SL.MAPS[0];
     T.map = m;
-    T.hills = m.hills;
+    T.customHeight = m.heightGrid || null;
+    T.customHeightRes = m.heightRes || 128;
+    T.waterAreas = m.waterAreas || [];
+    T.bridges = m.bridges || [];
+    T.aiLanes = m.aiLanes || [];
+    T.hills = m.hills || [];
     T.streams = m.streams.map(function (s) { return spline(s, 10); });
     T.roads = m.roads.map(function (s) { return spline(s, 10); });
     T.tracks = m.tracks.map(function (s) { return spline(s, 10); });
@@ -78,6 +83,18 @@
         fortified: false, hp: 0, maxHp: SL.FORT.maxHp, fortifyProgress: 0, structure: null
       };
     });
+    // 规划器导入的站点也作为可占领区加入
+    for (var si2 = 0; si2 < (m.sites || []).length; si2++) {
+      var sm = m.sites[si2];
+      T.zones.push({
+        id: sm.id || ('site_' + si2), name: sm.name || '站点', kind: 'fort',
+        site: true, siteKind: sm.kind, siteHp: sm.hp || 2600,
+        x: sm.x, y: sm.y, r: sm.r || 72,
+        owner: null, cap: 0, capSide: null,
+        fortified: false, hp: sm.hp || 2600, maxHp: sm.hp || 2600,
+        fortifyProgress: 0, structure: null, structures: [], rubbles: [], rubble: null, rubbleProgress: 0
+      });
+    }
     // 每片林地自动生成一个可占领的「林地」区，保证森林和占领区一一对应
     for (var fi = 0; fi < m.forests.length; fi++) {
       var f = m.forests[fi];
@@ -812,7 +829,19 @@
   T.build = function (seed) {
     for (var j = 0; j < GRID; j++) {
       for (var i = 0; i < GRID; i++) {
-        heights[j * GRID + i] = rawHeight(ORIGIN + i * STEP, ORIGIN + j * STEP);
+        if (T.customHeight && T.customHeight.length) {
+          var cr = Math.max(2, T.customHeightRes || 128);
+          var fx = i / GRID * (cr - 1), fy = j / GRID * (cr - 1);
+          var ix = Math.floor(fx), iy = Math.floor(fy);
+          var tx = fx - ix, ty = fy - iy;
+          var i00 = T.customHeight[iy * cr + ix] || 0;
+          var i10 = T.customHeight[iy * cr + Math.min(cr - 1, ix + 1)] || 0;
+          var i01 = T.customHeight[Math.min(cr - 1, iy + 1) * cr + ix] || 0;
+          var i11 = T.customHeight[Math.min(cr - 1, iy + 1) * cr + Math.min(cr - 1, ix + 1)] || 0;
+          heights[j * GRID + i] = U.lerp(U.lerp(i00, i10, tx), U.lerp(i01, i11, tx), ty) * 100;
+        } else {
+          heights[j * GRID + i] = rawHeight(ORIGIN + i * STEP, ORIGIN + j * STEP);
+        }
       }
     }
     var tmp = new Float32Array(heights.length);
