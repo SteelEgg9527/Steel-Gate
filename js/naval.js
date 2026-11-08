@@ -2044,17 +2044,35 @@ return null;
       ctx.strokeStyle = z.destroyed ? 'rgba(160,120,100,0.8)' : (z.owner === 'blue' ? '#a9d5f2' : z.owner === 'red' ? '#efaa98' : '#e8d59f');
       ctx.lineWidth = 1.4;
       var radarSymbol = z.kind === 'radar';
-      ctx.beginPath();
       if (radarSymbol) {
-        ctx.moveTo(0, 8); ctx.lineTo(0, -2);
-        ctx.arc(0, -2, 7, Math.PI, 0, false);
-        ctx.moveTo(-7, -2); ctx.lineTo(7, -2);
-      } else if (z.kind === 'coastbase') {
-        ctx.rect(-7, -5, 14, 10);
-        ctx.moveTo(0, 0); ctx.lineTo(13, 0);
-        ctx.moveTo(0, 0); ctx.lineTo(0, 11);
-      } else { ctx.moveTo(0, -8); ctx.lineTo(7, 6); ctx.lineTo(-7, 6); ctx.closePath(); }
-      if (radarSymbol) ctx.stroke(); else { ctx.fill(); ctx.stroke(); }
+        // 锅盖/抛物面天线：倾斜的 U 形盘 + 馈源 + 支架
+        ctx.save();
+        ctx.translate(0, -2);
+        ctx.rotate(-0.48);
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI, false);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 0); ctx.lineTo(0, -6);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, -6, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.beginPath();
+        ctx.moveTo(0, 2); ctx.lineTo(0, 9);
+        ctx.moveTo(0, 9); ctx.lineTo(-3, 12);
+        ctx.moveTo(0, 9); ctx.lineTo(3, 12);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        if (z.kind === 'coastbase') {
+          ctx.rect(-7, -5, 14, 10);
+          ctx.moveTo(0, 0); ctx.lineTo(13, 0);
+          ctx.moveTo(0, 0); ctx.lineTo(0, 11);
+        } else { ctx.moveTo(0, -8); ctx.lineTo(7, 6); ctx.lineTo(-7, 6); ctx.closePath(); }
+        ctx.fill(); ctx.stroke();
+      }
       ctx.font = '700 9px ' + SL.FONT_UI;
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(14,18,14,0.85)';

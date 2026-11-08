@@ -2302,11 +2302,22 @@
       c.save();
       c.translate(rdx, rdy);
       c.strokeStyle = rdc;
-      c.lineWidth = 1.3;
+      c.lineWidth = 1.2;
+      c.save();
+      c.rotate(-0.48);
       c.beginPath();
-      c.moveTo(0, 5); c.lineTo(0, -2);
-      c.arc(0, -2, 4.5, Math.PI, 0, false);
-      c.moveTo(-4.5, -2); c.lineTo(4.5, -2);
+      c.arc(0, 0, 4.2, 0, Math.PI, false);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(0, 0); c.lineTo(0, -3.2);
+      c.stroke();
+      c.beginPath();
+      c.arc(0, -3.2, 0.8, 0, Math.PI * 2);
+      c.fillStyle = rdc;
+      c.fill();
+      c.restore();
+      c.beginPath();
+      c.moveTo(0, 2); c.lineTo(0, 5.5);
       c.stroke();
       c.restore();
     }
