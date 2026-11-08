@@ -110,6 +110,10 @@
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
     this.navalShipLastSeen = { red: null, green: null };
     this.radarScanWas = { blue: false, red: false, green: false };
+    this.radarScanStart = { blue: 0, red: 0, green: 0 };
+    this.radarSweepAngle = { blue: 0, red: 0, green: 0 };
+    this.radarLitUntil = { blue: {}, red: {}, green: {} };
+    this.lastKnown = {};
     this.aiShipUsed = { red: false, green: false };
     this.aiShipRespawn = { red: false, green: false };
     this.aiShipCost = { red: (SL.NAVAL && SL.NAVAL.shipCost) || 2500, green: (SL.NAVAL && SL.NAVAL.shipCost) || 2500 };
@@ -267,6 +271,7 @@
 
   Game.prototype.spawnShip = function (side, yHint, force) {
     if (!this.naval) return null;
+    if (!this.testMode && side !== 'blue' && this.navalTowerCount(side) < 1) return null;
     if (!force && this.shipOf(side)) return null;
     var sumX = 0, sumY = 0, n = 0;
     for (var i = 0; i < this.units.length; i++) {
@@ -440,22 +445,55 @@
 
   Game.prototype.updateNaval = function (dt) {
     if (!this.naval) return;
-    // 雷达每 30 秒扫描海面，暴露海面目标 5 秒
+    // 雷达扫描线：每轮旋转 2 周，随后冷却 30 秒
     var scanSides = ['blue', 'red', 'green'];
     for (var rs = 0; rs < scanSides.length; rs++) {
       var rside = scanSides[rs];
-      if (!this.navalHasRadar(rside)) { this.radarScanNext[rside] = 30; this.radarScanUntil[rside] = 0; this.radarScanWas[rside] = false; continue; }
-      if (!this.radarScanWas[rside]) {
-        this.radarScanWas[rside] = true;
-        this.radarScanNext[rside] = 0.5;
+      if (!this.navalHasRadar(rside)) {
+        this.radarScanNext[rside] = 30;
+        this.radarScanUntil[rside] = 0;
+        this.radarScanWas[rside] = false;
+        this.radarSweepAngle[rside] = 0;
+        continue;
       }
-      this.radarScanNext[rside] -= dt;
+      if (this.radarScanUntil[rside] > this.time) {
+        var dur = SL.NAVAL.radarScanDuration || 8;
+        var prog = U.clamp((this.time - (this.radarScanStart[rside] || this.time)) / dur, 0, 1);
+        var turns = SL.NAVAL.radarSweepTurns || 2;
+        this.radarSweepAngle[rside] = prog * Math.PI * 2 * turns;
+        var rr = SL.NAVAL.radarRange || 2500;
+        var arc = (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180;
+        var lit = this.radarLitUntil[rside] || (this.radarLitUntil[rside] = {});
+        var sweep = this.radarSweepAngle[rside];
+        var all = [];
+        for (var ui = 0; ui < this.units.length; ui++) if (this.units[ui].alive && this.units[ui].side !== rside) all.push(this.units[ui]);
+        for (var si = 0; si < this.battleships.length; si++) if (this.battleships[si].alive && this.battleships[si].side !== rside) all.push(this.battleships[si]);
+        for (var pi = 0; pi < this.planes.length; pi++) if (this.planes[pi].hp > 0 && this.planes[pi].side !== rside) all.push(this.planes[pi]);
+        for (var oi = 0; oi < all.length; oi++) {
+          var o = all[oi];
+          if (U.dist(o.x, o.y, this.radar.x, this.radar.y) > rr) continue;
+          var oa = Math.atan2(o.y - this.radar.y, o.x - this.radar.x);
+          var rel = Math.atan2(Math.sin(oa - sweep), Math.cos(oa - sweep));
+          if (rel <= 0 && rel >= -arc) lit[o.id] = this.time + (SL.NAVAL.radarLitTime || 3);
+        }
+        if (prog >= 1) {
+          this.radarScanUntil[rside] = 0;
+          this.radarScanNext[rside] = this.time + (SL.NAVAL.radarCooldown || 30);
+          this.radarScanWas[rside] = false;
+        }
+        continue;
+      }
       if (this.radarScanNext[rside] <= 0) {
-        this.radarScanNext[rside] = SL.NAVAL.radarScanInterval || 30;
-        this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 5);
-        this.log(SL.SIDES[rside].name + ' 雷达搜索：发现海面与空中目标', rside === 'blue' ? 'order' : 'loss');
+        this.radarScanNext[rside] = Infinity;
+        this.radarScanStart[rside] = this.time;
+        this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 8);
+        this.radarSweepAngle[rside] = 0;
+        this.radarScanWas[rside] = true;
+        this.radarLitUntil[rside] = {};
+        this.log(SL.SIDES[rside].name + ' 雷达扫描启动', rside === 'blue' ? 'order' : 'loss');
       }
     }
+
     // 记录玩家战舰最后被 AI 发现的位置，供岸基火力盲射
     var seenShip = this.shipOf('blue');
     if (seenShip) {
@@ -467,6 +505,30 @@
           this.navalShipLastSeen[asi] = { x: seenShip.x, y: seenShip.y, t: this.time };
         }
       }
+    }
+    // 蓝色战术图记录敌军最后出现位置
+    var knownAll = [];
+    for (var ku = 0; ku < this.units.length; ku++) knownAll.push(this.units[ku]);
+    for (var ks = 0; ks < this.battleships.length; ks++) knownAll.push(this.battleships[ks]);
+    for (var kp = 0; kp < this.planes.length; kp++) knownAll.push(this.planes[kp]);
+    for (var ki = 0; ki < knownAll.length; ki++) {
+      var ko = knownAll[ki];
+      if (!ko || ko.side === 'blue') continue;
+      var alive = ko.alive !== false && (ko.hp == null || ko.hp > 0);
+      if (!alive) continue;
+      var litFor = this.radarLitUntil && this.radarLitUntil.blue && this.radarLitUntil.blue[ko.id] > this.time;
+      var visible = false;
+      if (ko.kind === 'b17' || ko.isShip || ko.def) {
+        visible = this.unitVisibleTo('blue', ko);
+      }
+      if (!visible && litFor) visible = true;
+      if (visible) {
+        this.lastKnown[ko.id] = { x: ko.x, y: ko.y, side: ko.side, name: ko.name, obj: ko };
+      }
+    }
+    for (var lk in this.lastKnown) {
+      var lv = this.lastKnown[lk];
+      if (!lv || !lv.obj || lv.obj.alive === false || (lv.obj.hp != null && lv.obj.hp <= 0)) delete this.lastKnown[lk];
     }
     // AI 海军：拥有通讯塔并支付足够分数即可召唤战舰
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {

@@ -2261,11 +2261,45 @@
       c.stroke();
       c.setLineDash([]);
     }
+    var litMap = (game.radarLitUntil && game.radarLitUntil.blue) || {};
+    var drawn = {};
+    function litAt(id) { return litMap[id] != null && litMap[id] > game.time; }
+    // 雷达扫描线只在战术小地图上显示
+    var radar = game.radar;
+    if (radar && !radar.destroyed && radar.owner === 'blue' && game.radarScanActive('blue')) {
+      var rcx = radar.x * s, rcy = radar.y * s;
+      var rang = game.radarSweepAngle.blue || 0;
+      var rlen = (SL.NAVAL.radarRange || 2500) * s;
+      var rarc = (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180;
+      c.save();
+      c.translate(rcx, rcy);
+      c.rotate(rang);
+      c.fillStyle = 'rgba(111,220,224,0.08)';
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.arc(0, 0, rlen, -rarc, 0);
+      c.closePath();
+      c.fill();
+      c.strokeStyle = 'rgba(143,236,230,0.85)';
+      c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(0, 0); c.lineTo(rlen, 0); c.stroke();
+      // 拖尾残影
+      for (var tk = 1; tk <= 5; tk++) {
+        c.strokeStyle = 'rgba(111,220,224,' + (0.28 / tk) + ')';
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(rlen, 0);
+        c.stroke();
+        c.rotate(-rarc / 5);
+      }
+      c.restore();
+    }
     // 单位
     for (var i = 0; i < game.units.length; i++) {
       var u = game.units[i];
       if (!u.alive) continue;
-      if (u.side !== 'blue' && !game.unitVisibleTo('blue', u)) continue;
+      if (u.side !== 'blue' && !game.unitVisibleTo('blue', u) && !litAt(u.id)) continue;
+      drawn[u.id] = true;
       var sc = SL.SIDES[u.side] || SL.SIDES.blue;
       c.fillStyle = sc.light;
       c.beginPath();
@@ -2277,7 +2311,8 @@
       for (var bi = 0; bi < game.battleships.length; bi++) {
         var bs = game.battleships[bi];
         if (!bs || !bs.alive) continue;
-        if (bs.side !== 'blue' && !game.unitVisibleTo('blue', bs)) continue;
+        if (bs.side !== 'blue' && !game.unitVisibleTo('blue', bs) && !litAt(bs.id)) continue;
+        drawn[bs.id] = true;
         var bsc = SL.SIDES[bs.side] || SL.SIDES.blue;
         c.fillStyle = bsc.light;
         c.strokeStyle = 'rgba(10,18,20,0.85)';
@@ -2302,12 +2337,12 @@
         c.fillRect(ss.x * s - 2.2, ss.y * s - 2.2, 4.4, 4.4);
       }
     }
-    // 飞机：己方轰炸机、战斗机、侦察机始终显示；敌机在雷达扫描期间显示
-    var radarAir = game.radarScanActive && game.radarScanActive('blue');
+    // 飞机：己方始终显示；敌机仅在雷达点亮时显示
     for (var pi = 0; pi < game.planes.length; pi++) {
       var p = game.planes[pi];
       if (!p || p.hp <= 0) continue;
-      if (p.side !== 'blue' && !radarAir) continue;
+      if (p.side !== 'blue' && !litAt(p.id)) continue;
+      drawn[p.id] = true;
       var psc = SL.SIDES[p.side] || SL.SIDES.blue;
       c.fillStyle = p.side === 'blue' ? '#b9d8e8' : 'rgba(238,170,120,0.95)';
       c.beginPath();
@@ -2322,11 +2357,26 @@
       for (var spi = 0; spi < game.seaplanes.length; spi++) {
         var sp = game.seaplanes[spi];
         if (!sp) continue;
-        if (sp.side !== 'blue' && !radarAir) continue;
+        if (sp.side !== 'blue' && !litAt(sp.id)) continue;
+        drawn[sp.id] = true;
         c.fillStyle = sp.side === 'blue' ? '#9fc9dc' : 'rgba(238,170,120,0.9)';
         c.beginPath();
         c.arc(sp.x * s, sp.y * s, 2.1, 0, Math.PI * 2);
         c.fill();
+      }
+    }
+    // 敌人最后出现位置：未点亮时保留淡色标记
+    if (game.lastKnown) {
+      for (var lk in game.lastKnown) {
+        if (drawn[lk]) continue;
+        var lv = game.lastKnown[lk];
+        if (!lv || !lv.obj || lv.obj.alive === false) continue;
+        c.strokeStyle = 'rgba(232,198,120,0.55)';
+        c.fillStyle = 'rgba(232,198,120,0.18)';
+        c.lineWidth = 1;
+        c.beginPath();
+        c.arc(lv.x * s, lv.y * s, 2.8, 0, Math.PI * 2);
+        c.fill(); c.stroke();
       }
     }
     // 视野框
