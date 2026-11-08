@@ -198,7 +198,7 @@
     for (var i = 0; i < (T.bridges || []).length; i++) {
       var b = T.bridges[i];
       var dx = x - b.x, dy = y - b.y;
-      if (dx * dx + dy * dy <= 34 * 34) return true;
+      if (dx * dx + dy * dy <= 60 * 60) return true;
     }
     return false;
   };

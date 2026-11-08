@@ -4165,14 +4165,19 @@
       var px = x0 + dx * t, py = y0 + dy * t;
       if (Math.hypot(b.x - px, b.y - py) <= (b.type === 'wire' ? 10 : 13)) return true;
     }
-    // 规划器水域阻挡地面单位；桥梁点和舰船不受影响
+    // 规划器水域阻挡地面单位；只要路线经过桥梁，就允许沿桥跨过该段水域
     if (u.type !== 'battleship' && T.waterAreas && T.waterAreas.length) {
       var steps = Math.max(2, Math.ceil(Math.hypot(dx, dy) / 20));
+      var hitWater = false, hitBridge = false;
       for (var wi = 1; wi <= steps; wi++) {
         var wt = wi / steps;
         var wx = x0 + dx * wt, wy = y0 + dy * wt;
-        if (T.isWaterAt(wx, wy) && !T.isBridgeAt(wx, wy)) return true;
+        if (T.isWaterAt(wx, wy)) {
+          hitWater = true;
+          if (T.isBridgeAt(wx, wy)) hitBridge = true;
+        }
       }
+      if (hitWater && !hitBridge) return true;
     }
     return false;
   };
