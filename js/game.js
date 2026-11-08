@@ -1637,7 +1637,7 @@
           side: u.side, type: u.type, name: u.name, x: u.x, y: u.y,
           hp: u.hp, maxHp: u.maxHp, ammo: u.ammo, ammoMax: u.ammoMax,
           mgAmmo: u.mgAmmo, mgAmmoMax: u.mgAmmoMax, magLeft: u.magLeft,
-          cd: u.cd, stamina: u.stamina, fireMode: u.fireMode,
+          cd: u.cd, speedNow: u.speedNow, stamina: u.stamina, fireMode: u.fireMode,
           grenadeMode: u.grenadeMode, kills: u.kills, score: u.score, items: u.items,
           deployState: u.deployState, deployTimer: u.deployTimer,
           engineerMode: u.engineerMode, engineerValue: u.engineerValue,
@@ -2168,6 +2168,7 @@
       lastSeen: null,
       dustT: 0,
       idle: 0,
+      speedNow: 0,
       deployState: SL.ARTILLERY[typeKey] ? 'deployed' : 'none',
       deployTimer: 0,
       engineerMode: null,
@@ -3384,6 +3385,10 @@
       if (!u.alive) continue;
       u.cd -= dt;
       if (u.mgCd > 0) u.mgCd -= dt;
+      if ((u.type === 'tank' || u.type === 'heavy_tank') && u.speedNow > 0 && !u.moving) {
+        var decel = (u.def.speed || 10) / (u.def.accelTime || 3) * 1.8;
+        u.speedNow = Math.max(0, u.speedNow - decel * dt);
+      }
       if (u.def.weapon.mag && u.magLeft <= 0 && u.cd <= 0) u.magLeft = u.def.weapon.mag;
       u.scan -= dt;
       if (u.flash > 0) u.flash -= dt;
@@ -3817,6 +3822,12 @@
     if (d < 0.001) return;
     var mul = T.speedAt(u.x, u.y, u.type);
     var speed = u.def.speed * mul;
+    if (u.type === 'tank' || u.type === 'heavy_tank') {
+      var accelTime = u.def.accelTime || 3;
+      var accel = (u.def.speed * mul) / accelTime;
+      u.speedNow = Math.min(u.def.speed * mul, (u.speedNow || 0) + accel * dt);
+      speed = u.speedNow;
+    }
     if (u.type === 'engineer_vehicle' && u.engineerMode) {
       speed *= (SL.ENGINEER.modeSpeedMul || 0.8);
     }
