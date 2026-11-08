@@ -2642,6 +2642,49 @@
   };
 
   /* 编队移动：围绕目标点排开 */
+  // 机械化单位优先沿最近的同一条道路行军；返回带起终点的路径
+  Game.prototype.roadRouteFor = function (u, tx, ty) {
+    if (!this.isVehicleUnit(u) || u.type === 'battleship') return null;
+    if (!T.roads || !T.roads.length) return null;
+    var direct = U.dist(u.x, u.y, tx, ty);
+    if (direct < 220) return null;
+    var best = null;
+    for (var ri = 0; ri < T.roads.length; ri++) {
+      var road = T.roads[ri];
+      if (!road || road.length < 2) continue;
+      var si = 0, sd = Infinity, ti = 0, td = Infinity;
+      for (var i = 0; i < road.length; i++) {
+        var ds = U.dist2(u.x, u.y, road[i].x, road[i].y);
+        if (ds < sd) { sd = ds; si = i; }
+        var dt = U.dist2(tx, ty, road[i].x, road[i].y);
+        if (dt < td) { td = dt; ti = i; }
+      }
+      sd = Math.sqrt(sd); td = Math.sqrt(td);
+      if (sd > 520 || td > 520 || si === ti) continue;
+      var score = sd + td;
+      if (!best || score < best.score) best = { road: road, si: si, ti: ti, score: score };
+    }
+    if (!best) return null;
+    var pts = [{ x: u.x, y: u.y }, { x: best.road[best.si].x, y: best.road[best.si].y }];
+    var step = best.si < best.ti ? 1 : -1;
+    for (var k = best.si; k !== best.ti + step; k += step) {
+      pts.push({ x: best.road[k].x, y: best.road[k].y });
+    }
+    pts.push({ x: tx, y: ty });
+    // 去重、剔除不可通行的道路段（水域/障碍）
+    var out = [];
+    for (var j = 0; j < pts.length; j++) {
+      var q = pts[j];
+      if (out.length && U.dist(out[out.length - 1].x, out[out.length - 1].y, q.x, q.y) < 6) continue;
+      if (out.length && this.segmentBlocked(u, out[out.length - 1].x, out[out.length - 1].y, q.x, q.y)) return null;
+      out.push(q);
+    }
+    var routeLen = 0;
+    for (var m = 1; m < out.length; m++) routeLen += U.dist(out[m - 1].x, out[m - 1].y, out[m].x, out[m].y);
+    if (routeLen > direct * 2.4) return null;
+    return out.length > 2 ? out.slice(1) : null;
+  };
+
   Game.prototype.commandMove = function (units, x, y, sprint) {
     if (!units.length) return;
     var cols = Math.ceil(Math.sqrt(units.length));    var gap = 42;
@@ -2673,6 +2716,11 @@
       units[i].sprintRecovering = wantRun && units[i].stamina < CB.sprintMin;
       units[i].target = null;
       units[i].path = null;
+      var roadPath = this.roadRouteFor(units[i], tx, ty);
+      if (roadPath) {
+        units[i].path = roadPath;
+        units[i].pathGoal = { x: tx, y: ty };
+      }
       units[i].noPath = false;
       units[i].rocketQueue = [];
     }
@@ -4117,6 +4165,15 @@
       var px = x0 + dx * t, py = y0 + dy * t;
       if (Math.hypot(b.x - px, b.y - py) <= (b.type === 'wire' ? 10 : 13)) return true;
     }
+    // 规划器水域阻挡地面单位；桥梁点和舰船不受影响
+    if (u.type !== 'battleship' && T.waterAreas && T.waterAreas.length) {
+      var steps = Math.max(2, Math.ceil(Math.hypot(dx, dy) / 20));
+      for (var wi = 1; wi <= steps; wi++) {
+        var wt = wi / steps;
+        var wx = x0 + dx * wt, wy = y0 + dy * wt;
+        if (T.isWaterAt(wx, wy) && !T.isBridgeAt(wx, wy)) return true;
+      }
+    }
     return false;
   };
 
@@ -4363,13 +4420,23 @@
         }
       }
     }
+    if (u.type !== 'battleship' && T.waterAreas && T.waterAreas.length) {
+      for (var wy = 0; wy < n; wy++) {
+        for (var wx = 0; wx < n; wx++) {
+          if (blocked[wy * n + wx]) continue;
+          var wcx = (wx + 0.5) * cell, wcy = (wy + 0.5) * cell;
+          if (T.isWaterAt(wcx, wcy) && !T.isBridgeAt(wcx, wcy)) blocked[wy * n + wx] = 1;
+        }
+      }
+    }
     cached = { version: this.barrierVersion, cell: cell, n: n, blocked: blocked };
     this.barrierGridCache[key] = cached;
     return cached;
   };
 
   Game.prototype.findPath = function (u, tx, ty) {
-    if (!this.barriers.length) return null;
+    var hasWater = !!(T.waterAreas && T.waterAreas.length) && u.type !== 'battleship';
+    if (!this.barriers.length && !hasWater) return null;
     if (!this.segmentBlocked(u, u.x, u.y, tx, ty)) return [];
     var grid = this.barrierGridFor(u);
     var cell = grid.cell, n = grid.n, blocked = grid.blocked;

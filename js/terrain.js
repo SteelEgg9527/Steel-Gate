@@ -184,6 +184,25 @@
   };
 
   T.streamDistance = function (x, y) { return distToPath(x, y, T.stream); };
+
+  // 规划器导入的水域/桥梁：水域阻挡地面单位，桥梁点允许通过
+  T.isWaterAt = function (x, y) {
+    for (var i = 0; i < (T.waterAreas || []).length; i++) {
+      var w = T.waterAreas[i];
+      var dx = x - w.x, dy = y - w.y;
+      if (dx * dx + dy * dy <= (w.r || 0) * (w.r || 0)) return true;
+    }
+    return false;
+  };
+  T.isBridgeAt = function (x, y) {
+    for (var i = 0; i < (T.bridges || []).length; i++) {
+      var b = T.bridges[i];
+      var dx = x - b.x, dy = y - b.y;
+      if (dx * dx + dy * dy <= 34 * 34) return true;
+    }
+    return false;
+  };
+
   T.roadDistance = function (x, y) {
     var best = Infinity;
     for (var i = 0; i < T.roads.length; i++) best = Math.min(best, distToPath(x, y, T.roads[i]));
@@ -970,6 +989,18 @@
       ctx.stroke(paths.streams[si]);
     }
 
+    // 规划器水域
+    for (var wi = 0; wi < (T.waterAreas || []).length; wi++) {
+      var wa = T.waterAreas[wi];
+      ctx.beginPath();
+      ctx.arc(wa.x, wa.y, wa.r || 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(71,130,162,0.42)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(48,100,132,0.72)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     // 公路与土路
     for (si = 0; si < paths.roads.length; si++) {
       ctx.strokeStyle = C.roadEdge;
@@ -993,6 +1024,19 @@
       ctx.strokeStyle = 'rgba(203,172,131,0.9)';
       ctx.lineWidth = 2.2;
       ctx.stroke(paths.tracks[si]);
+    }
+
+    // 桥梁
+    for (var bri = 0; bri < (T.bridges || []).length; bri++) {
+      var br = T.bridges[bri];
+      ctx.save();
+      ctx.translate(br.x, br.y);
+      ctx.fillStyle = 'rgba(109,91,61,0.9)';
+      ctx.fillRect(-22, -9, 44, 18);
+      ctx.strokeStyle = 'rgba(238,216,166,0.8)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-22, -9, 44, 18);
+      ctx.restore();
     }
 
     // 房屋
