@@ -2285,7 +2285,25 @@
     var u = this.addUnit(side, type, x, y, SL.UNIT_TYPES[type].name + n);
     u.aggressive = true;
     u.objective = { x: (T.objective && T.objective.x) || mapSize / 2, y: (T.objective && T.objective.y) || mapSize / 2 };
+    var aiLane = this.aiLaneFor(side, x, y);
+    if (aiLane) {
+      u.aiLane = aiLane;
+      u.laneIndex = 1;
+      u.objective = { x: aiLane[1].x, y: aiLane[1].y };
+    }
     return u;
+  };
+
+  Game.prototype.aiLaneFor = function (side, x, y) {
+    if (side === 'blue' || !T.aiLanePaths || !T.aiLanePaths.length) return null;
+    var best = null, bd = Infinity;
+    for (var i = 0; i < T.aiLanePaths.length; i++) {
+      var lane = T.aiLanePaths[i];
+      if (!lane || lane.length < 2) continue;
+      var d = U.dist(x, y, lane[0].x, lane[0].y);
+      if (d < bd && d < 900) { bd = d; best = lane; }
+    }
+    return best;
   };
 
   Game.prototype.addUnit = function (side, typeKey, x, y, name) {
@@ -7407,6 +7425,17 @@
         if (sd > site.r * 0.7) u.order = { kind: 'attackMove', x: site.x, y: site.y };
         else u.order = null;
         return;
+      }
+    }
+
+    // 沿规划器 AI 路线推进：抵达当前路点后自动取下一个
+    if (u.side !== 'blue' && u.aiLane && u.objective && U.dist(u.x, u.y, u.objective.x, u.objective.y) < 55) {
+      u.laneIndex = (u.laneIndex || 0) + 1;
+      if (u.laneIndex < u.aiLane.length) {
+        u.objective = { x: u.aiLane[u.laneIndex].x, y: u.aiLane[u.laneIndex].y };
+      } else {
+        u.aiLane = null;
+        u.objective = { x: (T.objective && T.objective.x) || SL.CONFIG.mapSize / 2, y: (T.objective && T.objective.y) || SL.CONFIG.mapSize / 2 };
       }
     }
 

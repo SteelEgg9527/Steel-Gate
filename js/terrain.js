@@ -59,6 +59,10 @@
     T.waterAreas = m.waterAreas || [];
     T.bridges = m.bridges || [];
     T.aiLanes = m.aiLanes || [];
+    T.aiLanePaths = (m.aiLanes || []).map(function (l) {
+      var pts = l && l.points ? l.points : l;
+      return (pts && pts.length >= 2) ? spline(pts, 10) : null;
+    }).filter(function (p) { return p && p.length >= 2; });
     T.hills = m.hills || [];
     T.streams = m.streams.map(function (s) { return spline(s, 10); });
     T.roads = m.roads.map(function (s) { return spline(s, 10); });
