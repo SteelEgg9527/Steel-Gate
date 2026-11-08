@@ -5632,20 +5632,6 @@
     function blueUnit() { return u && u.alive && u.side === 'blue'; }
 
     switch (card.key) {
-      case 'med':
-        if (!blueUnit() || u.type !== 'infantry') { res.msg = '医疗包只能拖到步兵班身上'; break; }
-        if (u.hp >= u.maxHp) { res.msg = '该班生命值已满'; break; }
-        u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.45);
-        this.fxText(u.x, u.y - 10, '+' + Math.round(u.maxHp * 0.45), '#9fe0a0');
-        res.ok = true; res.msg = u.name + ' 恢复生命';
-        break;
-      case 'repair':
-        if (!blueUnit() || u.type === 'infantry') { res.msg = '维修包只能拖到装甲单位'; break; }
-        if (u.hp >= u.maxHp) { res.msg = '该单位生命值已满'; break; }
-        u.hp = Math.min(u.maxHp, u.hp + u.maxHp * 0.4);
-        this.fxText(u.x, u.y - 10, '+' + Math.round(u.maxHp * 0.4), '#e8c47a');
-        res.ok = true; res.msg = u.name + ' 恢复装甲';
-        break;
       case 'unitpack':
         var sub = this.pickUnitType();
         this.drawCard('unit', sub);
@@ -6694,30 +6680,44 @@
         }
       }
 
-      // 补给站：工事弹药 / 工事维修
+      // 补给站：未摧毁的工事区恢复血量；工事区修复后，武器残骸逐渐恢复
       for (var zi = 0; zi < T.zones.length; zi++) {
         var z = T.zones[zi];
         if (!z.owner || z.owner !== s.side) continue;
         if (U.dist(z.x, z.y, s.x, s.y) > s.r + z.r) continue;
+        // 工事区已被摧毁：补给圈不能修复，只能由工兵/工程车处理
+        if (z.destroyed || z.rubble) continue;
         var zsStructs = this.zoneStructures(z);
-        if (zsStructs.length) {
-          for (var zsi = 0; zsi < zsStructs.length; zsi++) {
-            var zst = zsStructs[zsi];
-            if (zst.ammo < zst.maxAmmo && s.ammo > 0) {
-              var addA = Math.min(SL.SUPPLY.ammoRate, zst.maxAmmo - zst.ammo, s.ammo);
-              zst.ammo += addA;
-              s.ammo -= addA;
-            }
-            if (zst.hp < zst.maxHp && s.hp > 0) {
-              var mendS = Math.min(SL.SUPPLY.vehicleRepair * 0.5, zst.maxHp - zst.hp, s.hp);
-              zst.hp += mendS;
-              s.hp -= mendS;
-            }
-          }
-        } else if (z.fortified && !z.rubble && z.hp < z.maxHp && s.hp > 0) {
+        if (!z.fortified) continue;
+
+        // 工事区本体未摧毁时可以吃补给圈维修
+        if (z.hp < z.maxHp && s.hp > 0) {
           var mendZ = Math.min(SL.SUPPLY.vehicleRepair * 0.5, z.maxHp - z.hp, s.hp);
           z.hp += mendZ;
           s.hp -= mendZ;
+        }
+        // 已恢复工事区中的武器残骸，由补给圈逐一恢复
+        for (var zsi = 0; zsi < zsStructs.length; zsi++) {
+          var zst = zsStructs[zsi];
+          if (zst.destroyed || zst.hp <= 0) {
+            if (s.hp <= 0) continue;
+            var wt = SL.FORT.rebuildTime * Math.max(0.5, (zst.maxHp || 2000) / 2000);
+            zst.repairProgress = Math.min(1, (zst.repairProgress || 0) + 0.5 / wt);
+            if (zst.repairProgress >= 1) {
+              zst.destroyed = false;
+              zst.hp = zst.maxHp;
+              zst.ammo = Math.max(1, Math.round((zst.maxAmmo || 0) * (SL.FORT.rubbleAmmoRatio || 0.35)));
+              zst.repairProgress = 0;
+              s.hp = Math.max(0, s.hp - 10);
+              this.log(SL.SIDES[s.side].name + ' 补给圈修复了 ' + z.name + ' 的武器残骸', 'order');
+            }
+            continue;
+          }
+          if (zst.ammo < zst.maxAmmo && s.ammo > 0) {
+            var addA = Math.min(SL.SUPPLY.ammoRate, zst.maxAmmo - zst.ammo, s.ammo);
+            zst.ammo += addA;
+            s.ammo -= addA;
+          }
         }
         if (s.ammo <= 0 && s.hp <= 0) break;
       }

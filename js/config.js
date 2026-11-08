@@ -609,6 +609,8 @@
     target: { xp: 0, score: 0 },
     armor_target: { xp: 0, score: 0 },
     heavy_target: { xp: 0, score: 0 },
+    boss_super: { xp: 0, score: 0 },
+    boss_ghost: { xp: 0, score: 0 },
     ship: { xp: 6000, score: 3000 }
   };
 
@@ -964,8 +966,6 @@
 
   /* ---------------- 卡片 ---------------- */
   SL.CARD_DEFS = {
-    med: { key: 'med', name: '医疗包', icon: '＋', color: '#b85c5c', use: 'unit', desc: '拖到步兵班：恢复生命' },
-    repair: { key: 'repair', name: '维修包', icon: '⚒', color: '#c08a4a', use: 'unit', desc: '拖到装甲单位：恢复生命' },
     unitpack: { key: 'unitpack', name: '单位包', icon: '▣', color: '#5c7fa8', use: 'open', desc: '升级选中后立即开出一张单位卡' },
     equippack: { key: 'equippack', name: '装备包', icon: '✦', color: '#8a7a4a', use: 'open', desc: '升级选中后立即开出一张装备卡' },
     ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送补给，为范围内战舰补充舰体与炮塔弹药；补给箱可被摧毁' },
