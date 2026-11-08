@@ -317,7 +317,7 @@
       }
       var head = document.createElement('div');
       head.className = 'recent-row recent-head';
-      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数', '黄圈'].forEach(function (t) {
+      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数', '黄圈', '上传'].forEach(function (t) {
         var c = document.createElement('span'); c.textContent = t; head.appendChild(c);
       });
       el.recentResultsList.appendChild(head);
@@ -337,8 +337,18 @@
         var kl = document.createElement('span'); kl.textContent = (r.kills || 0) + ' / ' + (r.losses || 0);
         var sc = document.createElement('span'); sc.textContent = String(r.score || 0);
         var yx = document.createElement('span'); yx.textContent = String(r.yellowXp || 0);
+        var up = document.createElement('button');
+        up.type = 'button';
+        up.className = 'recent-upload';
+        up.textContent = r.uploaded ? '已上传' : '上传';
+        up.disabled = !!r.uploaded;
+        up.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          if (!SL.Leaderboard || !SL.Leaderboard.uploadRecent) return;
+          SL.Leaderboard.uploadRecent(r, renderRecentResults);
+        });
         row.appendChild(d); row.appendChild(mm); row.appendChild(oc);
-        row.appendChild(tm); row.appendChild(kl); row.appendChild(sc); row.appendChild(yx);
+        row.appendChild(tm); row.appendChild(kl); row.appendChild(sc); row.appendChild(yx); row.appendChild(up);
         el.recentResultsList.appendChild(row);
       }
     }
@@ -1917,6 +1927,14 @@
     }, 3000);
   }
 
+  function recentUuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   function recordRecentResult(g) {
     if (!g || g._recentSaved || g.testMode || g.demo) return;
     g._recentSaved = true;
@@ -1941,7 +1959,18 @@
       losses: (g.stats && g.stats.losses && g.stats.losses.blue) || 0,
       score: Math.floor((g.teams && g.teams.blue && g.teams.blue.scoreEarned) || 0),
       yellowXp: Math.floor((g.teams && g.teams.blue && g.teams.blue.yellowXp) || 0),
-      reason: g.endReason || ''
+      reason: g.endReason || '',
+      runId: g._lbRunId || (g._lbRunId = recentUuid()),
+      modeId: g.mode,
+      difficultyId: g.difficulty,
+      mapId: (SL.Terrain && SL.Terrain.map && SL.Terrain.map.id) || '',
+      result: g.state === 'won' ? 'win' : 'loss',
+      durationSec: Math.floor(g.time || 0),
+      wave: Math.floor((g.defense && g.defense.wave) || 0),
+      holdSec: Math.floor((g.defense && g.defense.hold) || 0),
+      shipsSunk: 0,
+      bossKills: Math.floor(g.bossKillCount || 0),
+      uploaded: false
     };
     try {
       var list = readRecentResultsStore();

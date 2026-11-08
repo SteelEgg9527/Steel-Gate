@@ -2956,3 +2956,23 @@ html, body {
   .lb-row { grid-template-columns: 36px minmax(66px,1.2fr) repeat(5, minmax(40px,.75fr)) !important; gap:4px; }
   .lb-overall-row { grid-template-columns: 34px minmax(64px,1.2fr) 54px 72px 38px 45px 64px !important; gap:4px; }
 }
+
+/* 近期战绩上传按钮与列宽 */
+.recent-row {
+  grid-template-columns: 1fr 1.55fr 0.72fr 0.68fr 0.78fr 0.62fr 0.68fr 0.58fr !important;
+}
+.recent-upload {
+  border: 1px solid rgba(196,178,134,0.38);
+  background: rgba(38,34,22,0.9);
+  color: #e4cf94;
+  padding: 3px 5px;
+  font: 600 9px var(--font-ui);
+  cursor: pointer;
+}
+.recent-upload:hover { border-color: #e0c274; color: #f5e8bc; }
+.recent-upload:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 720px) {
+  .recent-row { grid-template-columns: 0.9fr 1.35fr 0.65fr 0.65fr 0.55fr !important; }
+  .recent-row > span:nth-child(5), .recent-row > span:nth-child(6),
+  .recent-row > span:nth-child(7) { display: none; }
+}

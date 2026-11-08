@@ -238,6 +238,83 @@
     });
   }
 
+  function recentStore() {
+    try {
+      var raw = localStorage.getItem('steel1944_recent_results');
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+  function saveRecentStore(list) {
+    try { localStorage.setItem('steel1944_recent_results', JSON.stringify((list || []).slice(0, 12))); } catch (e) {}
+  }
+  function secondsOf(text) {
+    var m = String(text || '').match(/^(\d+):(\d+)$/);
+    return m ? (+m[1] * 60 + +m[2]) : 0;
+  }
+
+  function uploadRecent(rec, done) {
+    if (!rec) return;
+    if (rec.uploaded) { toast('这一局已经上传过', 'info'); return; }
+    askNickname(function (nick) {
+      var list = recentStore();
+      if (!rec.runId) rec.runId = uuid();
+      var mode = rec.modeId || ({ '三军混战': 'melee', '防御模式': 'lastStand', '舰炮轰鸣': 'naval', '背水一战': 'navalLastStand' }[rec.mode] || 'melee');
+      var difficulty = rec.difficultyId || ({ '简单': 'easy', '普通': 'normal', '困难': 'hard', '无限': 'endless' }[rec.difficulty] || 'normal');
+      var payload = {
+        runId: rec.runId,
+        playerId: playerId(),
+        nickname: nick,
+        mode: mode,
+        difficulty: difficulty,
+        mapId: rec.mapId || '',
+        result: rec.result || (rec.win ? 'win' : 'loss'),
+        score: Math.max(0, Math.floor(rec.score || 0)),
+        yellowXp: Math.max(0, Math.floor(rec.yellowXp || 0)),
+        kills: Math.max(0, Math.floor(rec.kills || 0)),
+        losses: Math.max(0, Math.floor(rec.losses || 0)),
+        durationSec: rec.durationSec != null ? rec.durationSec : secondsOf(rec.time),
+        wave: Math.max(0, Math.floor(rec.wave || 0)),
+        holdSec: Math.max(0, Math.floor(rec.holdSec || 0)),
+        shipsSunk: Math.max(0, Math.floor(rec.shipsSunk || 0)),
+        bossKills: Math.max(0, Math.floor(rec.bossKills || 0)),
+        clientVersion: 'v0.12.31'
+      };
+      requestJSON('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function () {
+        rec.uploaded = true;
+        rec.runId = payload.runId;
+        var found = false;
+        for (var i = 0; i < list.length; i++) {
+          if ((list[i].runId && list[i].runId === rec.runId) || (!list[i].runId && list[i].ts === rec.ts)) {
+            list[i].uploaded = true;
+            list[i].runId = rec.runId;
+            found = true;
+            break;
+          }
+        }
+        if (!found) list.unshift(rec);
+        saveRecentStore(list);
+        toast('近期战绩已上传', 'win');
+        if (done) done();
+      }).catch(function (err) {
+        if (err && err.status === 409) {
+          rec.uploaded = true;
+          saveRecentStore(list);
+          toast('这一局已经上传过', 'info');
+          if (done) done();
+          return;
+        }
+        toast(errorText(err.status, err.data), 'loss');
+      });
+    });
+  }
+
+  L.uploadRecent = uploadRecent;
+
   function onGameEnd(g) {
     if (!autoUploadEnabled() || !g || g.testMode || g.demo || g._lbAutoTried || g._lbUploaded) return;
     g._lbAutoTried = true;
