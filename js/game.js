@@ -278,20 +278,11 @@
     var home = (T.spawns && T.spawns[side]) || anchor;
     anchor = { x: home.x, y: yHint != null ? yHint : home.y };
     var best = null;
-    var port = this.portOf ? this.portOf(side) : null;
-    if (port) {
-      var pwater = SL.Naval.nearestWaterPoint(port.x, port.y);
-      if (SL.Naval.isWater(pwater.x, pwater.y)) {
-        best = { x: pwater.x, y: pwater.y, inward: Math.atan2(pwater.y - port.y, pwater.x - port.x) };
-      }
-    }
-    if (!best) {
-      var ep = this.supplySpawnPoint(side, yHint);
-      best = {
-        x: ep.x, y: ep.y,
-        inward: Math.atan2(T.size / 2 - ep.y, T.size / 2 - ep.x)
-      };
-    }
+    var ep = this.shipSpawnPoint(side, yHint);
+    best = {
+      x: ep.x, y: ep.y,
+      inward: Math.atan2(T.size / 2 - ep.y, T.size / 2 - ep.x)
+    };
     var ship = SL.Naval.createShip(this, side, best.x, best.y);
     ship.entryX = U.clamp(best.x + Math.cos(best.inward) * 180, 30, T.size - 30);
     ship.entryY = U.clamp(best.y + Math.sin(best.inward) * 180, 30, T.size - 30);
@@ -362,6 +353,28 @@
         if (t.hp <= 0) { t.hp = 0; t.destroyed = true; this.log(ship.name + ' 一座主炮塔被摧毁', 'loss'); }
       }
     }
+  };
+
+  // 战舰只从地图边缘海域进入，避开港口和近岸位置
+  Game.prototype.shipSpawnPoint = function (side, yHint) {
+    var size = T.size || SL.CONFIG.mapSize || 2000;
+    var home = (T.spawns && T.spawns[side]) || { x: size / 2, y: size / 2 };
+    var best = null, bestD = Infinity;
+    var fallback = null, fallbackShore = -1;
+    for (var e = 0; e < 4; e++) {
+      for (var i = 1; i < 60; i++) {
+        var t = i / 60;
+        var x = e <= 1 ? size * t : (e === 2 ? 24 : size - 24);
+        var y = e <= 1 ? (e === 0 ? 24 : size - 24) : size * t;
+        if (!SL.Naval || !SL.Naval.isWater(x, y)) continue;
+        var shore = SL.Naval.shoreDistance ? SL.Naval.shoreDistance(x, y) : 0;
+        var d = U.dist2(x, y, home.x, home.y);
+        if (!fallback || shore > fallbackShore) { fallback = { x: x, y: y }; fallbackShore = shore; }
+        if (shore < 600) continue;
+        if (d < bestD) { bestD = d; best = { x: x, y: y }; }
+      }
+    }
+    return best || fallback || (SL.Naval && SL.Naval.nearestWaterPoint ? SL.Naval.nearestWaterPoint(size - 90, yHint) : { x: size - 90, y: yHint });
   };
 
   Game.prototype.supplySpawnPoint = function (side, yHint) {
@@ -6220,6 +6233,10 @@
         var b = this.planes[j];
         if (!b || b.hp <= 0) continue;
         var min = (a.kind === 'b17' || b.kind === 'b17') ? 58 : 28;
+        // 敌方轰炸机各自执行攻击航线时不互相推挤，避免对向飞行时卡死
+        var aBomber = a.kind === 'airstrike' || a.kind === 'hellBomber';
+        var bBomber = b.kind === 'airstrike' || b.kind === 'hellBomber';
+        if (a.side !== 'blue' && b.side !== 'blue' && (aBomber || bBomber)) continue;
         var dx = b.x - a.x, dy = b.y - a.y;
         var d = Math.hypot(dx, dy);
         if (d >= min) continue;
