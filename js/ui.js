@@ -1132,7 +1132,7 @@
     if (el.nhScan) {
       if (!radarOwner) el.nhScan.textContent = '广域搜索 —';
       else if (g.time < (g.radarScanUntil[radarOwner] || 0)) {
-        var scanDur = (SL.NAVAL && SL.NAVAL.radarScanDuration) || 20;
+        var scanDur = (SL.NAVAL && SL.NAVAL.radarScanDuration) || 30;
         var scanPct = Math.max(0, Math.min(100, Math.floor((g.time - (g.radarScanStart[radarOwner] || g.time)) / scanDur * 100)));
         el.nhScan.textContent = '广域搜索 ' + scanPct + '%';
       } else {

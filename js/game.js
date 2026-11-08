@@ -460,16 +460,19 @@
       }
       if (this.radarScanUntil[rside] > 0 && this.time >= this.radarScanUntil[rside]) {
         this.radarScanUntil[rside] = 0;
-        this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 20) + (SL.NAVAL.radarCooldown || 30);
+        this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 30) + (SL.NAVAL.radarCooldown || 30);
         this.radarCooldownLeft[rside] = SL.NAVAL.radarCooldown || 30;
         this.radarScanWas[rside] = false;
       }
       if (this.radarScanUntil[rside] > this.time) {
-        var dur = SL.NAVAL.radarScanDuration || 8;
+        var dur = SL.NAVAL.radarScanDuration || 30;
         var prog = U.clamp((this.time - (this.radarScanStart[rside] || this.time)) / dur, 0, 1);
         var turns = SL.NAVAL.radarSweepTurns || 2;
-        this.radarSweepAngle[rside] = prog * Math.PI * 2 * turns;
-        var rr = SL.NAVAL.radarRange || 2500;
+        var ideal = prog * Math.PI * 2 * turns;
+        var prev = this.radarSweepAngle[rside] || 0;
+        var delta = Math.atan2(Math.sin(ideal - prev), Math.cos(ideal - prev));
+        this.radarSweepAngle[rside] = prev + delta * Math.min(1, dt * 14);
+        var rr = SL.NAVAL.radarRange || 3500;
         var arc = (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180;
         var lit = this.radarLitUntil[rside] || (this.radarLitUntil[rside] = {});
         var sweep = this.radarSweepAngle[rside];
@@ -486,7 +489,7 @@
         }
         if (prog >= 1) {
           this.radarScanUntil[rside] = 0;
-          this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 20) + (SL.NAVAL.radarCooldown || 30);
+          this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 30) + (SL.NAVAL.radarCooldown || 30);
           this.radarScanWas[rside] = false;
         }
         continue;
@@ -497,7 +500,7 @@
         this.radarScanNext[rside] = Infinity;
         this.radarCooldownLeft[rside] = 0;
         this.radarScanStart[rside] = this.time;
-        this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 8);
+        this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 30);
         this.radarSweepAngle[rside] = 0;
         this.radarScanWas[rside] = true;
         this.radarLitUntil[rside] = {};
@@ -7279,7 +7282,7 @@
     // 雷达扫描线经过的扇形区域驱散迷雾
     if (this.naval && this.radarScanActive('blue') && this.radar) {
       this.revealFogSector(this.radar.x, this.radar.y,
-        SL.NAVAL.radarRange || 2500, this.radarSweepAngle.blue || 0,
+        SL.NAVAL.radarRange || 3500, this.radarSweepAngle.blue || 0,
         (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180);
     }
     for (var k = 0; k < this.recons.length; k++) {

@@ -2269,7 +2269,7 @@
     if (radar && !radar.destroyed && radar.owner === 'blue' && game.radarScanActive('blue')) {
       var rcx = radar.x * s, rcy = radar.y * s;
       var rang = game.radarSweepAngle.blue || 0;
-      var rlen = (SL.NAVAL.radarRange || 2500) * s;
+      var rlen = (SL.NAVAL.radarRange || 3500) * s;
       var rarc = (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180;
       c.save();
       c.translate(rcx, rcy);
