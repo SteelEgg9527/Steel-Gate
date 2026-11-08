@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>钢铁之门 · 地图规划器</title>
+<style>
+  :root{
+    --bg:#171a15; --panel:#20251d; --line:#4e523f; --ink:#e8dfc5;
+    --dim:#9da78e; --gold:#d9bb77; --blue:#6d9bc4; --red:#c36b5d;
+    --green:#83a86f; --water:#4f86a4; --paper:#d8cba9;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--ink);font:12px "Microsoft YaHei","Noto Sans SC",sans-serif;overflow:hidden}
+  #app{display:flex;height:100%}
+  #sidebar{width:310px;flex:0 0 310px;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px}
+  h1{font-size:18px;letter-spacing:.12em;margin:0 0 4px;color:#f0e4c2}
+  .sub{color:var(--dim);font-size:10px;margin-bottom:12px}
+  .field{margin:9px 0}
+  .field label{display:block;color:#b9c1a5;font-size:10px;margin-bottom:4px}
+  input,select,textarea{width:100%;background:#141812;border:1px solid #4a503d;color:var(--ink);padding:6px;border-radius:2px;font:11px var(--mono,monospace)}
+  input[type=range]{padding:0}
+  .row{display:flex;gap:7px}.row>*{flex:1}
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:5px}
+  .tool{background:#252b20;border:1px solid #464c39;color:#c9d1b5;padding:6px 5px;text-align:left;cursor:pointer;font-size:10px;border-radius:2px}
+  .tool:hover{border-color:#b8a46d}
+  .tool.on{background:#3c3d28;border-color:var(--gold);color:#f3dfaa;box-shadow:inset 2px 0 0 var(--gold)}
+  .group-title{margin:14px 0 5px;color:#87937b;font:700 9px monospace;letter-spacing:.15em;text-transform:uppercase}
+  button{background:#2c3326;border:1px solid #555d46;color:#e2d8ba;padding:6px 8px;cursor:pointer;border-radius:2px;font-size:10px}
+  button:hover{border-color:var(--gold);color:#fff0bf}
+  button.primary{background:#4a4329;border-color:#b79958;color:#f5dfa6}
+  .divider{height:1px;background:var(--line);margin:12px 0}
+  #main{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:18px;position:relative}
+  #canvasWrap{position:relative;width:min(86vh,900px);height:min(86vh,900px);max-width:100%;max-height:100%}
+  canvas{width:100%;height:100%;display:block;background:#c7b991;border:1px solid #5e5b45;box-shadow:0 0 0 4px rgba(0,0,0,.18)}
+  #hint{position:absolute;left:0;right:0;bottom:-32px;text-align:center;color:#8e997f;font-size:10px}
+  #stats{color:#8e997f;font-size:10px;line-height:1.7;margin-top:6px}
+  #legend{font-size:10px;color:#aab49a;line-height:1.8}
+  .swatch{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
+  #file{display:none}
+  .tip{color:#8d997e;font-size:10px;line-height:1.6;margin:7px 0}
+  .danger{border-color:#7f4d43;color:#e0a89a}
+  #status{min-height:18px;color:#d6c58e;font-size:10px;margin-top:8px}
+  @media(max-width:760px){#sidebar{width:240px;flex-basis:240px}#main{padding:8px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>钢铁之门 · 地图规划器</h1>
+    <div class="sub">画地形、道路、据点，导出 map.json 交给实现端</div>
+
+    <div class="field"><label>地图名</label><input id="mapName" value="新地图"></div>
+    <div class="row">
+      <div class="field"><label>尺寸</label><select id="mapSize"><option value="2000">2000m 陆战</option><option value="5000">5000m 海战</option></select></div>
+      <div class="field"><label>高度网格</label><select id="heightRes"><option value="64">64×64</option><option value="128" selected>128×128</option><option value="256">256×256</option></select></div>
+    </div>
+    <div class="field"><label>草图 / 参考图</label><button id="sketchBtn">上传草图图片</button><input id="file" type="file" accept="image/*"><div id="sketchName" class="tip">未上传</div></div>
+
+    <div class="divider"></div>
+    <div class="group-title">笔刷</div>
+    <div class="row">
+      <div class="field"><label>笔刷半径 m</label><input id="brush" type="number" value="120" min="20" step="10"></div>
+      <div class="field"><label>高度强度</label><input id="strength" type="number" value="0.04" min="0.005" max="0.2" step="0.005"></div>
+    </div>
+    <div class="tools">
+      <button class="tool" data-tool="height-up">▲ 抬高地形</button>
+      <button class="tool" data-tool="height-down">▼ 压低地形</button>
+      <button class="tool" data-tool="water">水域</button>
+      <button class="tool" data-tool="forest">森林</button>
+      <button class="tool" data-tool="road-highway">公路</button>
+      <button class="tool" data-tool="road-dirt">土路</button>
+      <button class="tool" data-tool="bridge">桥梁</button>
+      <button class="tool" data-tool="ai-lane">AI 路线</button>
+    </div>
+
+    <div class="group-title">玩法对象</div>
+    <div class="field"><label>对象名称</label><input id="objectName" value="新据点"></div>
+    <div class="row">
+      <div class="field"><label>半径 m</label><input id="objectRadius" type="number" value="72" min="16" step="4"></div>
+      <div class="field"><label>对象类型</label><select id="objectKind">
+        <option value="fort">工事</option><option value="village">村庄</option><option value="town">城镇</option><option value="bush">灌木</option><option value="forest">林地</option>
+      </select></div>
+    </div>
+    <div class="tools">
+      <button class="tool" data-tool="zone">放置占领区</button>
+      <button class="tool" data-tool="comm">通讯塔</button>
+      <button class="tool" data-tool="radar">雷达站</button>
+      <button class="tool" data-tool="port">港口</button>
+      <button class="tool" data-tool="coastbase">海岸基地</button>
+      <button class="tool" data-tool="yellow">黄圈</button>
+      <button class="tool" data-tool="spawn-blue">蓝方出生</button>
+      <button class="tool" data-tool="spawn-red">红方出生</button>
+      <button class="tool" data-tool="spawn-green">绿方出生</button>
+      <button class="tool" data-tool="erase">橡皮擦</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="row"><button id="finishRoad" class="primary">完成路线（Enter）</button><button id="undo">撤销 Ctrl+Z</button></div>
+    <div class="row" style="margin-top:6px"><button id="gridBtn">网格开/关</button><button id="contourBtn">等高线开/关</button></div>
+    <div class="row" style="margin-top:6px"><button id="export">导出 map.json</button><button id="importBtn">导入 JSON</button></div>
+    <div class="row" style="margin-top:6px"><button id="png">导出预览 PNG</button><button id="localSave">保存到本地</button></div>
+    <div class="row" style="margin-top:6px"><button id="localLoad">读取本地</button><button id="clear" class="danger">清空画布</button></div>
+    <input id="jsonFile" type="file" accept=".json,application/json" style="display:none">
+    <div id="status"></div>
+
+    <div class="divider"></div>
+    <div class="group-title">图例</div>
+    <div id="legend">
+      <div><span class="swatch" style="background:#bca77d"></span>高地</div>
+      <div><span class="swatch" style="background:#4f86a4"></span>水域</div>
+      <div><span class="swatch" style="background:#68865b"></span>森林</div>
+      <div><span class="swatch" style="background:#b4a06f"></span>道路 / 桥梁</div>
+      <div><span class="swatch" style="background:#d9bb77"></span>黄圈 / 据点</div>
+      <div><span class="swatch" style="background:#6d9bc4"></span>蓝方出生</div>
+      <div><span class="swatch" style="background:#c36b5d"></span>红方出生</div>
+    </div>
+    <div id="stats"></div>
+    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮不缩放，地图按画布缩放。</p>
+  </aside>
+  <main id="main">
+    <div id="canvasWrap">
+      <canvas id="map" width="900" height="900"></canvas>
+      <div id="hint">左键绘制 · 道路连续点击 · Enter 完成路线</div>
+    </div>
+  </main>
+</div>
+<script>
+(function(){
+  'use strict';
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const $ = id => document.getElementById(id);
+
+  const state = {
+    name: '新地图', size: 2000, res: 128,
+    height: new Float32Array(128 * 128),
+    water: [], forests: [], roads: [], bridges: [],
+    zones: [], sites: [], spawns: { blue: null, red: null, green: null },
+    yellow: null, aiLanes: [], background: null, backgroundName: '', seq: 0,
+    grid: true, contour: true
+  };
+  let tool = 'height-up';
+  let draft = null;
+  let painting = false;
+  let undoStack = [];
+  const heightCanvas = document.createElement('canvas');
+  const hctx = heightCanvas.getContext('2d');
+
+  function status(msg){ $('status').textContent = msg || ''; }
+  function worldScale(){ return W / state.size; }
+  function point(e){
+    const r = canvas.getBoundingClientRect();
+    const px = (e.clientX - r.left) * (W / r.width);
+    const py = (e.clientY - r.top) * (H / r.height);
+    return { x: px * state.size / W, y: py * state.size / H, px, py };
+  }
+  function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+  function snap(v, step){ return step ? Math.round(v/step)*step : v; }
+
+  function resetHeight(res){
+    state.res = res;
+    state.height = new Float32Array(res*res);
+    // 轻微起伏，避免默认完全平地
+    for (let y=0;y<res;y++) for(let x=0;x<res;x++){
+      state.height[y*res+x] = 0.12 + Math.sin(x/res*Math.PI*3)*0.025 + Math.cos(y/res*Math.PI*4)*0.02;
+    }
+  }
+  resetHeight(128);
+
+  function styleToolButtons(){
+    document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('on', b.dataset.tool === tool));
+  }
+  function setTool(t){
+    if (draft && draft.points && draft.points.length >= 2) finishRoad();
+    tool = t; styleToolButtons(); status('工具：' + (document.querySelector('.tool[data-tool="'+t+'"]')?.textContent.trim() || t));
+    canvas.style.cursor = t === 'erase' ? 'not-allowed' : 'crosshair';
+  }
+  document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click', ()=>setTool(b.dataset.tool)));
+
+  function heightIndex(x,y){
+    return Math.floor(U.clamp(y/state.size,0,0.999) * state.res) * state.res +
+           Math.floor(U.clamp(x/state.size,0,0.999) * state.res);
+  }
+  const U = { clamp(v,a,b){ return Math.max(a, Math.min(b,v)); } };
+
+  function paintHeight(pt, delta){
+    const rWorld = Math.max(20, Number($('brush').value)||120);
+    const rCells = rWorld / state.size * state.res;
+    const cx = pt.x / state.size * state.res, cy = pt.y / state.size * state.res;
+    for (let y=Math.floor(cy-rCells); y<=Math.ceil(cy+rCells); y++){
+      if (y<0||y>=state.res) continue;
+      for (let x=Math.floor(cx-rCells); x<=Math.ceil(cx+rCells); x++){
+        if (x<0||x>=state.res) continue;
+        const d = Math.hypot(x+0.5-cx, y+0.5-cy) / Math.max(1,rCells);
+        if (d > 1) continue;
+        const fall = 1 - d*d;
+        const i = y*state.res+x;
+        state.height[i] = U.clamp(state.height[i] + delta * fall, 0, 1);
+      }
+    }
+  }
+  function buildHeightCanvas(){
+    heightCanvas.width = state.res; heightCanvas.height = state.res;
+    const img = hctx.createImageData(state.res,state.res);
+    for (let i=0;i<state.height.length;i++){
+      const h=state.height[i];
+      const r = Math.round(120 + 105*h);
+      const g = Math.round(112 + 93*h);
+      const b = Math.round(78 + 70*h) - Math.round(35*(1-h));
+      img.data[i*4]=r; img.data[i*4+1]=g; img.data[i*4+2]=Math.max(0,b); img.data[i*4+3]=190;
+    }
+    hctx.putImageData(img,0,0);
+  }
+  buildHeightCanvas();
+
+  function drawBackground(){
+    if (state.background && state.background.complete && state.background.naturalWidth){
+      const s = Math.max(W/state.background.naturalWidth, H/state.background.naturalHeight);
+      const dw = state.background.naturalWidth*s, dh = state.background.naturalHeight*s;
+      ctx.drawImage(state.background,(W-dw)/2,(H-dh)/2,dw,dh);
+      ctx.fillStyle='rgba(20,24,18,0.32)'; ctx.fillRect(0,0,W,H);
+    } else {
+      ctx.fillStyle='#cfc2a1'; ctx.fillRect(0,0,W,H);
+    }
+  }
+  function drawGrid(){
+    if (!state.grid) return;
+    const n=20;
+    ctx.save(); ctx.strokeStyle='rgba(53,58,43,0.18)'; ctx.lineWidth=1;
+    for(let i=0;i<=n;i++){ const p=i/n*W; ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(W,p);ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawContours(){
+    if (!state.contour) return;
+    const res=state.res, levels=[0.25,0.45,0.65,0.85];
+    ctx.save(); ctx.strokeStyle='rgba(76,58,34,0.32)'; ctx.lineWidth=1;
+    for (const lv of levels){
+      for(let y=0;y<res-1;y++) for(let x=0;x<res-1;x++){
+        const a=state.height[y*res+x], b=state.height[y*res+x+1], c=state.height[(y+1)*res+x], d=state.height[(y+1)*res+x+1];
+        if ((a-lv)*(b-lv)>=0 && (a-lv)*(c-lv)>=0) continue;
+        const sx=(x+0.5)/res*W, sy=(y+0.5)/res*H;
+        ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+W/res,sy);ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+  function drawCircleFeature(f, fill, stroke, label){
+    const s=worldScale(), x=f.x*s, y=f.y*s, r=(f.r||40)*s;
+    ctx.save(); ctx.beginPath(); ctx.arc(x,y,Math.max(2,r),0,Math.PI*2);
+    if(fill){ctx.fillStyle=fill;ctx.fill();}
+    if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
+    if(label){ctx.fillStyle='#37402f';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText(label,x,y-r-3);}
+    ctx.restore();
+  }
+  function drawRoute(route, color, dash, label){
+    if(!route.points||route.points.length<2) return;
+    const s=worldScale();
+    ctx.save(); ctx.strokeStyle=color; ctx.lineWidth=Math.max(1.5,(route.width||14)*s*0.45); ctx.setLineDash(dash||[]); ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.beginPath(); route.points.forEach((p,i)=>i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s)); ctx.stroke();
+    ctx.setLineDash([]);
+    if(label){ ctx.fillStyle=color; ctx.font='9px sans-serif'; const p=route.points[0]; ctx.fillText(label,p.x*s+4,p.y*s-4); }
+    ctx.restore();
+  }
+  function draw(){
+    drawBackground();
+    ctx.globalAlpha=state.background?0.38:0.62;
+    ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(heightCanvas,0,0,W,H);
+    ctx.globalAlpha=1;
+    drawContours();
+    drawGrid();
+
+    state.water.forEach(f=>drawCircleFeature(f,'rgba(65,126,164,0.42)','rgba(48,100,132,0.8)'));
+    state.forests.forEach(f=>drawCircleFeature(f,'rgba(83,112,64,0.28)','rgba(62,91,51,0.7)','林'));
+    state.roads.forEach(r=>drawRoute(r, r.type==='highway'?'#c7b078':'#ad956c', [], ''));
+    state.aiLanes.forEach(r=>drawRoute(r,'rgba(178,105,84,0.85)',[8,6],'AI'));
+    state.bridges.forEach(f=>{
+      const s=worldScale(); ctx.save(); ctx.strokeStyle='#6e5b3d';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo((f.x-22)*s,(f.y-12)*s);ctx.lineTo((f.x+22)*s,(f.y-12)*s);ctx.lineTo((f.x+22)*s,(f.y+12)*s);ctx.lineTo((f.x-22)*s,(f.y+12)*s);ctx.stroke();ctx.restore();
+      drawCircleFeature({x:f.x,y:f.y,r:18},'rgba(122,96,58,0.35)','#6e5b3d');
+    });
+    state.zones.forEach(z=>{
+      drawCircleFeature(z, z.kind==='bush'?'rgba(104,126,70,0.14)':'rgba(217,187,119,0.12)', '#9d8655', z.name);
+    });
+    state.sites.forEach(z=>{
+      const col=z.kind==='radar'?'#6d9bc4':(z.kind==='port'?'#6aa0a0':(z.kind==='comm'?'#d9bb77':'#c58b68'));
+      drawCircleFeature(z,'rgba(30,36,28,0.12)',col,z.name);
+      const s=worldScale(), x=z.x*s,y=z.y*s;
+      ctx.fillStyle=col;ctx.font='700 11px sans-serif';ctx.textAlign='center';ctx.fillText(z.kind==='radar'?'雷达':(z.kind==='comm'?'塔':(z.kind==='port'?'港':'岸')),x,y+4);
+    });
+    if(state.yellow){
+      const s=worldScale();
+      ctx.save();ctx.setLineDash([7,5]);ctx.strokeStyle='#b58f3e';ctx.lineWidth=2;ctx.beginPath();ctx.arc(state.yellow.x*s,state.yellow.y*s,state.yellow.r*s,0,Math.PI*2);ctx.stroke();ctx.restore();
+      drawCircleFeature(state.yellow,'rgba(217,187,119,0.12)','#b58f3e');
+    }
+    Object.keys(state.spawns).forEach(k=>{
+      const p=state.spawns[k]; if(!p)return;
+      const s=worldScale(),x=p.x*s,y=p.y*s, col=k==='blue'?'#5b8db8':(k==='red'?'#bd6557':'#6e9b5d');
+      ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='700 9px sans-serif';ctx.textAlign='center';ctx.fillText(k[0].toUpperCase(),x,y+3);ctx.restore();
+    });
+    if(draft){
+      drawRoute({points:draft.points,width:draft.type==='ai-lane'?10:16}, draft.type==='ai-lane'?'#b26954':'#9b7c4e', draft.type==='ai-lane'?[8,6]:[], '绘制中');
+    }
+    // 罗盘与比例尺
+    ctx.save();ctx.fillStyle='rgba(38,44,33,.7)';ctx.fillRect(10,10,120,22);ctx.fillStyle='#ead9b5';ctx.font='10px monospace';ctx.fillText(state.name+' · '+state.size+'m',18,25);ctx.restore();
+  }
+
+  function snapshot(){
+    const data = exportData();
+    undoStack.push(JSON.stringify(data));
+    if (undoStack.length>30) undoStack.shift();
+  }
+  function undo(){
+    if(!undoStack.length){status('没有可撤销操作');return;}
+    importData(JSON.parse(undoStack.pop()), true);
+    status('已撤销');
+  }
+
+  function placeAt(pt){
+    if(tool==='zone'){
+      state.zones.push({id:'z_'+(++state.seq||(state.seq=1)),name:$('objectName').value||'占领区',kind:$('objectKind').value,r:Number($('objectRadius').value)||72,x:pt.x,y:pt.y});
+    } else if(tool==='comm'||tool==='radar'||tool==='port'||tool==='coastbase'){
+      const names={comm:'通讯塔',radar:'雷达站',port:'港口',coastbase:'海岸基地'};
+      state.sites.push({id:'s_'+(++state.seq||(state.seq=1)),kind:tool,name:$('objectName').value||names[tool],r:Number($('objectRadius').value)||72,x:pt.x,y:pt.y});
+    } else if(tool==='yellow'){
+      state.yellow={x:pt.x,y:pt.y,r:Number($('objectRadius').value)||300};
+    } else if(tool==='spawn-blue'){state.spawns.blue={x:pt.x,y:pt.y};}
+    else if(tool==='spawn-red'){state.spawns.red={x:pt.x,y:pt.y};}
+    else if(tool==='spawn-green'){state.spawns.green={x:pt.x,y:pt.y};}
+    else if(tool==='bridge'){state.bridges.push({x:pt.x,y:pt.y});}
+  }
+  function eraseAt(pt){
+    const radius=Number($('brush').value)||120;
+    const near=arr=>arr.findIndex(f=>dist(f,pt)<=Math.max(radius,f.r||0));
+    let i;
+    if((i=near(state.water))>=0){state.water.splice(i,1);return;}
+    if((i=near(state.forests))>=0){state.forests.splice(i,1);return;}
+    if((i=near(state.zones))>=0){state.zones.splice(i,1);return;}
+    if((i=near(state.sites))>=0){state.sites.splice(i,1);return;}
+    if(state.yellow && dist(state.yellow,pt)<=radius){state.yellow=null;return;}
+    if(state.spawns.blue && dist(state.spawns.blue,pt)<=radius){state.spawns.blue=null;return;}
+    if(state.spawns.red && dist(state.spawns.red,pt)<=radius){state.spawns.red=null;return;}
+    if(state.spawns.green && dist(state.spawns.green,pt)<=radius){state.spawns.green=null;return;}
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    if(e.button!==0)return;
+    const pt=point(e);
+    if(tool==='height-up'||tool==='height-down'){
+      snapshot();painting=true;
+      paintHeight(pt, (tool==='height-up'?1:-1)*Number($('strength').value||0.04));
+      return;
+    }
+    if(tool==='water'||tool==='forest'){
+      snapshot();
+      const arr=tool==='water'?state.water:state.forests;
+      arr.push({x:pt.x,y:pt.y,r:Number($('brush').value)||120});
+      return;
+    }
+    if(tool==='road-highway'||tool==='road-dirt'||tool==='ai-lane'){
+      if(!draft) draft={type:tool,points:[]};
+      const last=draft.points[draft.points.length-1];
+      if(!last || dist(last,pt)>state.size*0.008) draft.points.push({x:pt.x,y:pt.y});
+      return;
+    }
+    if(tool==='erase'){snapshot();eraseAt(pt);return;}
+    snapshot();
+    placeAt(pt);
+  });
+  canvas.addEventListener('pointermove', e=>{
+    if(!painting)return;
+    const pt=point(e);
+    paintHeight(pt,(tool==='height-up'?1:-1)*Number($('strength').value||0.04));
+  });
+  window.addEventListener('pointerup', ()=>{if(painting){painting=false;status('地形已修改');}});
+  canvas.addEventListener('dblclick', ()=>{ if(draft) finishRoad(); });
+
+  function finishRoad(){
+    if(!draft){status('没有正在绘制的路线');return;}
+    if(draft.points.length>=2){
+      snapshot();
+      if(draft.type==='ai-lane') state.aiLanes.push({type:'ai-lane',points:draft.points.slice()});
+      else {
+        const type=draft.type==='road-highway'?'highway':'dirt';
+        state.roads.push({type,width:type==='highway'?18:12,points:draft.points.slice()});
+      }
+      status('路线已完成（'+draft.points.length+' 点）');
+    }
+    draft=null;
+  }
+  $('finishRoad').addEventListener('click',finishRoad);
+
+  function exportData(){
+    return {
+      schema:'steel-map-plan/v1', name:state.name, size:state.size,
+      height:{res:state.res, values:Array.from(state.height,(v)=>Math.round(v*1000)/1000)},
+      water:state.water.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
+      forests:state.forests.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
+      roads:state.roads.map(r=>({type:r.type,width:r.width,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
+      bridges:state.bridges.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1)})),
+      zones:state.zones.map(z=>({id:z.id,name:z.name,kind:z.kind,x:+z.x.toFixed(1),y:+z.y.toFixed(1),r:z.r})),
+      sites:state.sites.map(z=>({id:z.id,kind:z.kind,name:z.name,x:+z.x.toFixed(1),y:+z.y.toFixed(1),r:z.r})),
+      spawns:state.spawns, yellow:state.yellow,
+      aiLanes:state.aiLanes.map(r=>({type:r.type,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
+      backgroundName:state.backgroundName || ''
+    };
+  }
+  function importData(data, silent){
+    if(!data || data.schema!=='steel-map-plan/v1') throw new Error('不是地图规划器 JSON');
+    state.name=data.name||'新地图'; state.size=Number(data.size)||2000;
+    state.res=(data.height&&data.height.res)||128;
+    state.height=new Float32Array(state.res*state.res);
+    if(data.height&&Array.isArray(data.height.values)) data.height.values.forEach((v,i)=>{if(i<state.height.length)state.height[i]=Number(v)||0;});
+    state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
+    state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
+    state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];state.backgroundName=data.backgroundName||'';
+    $('mapName').value=state.name;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
+    buildHeightCanvas();
+    if(!silent) status('JSON 已导入');
+    draw();
+  }
+  function download(name, blob){
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  $('export').addEventListener('click',()=>{
+    download((state.name||'map')+'.json', new Blob([JSON.stringify(exportData(),null,2)],{type:'application/json'}));
+    status('map.json 已导出');
+  });
+  $('importBtn').addEventListener('click',()=>$('jsonFile').click());
+  $('jsonFile').addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>{try{snapshot();importData(JSON.parse(rd.result));}catch(err){status('导入失败：'+err.message);}};rd.readAsText(f);
+  });
+  $('png').addEventListener('click',()=>{canvas.toBlob(b=>{if(b)download((state.name||'map')+'-preview.png',b);},'image/png');});
+  $('localSave').addEventListener('click',()=>{try{localStorage.setItem('steel_map_planner_v1',JSON.stringify(exportData()));status('已保存到浏览器本地');}catch(e){status('保存失败：'+e.message);}});
+  $('localLoad').addEventListener('click',()=>{try{const raw=localStorage.getItem('steel_map_planner_v1');if(!raw){status('本地没有地图');return;}snapshot();importData(JSON.parse(raw));}catch(e){status('读取失败：'+e.message);}});
+  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];buildHeightCanvas();draw();status('已清空');});
+  $('undo').addEventListener('click',undo);
+  $('gridBtn').addEventListener('click',()=>{state.grid=!state.grid;draw();});
+  $('contourBtn').addEventListener('click',()=>{state.contour=!state.contour;draw();});
+  $('mapName').addEventListener('input',e=>{state.name=e.target.value;draw();});
+  $('mapSize').addEventListener('change',e=>{state.size=Number(e.target.value);draw();});
+  $('heightRes').addEventListener('change',e=>{state.res=Number(e.target.value);state.height=new Float32Array(state.res*state.res);buildHeightCanvas();draw();});
+  $('sketchBtn').addEventListener('click',()=>$('file').click());
+  $('file').addEventListener('change',e=>{
+    const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+    rd.onload=()=>{const im=new Image();im.onload=()=>{state.background=im;state.backgroundName=f.name;$('sketchName').textContent=f.name;draw();};im.src=rd.result;};
+    rd.readAsDataURL(f);
+  });
+  window.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){finishRoad();e.preventDefault();}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){undo();e.preventDefault();}
+  });
+  styleToolButtons(); draw();
+  status('从草图开始，或直接抬高/压低地形');
+})();
+</script>
+</body>
+</html>

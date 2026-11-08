@@ -106,6 +106,7 @@
     this.shipRecords = [];
     this.playerShipSummoned = false;
     this.shipSupportOwned = false;
+    this.shipSummonTargets = { blue: null, red: null, green: null };
     this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2500;
     this.radarScanNext = { blue: 30, red: 30, green: 30 };
     this.radarCooldownLeft = { blue: 30, red: 30, green: 30 };
@@ -271,6 +272,34 @@
     }
   };
 
+  // 召唤卡指定点：水面直接用；陆地点取离该点最近、离岸至少300m的海面
+  Game.prototype.shipSummonPoint = function (x, y) {
+    if (!SL.Naval) return { x: x, y: y };
+    if (SL.Naval.isWater(x, y)) return { x: x, y: y };
+    var best = null, bestD = Infinity;
+    for (var r = 300; r <= 1400; r += 50) {
+      for (var a = 0; a < 32; a++) {
+        var ang = a / 32 * Math.PI * 2;
+        var px = U.clamp(x + Math.cos(ang) * r, 20, T.size - 20);
+        var py = U.clamp(y + Math.sin(ang) * r, 20, T.size - 20);
+        if (!SL.Naval.isWater(px, py)) continue;
+        var shore = SL.Naval.shoreDistance ? SL.Naval.shoreDistance(px, py) : 300;
+        if (shore < 300) continue;
+        var d = U.dist2(px, py, x, y);
+        if (d < bestD) { bestD = d; best = { x: px, y: py }; }
+      }
+      if (best) break;
+    }
+    if (best) return best;
+    var wp = SL.Naval.nearestWaterPoint(x, y);
+    var lp = SL.Naval.nearestLandPoint(wp.x, wp.y);
+    var dx = wp.x - lp.x, dy = wp.y - lp.y;
+    var len = Math.hypot(dx, dy) || 1;
+    var fx = U.clamp(wp.x + dx / len * 300, 20, T.size - 20);
+    var fy = U.clamp(wp.y + dy / len * 300, 20, T.size - 20);
+    return SL.Naval.isWater(fx, fy) ? { x: fx, y: fy } : wp;
+  };
+
   Game.prototype.spawnShip = function (side, yHint, force) {
     if (!this.naval) return null;
     if (!this.testMode && side !== 'blue' && this.navalTowerCount(side) < 1) return null;
@@ -308,6 +337,13 @@
     ship.entering = true;
     ship.heading = best.inward;
     ship.speed = 0;
+    var summon = this.shipSummonTargets && this.shipSummonTargets[side];
+    if (summon) {
+      var approach = this.shipSummonPoint(summon.x, summon.y);
+      ship.summonTarget = approach;
+      ship.dest = { x: approach.x, y: approach.y };
+      this.shipSummonTargets[side] = null;
+    }
     if (side === 'blue') { this.playerShipSummoned = true; this.shipSupportOwned = true; }
     this.log(SL.SIDES[side].name + ' 重型巡洋舰进入海域：' + ship.name, side === 'blue' ? 'win' : 'loss');
     return ship;
@@ -881,6 +917,7 @@
       }
       var cost = this.shipPurchaseCost;
       this.teams.blue.score -= cost;
+      this.shipSummonTargets.blue = { x: x, y: y };
       this.shipPurchaseCost = Math.round(cost * (SL.NAVAL.shipCostStep || 1.5));
       this.shipSupportOwned = true;
       if (!this.spawnShip('blue', y)) return { ok: false, msg: '无法进入海域' };
@@ -981,6 +1018,7 @@
     if (card.key === 'ship_support') {
       if (this.shipOf('blue')) return { ok: false, msg: '本阵营已经拥有重型巡洋舰' };
       if (this.navalTowerCount('blue') < 1) return { ok: false, msg: '需要至少占领一座通讯塔' };
+      this.shipSummonTargets.blue = { x: x, y: y };
       if (!this.spawnShip('blue', y)) return { ok: false, msg: '无法进入海域' };
       var newShip = this.shipOf('blue');
       if (newShip) this.setSelectedShip(newShip);

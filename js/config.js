@@ -502,7 +502,7 @@
     ship_support: {
       key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
       use: 'point', cost: 2500,
-      desc: '在已占领港口或海域边缘召唤欧根亲王号'
+      desc: '拖到地图：在已占领港口或海域边缘召唤欧根亲王号，入场后前往指定位置；陆地目标自动选择离岸约300m的海面'
     },
     ship_prewarn: {
       key: 'ship_prewarn', name: '预先瞄准', icon: 'PA', color: '#74a99d',
