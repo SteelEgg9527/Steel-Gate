@@ -2990,10 +2990,11 @@
         continue;
       }
       if (z.fortified) {
-        if (eng) {
+        if (eng || engVeh) {
           z.hp = Math.min(z.maxHp, z.hp + SL.FORT.repairRate * dt);
           for (var sr = 0; sr < structs.length; sr++) {
             structs[sr].hp = Math.min(structs[sr].maxHp, structs[sr].hp + SL.FORT.repairRate * dt);
+            if (structs[sr].hp > 0) structs[sr].destroyed = false;
           }
         }
       } else if (eng) {
@@ -3328,19 +3329,10 @@
         st.hp -= applied;
         if (st.hp <= 0) {
           var stName = { bunker: '机枪碉堡', mortar: '迫击炮阵地', at_nest: '反坦克炮阵地', flak88: '88防空炮阵地' }[st.type] || '工事';
-          if (!z.rubbles) z.rubbles = [];
-          z.rubbles.push({
-            type: st.type, name: stName,
-            maxHp: st.maxHp,
-            maxAmmo: st.maxAmmo || st.ammo || 0,
-            ammo: st.ammo || 0
-          });
-          z.rubble = z.rubbles[0];
-          var ri = z.structures.indexOf(st);
-          if (ri >= 0) z.structures.splice(ri, 1);
+          st.hp = 0;
+          st.destroyed = true;
           z.structure = z.structures[0] || null;
-          z.rubbleProgress = 0;
-          this.log(z.name + ' 的' + stName + '被摧毁，残骸可修复', 'loss');
+          this.log(z.name + ' 的' + stName + '被摧毁，留在阵地等待修理', 'loss');
         }
       } else {
         z.hp -= applied;
