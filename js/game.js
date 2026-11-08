@@ -4426,6 +4426,8 @@
     if (cached && cached.version === this.barrierVersion) return cached;
     var cell = 40, n = Math.ceil(SL.CONFIG.mapSize / cell);
     var blocked = new Uint8Array(n * n);
+    var cost = new Float32Array(n * n);
+    cost.fill(1);
     var segs = this.barrierSegments();
     for (var i = 0; i < segs.length; i++) {
       var s = segs[i];
@@ -4443,16 +4445,35 @@
         }
       }
     }
-    if (u.type !== 'battleship' && T.waterAreas && T.waterAreas.length) {
-      for (var wy = 0; wy < n; wy++) {
-        for (var wx = 0; wx < n; wx++) {
-          if (blocked[wy * n + wx]) continue;
-          var wcx = (wx + 0.5) * cell, wcy = (wy + 0.5) * cell;
-          if (T.isWaterAt(wcx, wcy) && !T.isBridgeAt(wcx, wcy)) blocked[wy * n + wx] = 1;
+    if (u.type !== 'battleship') {
+      for (var cy = 0; cy < n; cy++) {
+        for (var cx = 0; cx < n; cx++) {
+          var idx = cy * n + cx;
+          if (blocked[idx]) continue;
+          var px = (cx + 0.5) * cell, py = (cy + 0.5) * cell;
+          if (T.waterAreas && T.waterAreas.length && T.isWaterAt(px, py) && !T.isBridgeAt(px, py)) {
+            blocked[idx] = 1;
+            continue;
+          }
+          var c = 1;
+          if (u.type !== 'infantry') {
+            var rd = T.roadDistance(px, py);
+            if (rd < 11) c *= 0.72;
+            var ff = T.forestAt(px, py);
+            if (ff > 0.5) c *= 1.55;
+            else if (ff > 0.25) c *= 1.18;
+            var sl = T.slopeAt(px, py);
+            if (sl > 0.09) c *= 1.6;
+            else if (sl > 0.045) c *= 1.18;
+          } else {
+            var inf = T.forestAt(px, py);
+            if (inf > 0.5) c *= 1.2;
+          }
+          cost[idx] = c;
         }
       }
     }
-    cached = { version: this.barrierVersion, cell: cell, n: n, blocked: blocked };
+    cached = { version: this.barrierVersion, cell: cell, n: n, blocked: blocked, cost: cost };
     this.barrierGridCache[key] = cached;
     return cached;
   };
@@ -4507,7 +4528,8 @@
           var ni = ny2 * n + nx2;
           if (blocked[ni] || closed[ni]) continue;
           if (dx2 && dy && (blocked[cy0 * n + nx2] || blocked[ny2 * n + cx0])) continue;
-          var ng = gScore[cur] + (dx2 && dy ? 1.4142 : 1);
+          var stepCost = (dx2 && dy ? 1.4142 : 1) * ((grid.cost[cur] + grid.cost[ni]) * 0.5);
+          var ng = gScore[cur] + stepCost;
           if (ng >= gScore[ni]) continue;
           came[ni] = cur;
           gScore[ni] = ng;
