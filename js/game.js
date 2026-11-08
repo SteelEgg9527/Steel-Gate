@@ -336,7 +336,7 @@
         var shipReward = (SL.REWARD && SL.REWARD.ship) || { xp: 5000, score: 2500 };
         if (source.isShip) {
           source.kills = (source.kills || 0) + 1;
-          source.score = (source.score || 0) + shipReward.score;
+          source.score = (source.score || 0) + this.scoreCredit(source.side, shipReward.score);
         }
         this.addScore(source.side, shipReward.score);
         this.addXp(source.side, shipReward.xp);
@@ -3102,65 +3102,58 @@
       var eng = this.zoneEngineer(z, z.owner);
       var engVeh = this.zoneEngineerVehicle(z, z.owner);
       var structs = this.zoneStructures(z);
-      if (!z.rubbles) z.rubbles = [];
-      if (z.rubble && z.rubbles.indexOf(z.rubble) < 0) z.rubbles.push(z.rubble);
-      if (z.rubbles.length) {
-        z.rubble = z.rubbles[0];
-        var repairPower = 0;
-        var repairCost = 0;
-        if (eng) {
-          repairPower = 1;
-        } else if (engVeh) {
-          repairPower = SL.ENGINEER.rubbleRepairSpeed || 2;
-          repairCost = SL.ENGINEER.rubbleRepairCost || 18;
-        }
-        if (repairPower > 0) {
-          var power = repairPower;
-          if (!eng && engVeh && repairCost > 0) {
-            var need = repairCost * dt;
-            if (engVeh.engineerValue < need) {
-              power *= Math.max(0, engVeh.engineerValue / Math.max(0.0001, need));
-              need = engVeh.engineerValue;
+
+      // 工事区已被摧毁：先修复工事区本体，武器保持残骸
+      if (z.destroyed || z.rubble) {
+        if (eng || engVeh) {
+          var zonePower = eng ? 1 : (SL.ENGINEER.rubbleRepairSpeed || 2);
+          z.repairProgress = Math.min(1, (z.repairProgress || 0) + dt / SL.FORT.rebuildTime * zonePower);
+          if (z.repairProgress >= 1) {
+            var zoneCost = SL.FORT.zoneRepairCost || 30;
+            if (engVeh && !eng && engVeh.engineerValue < zoneCost) {
+              z.repairProgress = 1;
+              continue;
             }
-            engVeh.engineerValue = Math.max(0, engVeh.engineerValue - need);
-          }
-          z.rubbleProgress = Math.min(1, (z.rubbleProgress || 0) + dt / SL.FORT.rebuildTime * power);
-          if (z.rubbleProgress >= 1) {
-            var rb = z.rubbles.shift();
-            if (rb.type === 'zone') {
-              z.fortified = true;
-              z.hp = z.maxHp;
-              z.structures = [];
-            } else {
-              var restored = {
-                type: rb.type, hp: rb.maxHp, maxHp: rb.maxHp,
-                ammo: Math.max(1, Math.round((rb.maxAmmo || 0) * SL.FORT.rubbleAmmoRatio)),
-                maxAmmo: rb.maxAmmo || 0
-              };
-              z.fortified = true;
-              z.hp = z.maxHp;
-              z.structures.push(restored);
-              z.structure = z.structures[0];
-            }
-            this.log(SL.SIDES[z.owner].name + ' ' + (eng ? '工兵' : '工程车') + '修复了 ' + z.name + ' 的工事', 'order');
-            if (SL.Audio) SL.Audio.repair(z.x, z.y);
-            z.rubble = z.rubbles[0] || null;
+            if (engVeh && !eng) engVeh.engineerValue = Math.max(0, engVeh.engineerValue - zoneCost);
+            z.repairProgress = 0;
+            z.destroyed = false;
+            z.fortified = true;
+            z.hp = z.maxHp;
+            z.rubble = null;
+            z.rubbles = [];
             z.rubbleProgress = 0;
+            // 武器仍然是 destroyed 状态，等待逐一修复
+            this.log(SL.SIDES[z.owner].name + ' 修复了 ' + z.name + ' 工事区，武器残骸待逐一修复', 'order');
+            if (SL.Audio) SL.Audio.repair(z.x, z.y);
           }
         }
         continue;
       }
+
+      // 工事区本体尚在：修复工事区血量，并逐一修复武器残骸
       if (z.fortified) {
         if (eng || engVeh) {
           z.hp = Math.min(z.maxHp, z.hp + SL.FORT.repairRate * dt);
+          var down = null;
           for (var sr = 0; sr < structs.length; sr++) {
-            var wasDown = structs[sr].destroyed || structs[sr].hp <= 0;
-            structs[sr].hp = Math.min(structs[sr].maxHp, structs[sr].hp + SL.FORT.repairRate * dt);
-            if (wasDown && structs[sr].hp > 0) {
-              structs[sr].destroyed = false;
-              if (!(structs[sr].ammo > 0)) {
-                structs[sr].ammo = Math.max(1, Math.round((structs[sr].maxAmmo || 0) * (SL.FORT.rubbleAmmoRatio || 0.35)));
+            if (structs[sr].destroyed || structs[sr].hp <= 0) { down = structs[sr]; break; }
+          }
+          if (down) {
+            var weaponTime = SL.FORT.rebuildTime * Math.max(0.5, (down.maxHp || 2000) / 2000);
+            down.repairProgress = Math.min(1, (down.repairProgress || 0) + dt / weaponTime * (eng ? 1 : (SL.ENGINEER.rubbleRepairSpeed || 2)));
+            if (down.repairProgress >= 1) {
+              var wcost = Math.max(1, Math.round((down.maxHp || 2000) / 100));
+              if (engVeh && !eng && engVeh.engineerValue < wcost) {
+                down.repairProgress = 1;
+                continue;
               }
+              if (engVeh && !eng) engVeh.engineerValue = Math.max(0, engVeh.engineerValue - wcost);
+              down.destroyed = false;
+              down.hp = down.maxHp;
+              down.ammo = Math.max(1, Math.round((down.maxAmmo || 0) * (SL.FORT.rubbleAmmoRatio || 0.35)));
+              down.repairProgress = 0;
+              this.log(SL.SIDES[z.owner].name + ' 修复了 ' + z.name + ' 的' + ({ bunker: '机枪碉堡', mortar: '迫击炮阵地', at_nest: '反坦克炮阵地', flak88: '88防空炮阵地' }[down.type] || '工事'), 'order');
+              if (SL.Audio) SL.Audio.repair(z.x, z.y);
             }
           }
         }
@@ -3490,30 +3483,26 @@
       if (d > z.r + radius) continue;
       var falloff = 1 - 0.75 * Math.min(1, d / (z.r + radius));
       var applied = dmg * falloff * SL.FORT.dmgMult;
-      var structs = this.zoneStructures(z);
-      if (structs.length) {
-        var st = structs[0];
-        st.hp -= applied;
-        if (st.hp <= 0) {
-          var stName = { bunker: '机枪碉堡', mortar: '迫击炮阵地', at_nest: '反坦克炮阵地', flak88: '88防空炮阵地' }[st.type] || '工事';
-          st.hp = 0;
-          st.destroyed = true;
-          z.structure = z.structures[0] || null;
-          this.log(z.name + ' 的' + stName + '被摧毁，留在阵地等待修理', 'loss');
+      // 承伤统一走工事区血量；仅当工事区被摧毁时，内部武器全部转为残骸
+      z.hp -= applied;
+      if (z.hp <= 0) {
+        z.hp = 0;
+        z.destroyed = true;
+        z.fortified = false;
+        z.fortifyProgress = 0;
+        z.cap = 0;
+        z.capSide = null;
+        var allStructs = this.zoneStructures(z);
+        for (var fsi = 0; fsi < allStructs.length; fsi++) {
+          allStructs[fsi].hp = 0;
+          allStructs[fsi].destroyed = true;
+          allStructs[fsi].repairProgress = 0;
         }
-      } else {
-        z.hp -= applied;
-        if (z.hp <= 0) {
-          z.fortified = false;
-          z.hp = 0;
-          z.fortifyProgress = 0;
-          z.structures = [];
-          z.rubbles = [];
-          z.structure = null;
-          z.rubble = { type: 'zone', name: '强化工事' };
-          z.rubbleProgress = 0;
-          this.log(z.name + ' 的强化工事被摧毁，残骸可修复', 'loss');
-        }
+        z.structure = z.structures[0] || null;
+        z.rubble = { type: 'zone', name: '强化工事' };
+        z.rubbleProgress = 0;
+        z.repairProgress = 0;
+        this.log(z.name + ' 的强化工事被摧毁，武器残骸可逐一修复', 'loss');
       }
     }
   };
@@ -5248,7 +5237,7 @@
       }
       var r = SL.REWARD[u.type] || SL.REWARD.infantry;
       killer.kills++;
-      killer.score += r.score;
+      killer.score += this.scoreCredit(killer.side, r.score);
       var team = this.teams[killer.side];
       this.addScore(killer.side, r.score);
       team.kills++;
@@ -5397,6 +5386,10 @@
     return { xp: cfg.xp, score: cfg.score, cards: cfg.cards };
   };
 
+  Game.prototype.scoreCredit = function (side, base) {
+    return base * (side === 'blue' ? (SL.XP.playerScoreMult || 2.5) : 1);
+  };
+
   Game.prototype.addScore = function (side, amount) {
     var t = this.teams[side];
     if (!t || !amount) return;
@@ -5462,7 +5455,7 @@
   };
 
   // 从 5 张候选里选 1 张进卡包
-  // 用分数分数购买一次抽卡机会
+  // 用分数购买一次抽卡机会
   Game.prototype.fortCardInfo = function (key) {
     return {
       bunker: { type: 'bunker', hp: SL.FORT.bunkerHp, ammo: SL.FORT.bunkerAmmo, name: '机枪碉堡' },
@@ -5950,7 +5943,7 @@
     if (SL.Audio) SL.Audio.explosion(20, p.x, p.y);
     if (source && source.side === 'blue') {
       this.addXp('blue', 40);
-      source.score += 20;
+      source.score += this.scoreCredit(source.side, 20);
       this.addScore('blue', 20);
       this.stats.kills.blue = (this.stats.kills.blue || 0) + 1;
       if (p.kind === 'hellBomber') this.awardTrialCards(1, p.x, p.y, '击落重型轰炸机');

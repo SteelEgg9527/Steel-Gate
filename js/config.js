@@ -501,7 +501,7 @@
     ship_support: {
       key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
       use: 'point', cost: 2500,
-      desc: '在已占领港口或海域边缘召唤欧根亲王号；每次购买涨价 50%'
+      desc: '在已占领港口或海域边缘召唤欧根亲王号'
     },
     ship_prewarn: {
       key: 'ship_prewarn', name: '预先瞄准', icon: 'PA', color: '#74a99d',
@@ -511,22 +511,22 @@
     naval_suppress: {
       key: 'naval_suppress', name: '舰炮压制', icon: 'FS', color: '#a58e5c',
       use: 'point', cost: 0,
-      desc: '全舰持续压制目标区域 5 分钟；校射完成后进入效力射'
+      desc: '全舰持续压制目标区域，校射完成后进入效力射'
     },
     seaplane: {
       key: 'seaplane', name: '水上飞机', icon: 'AR', color: '#75a0a5',
       use: 'point', cost: 0,
-      desc: '向战舰 2km 内派出水上侦察机，盘旋 40 秒'
+      desc: '向战舰附近派出水上侦察机进行侦察'
     },
     naval_supply: {
       key: 'naval_supply', name: '舰船补给', icon: 'NS', color: '#7b9b7e',
       use: 'point', cost: 500,
-      desc: '召唤补给舰，为战舰补充舰体与弹药（500分）'
+      desc: '召唤补给舰，为战舰补充舰体与弹药'
     },
     naval_bombard: {
       key: 'naval_bombard', name: '舰炮轰击', icon: 'NF', color: '#b18b5e',
       use: 'point', cost: 0,
-      desc: '旧版目标区域轰击'
+      desc: '对目标区域进行舰炮轰击'
     }
   };
 
@@ -717,7 +717,8 @@
     dmgMult: 1,         // 炮弹/空袭对工事的最终伤害倍率（伤害值由武器类型决定）
     suppressDuration: 60, // 火炮压制持续时间
     suppressRadius: 100,  // 压制落点散布半径
-    rebuildTime: 8,       // 工兵修复被毁工事时间
+    rebuildTime: 8,       // 工兵修复被毁工事区的时间
+    zoneRepairCost: 30,    // 工程车修复工事区消耗的工程值
     maxStructures: 4,     // 每个强化工事区最多部署的工事数量
     fieldBuildRange: 100, // 携带工兵装备的步兵可构筑野战工事的距离
     rubbleAmmoRatio: 0.35 // 修复后保留的弹药比例
@@ -730,32 +731,32 @@
   SL.EQUIP = {
     mg: {
       key: 'mg', name: '机枪', icon: 'MG', slot: 'weapon',
-      desc: 'MG42，高射速大伤害，射程 180m',
+      desc: 'MG42，高射速大伤害',
       weapon: { range: 200, dmg: 12, interval: 0.32, ap: 0.25, accuracy: 0.75, spread: 5, ammo: 120, kind: 'direct', usesUnitAmmo: true, mg: true, label: 'MG42' }
     },
     mortar: {
       key: 'mortar', name: '迫击炮', icon: 'MT', slot: 'weapon',
-      desc: '8cm 迫击炮，射程 300m，散布 65m，溅射 90m；停止移动后才能开火',
+      desc: '8cm 迫击炮，提供曲射与范围杀伤；停止移动后才能开火',
       weapon: { range: 300, dmg: 70, interval: 5, ap: 0.45, accuracy: 1, spread: 0, ammo: 0, kind: 'shell', minRange: 40, scatter: 65, splash: 90, usesUnitAmmo: true, requiresStop: true, mortar: true, label: '8cm GrW 34' }
     },
     bazooka: {
       key: 'bazooka', name: '火箭筒', icon: 'BZ', slot: 'weapon',
-      desc: 'Panzerschreck，2 发，对装甲高额杀伤，射程 200m；散布较大，不吃高地射程加成',
+      desc: 'Panzerschreck，对装甲高额杀伤；散布较大，不吃高地射程加成',
       weapon: { range: 200, dmg: 300, interval: 5, ap: 1.9, accuracy: 0.9, spread: 8, noRangeBonus: true, ammo: 2, kind: 'direct', antiArmor: true, rocket: true, projectileSpeed: 55, label: 'Panzerschreck' }
     },
     atgrenade: {
       key: 'atgrenade', name: '反坦克手雷', icon: '雷', slot: 'weapon',
-      desc: '5 发一组，射程 100m，高穿甲，对装甲目标优先使用',
+      desc: '高穿甲反坦克手雷，对装甲目标优先使用',
       weapon: { range: 100, dmg: 450, interval: 2.5, ap: 1.5, accuracy: 0.85, spread: 3, ammo: 5, kind: 'direct', antiArmor: true, label: '反坦克手雷' }
     },
     grenade: {
       key: 'grenade', name: '手榴弹', icon: '手', slot: 'weapon',
-      desc: '10 发，射程 100m，35m 溅射',
+      desc: '手榴弹，对目标区域造成范围杀伤',
       weapon: { range: 100, dmg: 220, interval: 1.5, ap: 0.3, accuracy: 0.85, spread: 4, ammo: 10, kind: 'direct', splash: 35, label: '手榴弹' }
     },
     sniper: {
       key: 'sniper', name: '狙击侦察小组', icon: '狙', slot: 'weapon',
-      desc: '狙击步枪+反坦克步枪：视野+100m，对步兵400m/150伤害，对装甲300m，对装甲车75伤害、对中坦35伤害，对重坦无效；可创建一次灌木隐蔽',
+      desc: '狙击步枪+反坦克步枪：对步兵致命，对装甲有限，对重坦无效；可创建一次灌木隐蔽',
       weapon: {
         range: 400, dmg: 150, interval: 4.5, ap: 0.5, accuracy: 0.9, spread: 1,
         ammo: 0, kind: 'direct', usesUnitAmmo: true, sniper: true,
@@ -776,7 +777,7 @@
     },
     engineer: {
       key: 'engineer', name: '工兵装备', icon: '工', slot: 'tool',
-      desc: '可构筑/修复强化工事；Shift+右键可建造一个野战工事区（1 次）',
+      desc: '可构筑/修复强化工事；Shift+右键可建造野战工事区',
       uses: 1, weapon: null
     }
   };
@@ -963,20 +964,20 @@
 
   /* ---------------- 卡片 ---------------- */
   SL.CARD_DEFS = {
-    med: { key: 'med', name: '医疗包', icon: '＋', color: '#b85c5c', use: 'unit', desc: '拖到步兵班：恢复 45% 生命' },
-    repair: { key: 'repair', name: '维修包', icon: '⚒', color: '#c08a4a', use: 'unit', desc: '拖到装甲单位：恢复 40% 生命' },
+    med: { key: 'med', name: '医疗包', icon: '＋', color: '#b85c5c', use: 'unit', desc: '拖到步兵班：恢复生命' },
+    repair: { key: 'repair', name: '维修包', icon: '⚒', color: '#c08a4a', use: 'unit', desc: '拖到装甲单位：恢复生命' },
     unitpack: { key: 'unitpack', name: '单位包', icon: '▣', color: '#5c7fa8', use: 'open', desc: '升级选中后立即开出一张单位卡' },
     equippack: { key: 'equippack', name: '装备包', icon: '✦', color: '#8a7a4a', use: 'open', desc: '升级选中后立即开出一张装备卡' },
-    ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送：可投到海面，为范围内战舰补充舰体与炮塔弹药；补给箱可被摧毁' },
-    airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：500lb 航弹，100m 杀伤半径，高额杀伤' },
-    artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：重炮支援 15s 30 发，直径 300m' },
-    recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：侦察机从边缘进入，抵达后盘旋 20 秒，侦察直径 500m' },
-    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机沿直径 600m 圈盘旋 40 秒，对地攻击 300m；追击敌机范围 1200m，不显示' },
+    ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送补给，为范围内战舰补充舰体与炮塔弹药；补给箱可被摧毁' },
+    airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：呼叫航弹空袭，对目标区域造成高额范围杀伤' },
+    artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：呼叫重炮火力支援' },
+    recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：派出侦察机侦察目标区域' },
+    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：派出战斗机编队巡逻制空' },
     fortpack: { key: 'fortpack', name: '工事装备包', icon: '堡', color: '#7c5a32', use: 'open', desc: '升级选中后立即开出一张工事卡' },
-    bunker: { key: 'bunker', name: '机枪碉堡', icon: '堡', color: '#7c5a32', use: 'point', desc: '拖到强化工事区：300m 机枪火力 + 额外减伤' },
-    mortar_nest: { key: 'mortar_nest', name: '迫击炮阵地', icon: '迫', color: '#6e6a3a', use: 'point', desc: '拖到强化工事区：3 门迫击炮陆续射击，射程 500m，散布 50m' },
-    at_gun_nest: { key: 'at_gun_nest', name: '反坦克炮阵地', icon: '反炮', color: '#6b5b34', use: 'point', desc: '拖到强化工事区：500m 反坦克火力' },
-    flak88: { key: 'flak88', name: '88防空炮阵地', icon: '88', color: '#5f5530', use: 'point', desc: '拖到强化工事区：400m 对地 / 600m 对空' },
+    bunker: { key: 'bunker', name: '机枪碉堡', icon: '堡', color: '#7c5a32', use: 'point', desc: '拖到强化工事区：部署机枪碉堡，提供持续火力与额外减伤' },
+    mortar_nest: { key: 'mortar_nest', name: '迫击炮阵地', icon: '迫', color: '#6e6a3a', use: 'point', desc: '拖到强化工事区：部署迫击炮阵地，提供曲射火力' },
+    at_gun_nest: { key: 'at_gun_nest', name: '反坦克炮阵地', icon: '反炮', color: '#6b5b34', use: 'point', desc: '拖到强化工事区：部署反坦克炮阵地' },
+    flak88: { key: 'flak88', name: '88防空炮阵地', icon: '88', color: '#5f5530', use: 'point', desc: '拖到强化工事区：部署88防空炮阵地，兼顾对地与对空' },
     target: { key: 'target', name: '标靶卡片', icon: '靶', color: '#a84c3c', use: 'point', desc: '仅试验场：在指定位置放置一个标靶' },
     armor_target: { key: 'armor_target', name: '装甲标靶卡片', icon: '甲靶', color: '#7a5c3a', use: 'point', desc: '仅试验场：在指定位置放置一个装甲标靶（参考中型坦克）' },
     heavy_target: { key: 'heavy_target', name: '重坦标靶卡片', icon: '重靶', color: '#6e4d32', use: 'point', desc: '仅试验场：在指定位置放置一个敌方重坦标靶（参考重型坦克）' },
@@ -985,7 +986,7 @@
     boss_ghost: { key: 'boss_ghost', name: 'Boss · 幽灵兵团', icon: 'B', color: '#4b6a5a', use: 'point', desc: '仅试验场：召唤幽灵兵团' },
     enemy_ship: { key: 'enemy_ship', name: '敌方战舰', icon: 'ES', color: '#a35448', use: 'point', desc: '仅海岸训练场：召唤敌方重型巡洋舰' },
     enemy_bomber: { key: 'enemy_bomber', name: '敌方轰炸机', icon: 'EB', color: '#8c3b2e', use: 'point', desc: '仅海岸训练场：召唤敌方普通轰炸机' },
-    unit: { key: 'unit', name: '单位卡', icon: '▣', color: '#5c7fa8', use: 'unit', desc: '拖到地图：在友军 200m 内生成单位' },
+    unit: { key: 'unit', name: '单位卡', icon: '▣', color: '#5c7fa8', use: 'unit', desc: '拖到地图：在友军附近生成单位' },
     equip: { key: 'equip', name: '装备卡', icon: '✦', color: '#8a7a4a', use: 'equip', desc: '拖到步兵班：直接装备武器' }
   };
 

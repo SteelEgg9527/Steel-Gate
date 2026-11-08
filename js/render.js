@@ -799,11 +799,26 @@
     if (!game || !SL.Terrain.zones) return;
     for (var i = 0; i < SL.Terrain.zones.length; i++) {
       var z = SL.Terrain.zones[i];
-      if (!z.fortified && !z.site) continue;
+      if (!z.fortified && !z.site && !z.destroyed) continue;
       if (game.fogEnabled !== false && !game.isSeen(z.x, z.y)) continue;
       var structs = (z.structures && z.structures.length) ? z.structures : (z.structure ? [z.structure] : []);
-      if (!structs.length) continue;
       var sx = R.proj.x(z.x), sy = R.proj.y(z.y);
+      if (z.destroyed && !z.site) {
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = 'rgba(196,156,118,0.8)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(sx, sy, z.r * cam.zoom, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '800 8px ' + SL.FONT_UI;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.strokeStyle = 'rgba(14,18,14,0.85)'; ctx.lineWidth = 3;
+        ctx.strokeText('工事残骸', sx, sy - z.r * cam.zoom - 4);
+        ctx.fillStyle = '#d8b08c';
+        ctx.fillText('工事残骸', sx, sy - z.r * cam.zoom - 4);
+        ctx.restore();
+      }
+      if (!structs.length) continue;
       if (z.site) {
         drawFortHpBar(sx, sy - 24, (z.hp || 0) / Math.max(1, z.maxHp || 1), z.hp || 0, z.maxHp || 0);
         if (!structs.length) continue;
