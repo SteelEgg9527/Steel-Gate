@@ -41,7 +41,9 @@ module.exports = async function handler(req, res) {
   if (wave > Math.floor(duration / 20) + 2) return L.json(res, 400, { ok: false, error: 'invalid_wave' });
   if (hold > duration + 300) return L.json(res, 400, { ok: false, error: 'invalid_hold' });
 
+  const endedAt = body.endedAt && !isNaN(Date.parse(body.endedAt)) ? new Date(body.endedAt).toISOString() : new Date().toISOString();
   const row = {
+    created_at: endedAt,
     run_id: body.runId,
     player_id: playerId,
     nickname: nickname,

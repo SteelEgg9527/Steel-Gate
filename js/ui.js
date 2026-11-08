@@ -1937,6 +1937,7 @@
 
   function recordRecentResult(g) {
     if (!g || g._recentSaved || g.testMode || g.demo) return;
+    if (!g._endedAt) g._endedAt = Date.now();
     g._recentSaved = true;
     var mode = g.mode === 'navalLastStand' ? '背水一战' : (g.mode === 'naval' ? '舰炮轰鸣' : (g.mode === 'lastStand' ? '防御模式' : '三军混战'));
     var diff = '普通';
@@ -1961,6 +1962,7 @@
       yellowXp: Math.floor((g.teams && g.teams.blue && g.teams.blue.yellowXp) || 0),
       reason: g.endReason || '',
       runId: g._lbRunId || (g._lbRunId = recentUuid()),
+      endedAt: new Date(g._endedAt).toISOString(),
       modeId: g.mode,
       difficultyId: g.difficulty,
       mapId: (SL.Terrain && SL.Terrain.map && SL.Terrain.map.id) || '',

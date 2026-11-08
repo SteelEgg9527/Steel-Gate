@@ -208,6 +208,7 @@
       holdSec: Math.floor((g.defense && g.defense.hold) || 0),
       shipsSunk: shipsSunk,
       bossKills: Math.floor(g.bossKillCount || 0),
+      endedAt: g._endedAt ? new Date(g._endedAt).toISOString() : new Date().toISOString(),
       clientVersion: 'v0.12.31'
     };
   }
@@ -278,6 +279,7 @@
         holdSec: Math.max(0, Math.floor(rec.holdSec || 0)),
         shipsSunk: Math.max(0, Math.floor(rec.shipsSunk || 0)),
         bossKills: Math.max(0, Math.floor(rec.bossKills || 0)),
+        endedAt: rec.endedAt || new Date(rec.ts || Date.now()).toISOString(),
         clientVersion: 'v0.12.31'
       };
       requestJSON('/api/submit', {
@@ -318,7 +320,7 @@
   function onGameEnd(g) {
     if (!autoUploadEnabled() || !g || g.testMode || g.demo || g._lbAutoTried || g._lbUploaded) return;
     g._lbAutoTried = true;
-    uploadCurrent(null, { openAfter: false });
+    uploadCurrent(null, { openAfter: true });
   }
 
   L.onGameEnd = onGameEnd;
@@ -390,10 +392,10 @@
     var head = lbOverlay.querySelector('#lb-head');
     head.innerHTML = '';
     var fields = currentMode === 'overall'
-      ? ['名次', '玩家', '综合分', '模式', '难度', '得分', '时间']
+      ? ['名次', '玩家', '综合分', '模式', '难度', '得分', '结算']
       : (isStand(currentMode)
-        ? ['名次', '玩家', '波次', '坚守', '击杀', '难度', '时间']
-        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度', '时间']);
+        ? ['名次', '玩家', '波次', '坚守', '击杀', '难度', '结算']
+        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度', '结算']);
     head.className = 'lb-row lb-head-row' + (currentMode === 'overall' ? ' lb-overall-row' : '');
     for (var i = 0; i < fields.length; i++) {
       var s = document.createElement('span');

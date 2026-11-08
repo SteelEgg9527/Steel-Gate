@@ -427,7 +427,7 @@
     hull: {
       name: '欧根亲王号', hp: 5000, armor: 4, vision: 1000,
       length: 212.5, beam: 21.8, maxSpeed: 17, accel: 1.6,
-      turnRate: 0.08, reverseSpeed: 6.5, shoreRange: 400,
+      turnRate: 0.08, reverseSpeed: 6.5, shoreRange: 600,
       suppressDuration: 300,
       nearShoreSpeed: 0.82, repairHullPerTurretHp: 0.2,
       nearShoreExposeChance: 0.08, exposeDuration: 5

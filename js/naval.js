@@ -1697,7 +1697,7 @@ return null;
       }
       for (var gi = 0; gi < game.coastalGuns.length; gi++) {
         var gun = game.coastalGuns[gi];
-        if (!gun || gun.side === ship.side || gun.hp <= 0) continue;
+        if (!gun || gun.side === ship.side || gun.hp <= 0 || !gun.base || gun.base.destroyed) continue;
         var gd = U.dist(ship.x, ship.y, gun.x, gun.y);
         if (gd > maxR || gd >= bd) continue;
         if (!game.canSee(ship.side, gun.x, gun.y)) continue;
