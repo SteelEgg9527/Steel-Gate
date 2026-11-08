@@ -346,8 +346,8 @@
       id: id, name: name, kind: kind, x: x, y: y,
       r: kind === 'radar' ? 66 : (kind === 'coastbase' ? 74 : (kind === 'port' ? 90 : 58)),
       owner: null, cap: 0, capSide: null,
-      site: true, siteHp: 2000, siteKind: kind, towerIndex: towerIndex,
-      hp: 2000, maxHp: 2000, destroyed: false,
+      site: true, siteHp: 2600, siteKind: kind, towerIndex: towerIndex,
+      hp: 2600, maxHp: 2600, destroyed: false,
       fortified: false, fortifyProgress: 0, structure: null, structures: [],
       rubbles: [], rubble: null, rubbleProgress: 0
     };

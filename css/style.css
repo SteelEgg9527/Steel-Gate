@@ -2944,3 +2944,15 @@ html, body {
 #ship-system #navy-cards .navy-stop-card .nm {
   font-size: 8px !important;
 }
+
+/* 排行榜增加上传时间列 */
+.lb-row {
+  grid-template-columns: 50px minmax(90px, 1.4fr) repeat(5, minmax(52px, 0.8fr)) !important;
+}
+.lb-overall-row {
+  grid-template-columns: 44px minmax(80px, 1.3fr) 66px 96px 46px 55px 78px !important;
+}
+@media (max-width: 720px) {
+  .lb-row { grid-template-columns: 36px minmax(66px,1.2fr) repeat(5, minmax(40px,.75fr)) !important; gap:4px; }
+  .lb-overall-row { grid-template-columns: 34px minmax(64px,1.2fr) 54px 72px 38px 45px 64px !important; gap:4px; }
+}

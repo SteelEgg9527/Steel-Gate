@@ -67,6 +67,18 @@ module.exports = async function handler(req, res) {
       headers: { Prefer: 'return=minimal' },
       body: JSON.stringify(row)
     });
+    // 每名玩家最多保留最近 100 局
+    try {
+      const old = await L.sb(L.TABLE + '?select=run_id&player_id=eq.' +
+        encodeURIComponent(playerId) + '&order=' + encodeURIComponent('created_at.desc') +
+        '&offset=100&limit=1000', { method: 'GET' });
+      if (old && old.length) {
+        const ids = old.map(function (x) { return x.run_id; }).join(',');
+        await L.sb(L.TABLE + '?run_id=in.(' + encodeURIComponent(ids) + ')', { method: 'DELETE' });
+      }
+    } catch (e) {
+      console.error('retention cleanup failed', e.status, e.body);
+    }
     return L.json(res, 201, { ok: true, runId: row.run_id });
   } catch (e) {
     if (e.status === 409) return L.json(res, 409, { ok: false, error: 'duplicate_run' });

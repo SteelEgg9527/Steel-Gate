@@ -123,6 +123,12 @@
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
   }
   function isStand(mode) { return mode === 'lastStand' || mode === 'navalLastStand'; }
+  function when(iso) {
+    var d = new Date(iso);
+    if (!d || isNaN(d.getTime())) return '—';
+    function p2(n) { return (n < 10 ? '0' : '') + n; }
+    return p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+  }
   function errorText(status, data) {
     if (status === 404) return '排行榜接口未部署';
     if (status === 503) return '排行榜后端未配置';
@@ -307,10 +313,10 @@
     var head = lbOverlay.querySelector('#lb-head');
     head.innerHTML = '';
     var fields = currentMode === 'overall'
-      ? ['名次', '玩家', '综合分', '模式', '难度', '得分']
+      ? ['名次', '玩家', '综合分', '模式', '难度', '得分', '时间']
       : (isStand(currentMode)
-        ? ['名次', '玩家', '波次', '坚守', '击杀', '难度']
-        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度']);
+        ? ['名次', '玩家', '波次', '坚守', '击杀', '难度', '时间']
+        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度', '时间']);
     head.className = 'lb-row lb-head-row' + (currentMode === 'overall' ? ' lb-overall-row' : '');
     for (var i = 0; i < fields.length; i++) {
       var s = document.createElement('span');
@@ -333,10 +339,10 @@
         var row = document.createElement('div');
         row.className = 'lb-row' + (i < 3 ? ' top' : '') + (currentMode === 'overall' ? ' lb-overall-row' : '');
         var vals = currentMode === 'overall'
-          ? [r.rank, r.nickname, r.points, modeName(r.mode), diffName(r.difficulty), r.score]
+          ? [r.rank, r.nickname, r.points, modeName(r.mode), diffName(r.difficulty), r.score, when(r.createdAt)]
           : (isStand(currentMode)
-            ? [r.rank, r.nickname, r.wave + ' 波', clock(r.holdSec), r.kills, diffName(r.difficulty)]
-            : [r.rank, r.nickname, r.yellowXp, r.score, r.kills, diffName(r.difficulty)]);
+            ? [r.rank, r.nickname, r.wave + ' 波', clock(r.holdSec), r.kills, diffName(r.difficulty), when(r.createdAt)]
+            : [r.rank, r.nickname, r.yellowXp, r.score, r.kills, diffName(r.difficulty), when(r.createdAt)]);
         for (var j = 0; j < vals.length; j++) {
           var s = document.createElement('span');
           s.textContent = String(vals[j]);
@@ -354,15 +360,15 @@
     lbBody.innerHTML = '';
     headRow();
     var url = currentMode === 'overall'
-      ? '/api/leaderboard?scope=overall&limit=50&playerId=' + encodeURIComponent(playerId())
+      ? '/api/leaderboard?scope=overall&limit=100&playerId=' + encodeURIComponent(playerId())
       : '/api/leaderboard?mode=' + encodeURIComponent(currentMode) +
         '&difficulty=' + encodeURIComponent(currentDiff) +
-        '&limit=50&playerId=' + encodeURIComponent(playerId());
+        '&limit=100&playerId=' + encodeURIComponent(playerId());
     requestJSON(url)
       .then(function (data) {
         lbStatus.textContent = currentMode === 'overall'
-          ? '总榜 · 全部模式与难度 · TOP 50'
-          : modeName(currentMode) + ' · ' + diffName(currentDiff) + ' · TOP 50';
+          ? '总榜 · 全部模式与难度 · 最近 100 局'
+          : modeName(currentMode) + ' · ' + diffName(currentDiff) + ' · 最近 100 局';
         renderRows(data);
       })
       .catch(function (err) {

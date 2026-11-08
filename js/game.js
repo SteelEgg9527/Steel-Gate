@@ -286,23 +286,11 @@
       }
     }
     if (!best) {
-      var anchors = [
-        { x: T.size - 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: Math.PI },
-        { x: 30, y: U.clamp(anchor.y, 260, T.size - 260), inward: 0 },
-        { x: U.clamp(anchor.x, 260, T.size - 260), y: 30, inward: Math.PI / 2 },
-        { x: U.clamp(anchor.x, 260, T.size - 260), y: T.size - 30, inward: -Math.PI / 2 }
-      ];
-      var bd = Infinity;
-      for (var ai = 0; ai < anchors.length; ai++) {
-        var ac = anchors[ai];
-        if (!SL.Naval.isWater(ac.x, ac.y)) continue;
-        var ad = U.dist(ac.x, ac.y, anchor.x, anchor.y);
-        if (ad < bd) { bd = ad; best = ac; }
-      }
-    }
-    if (!best) {
-      var wp = SL.Naval.nearestWaterPoint(anchor.x, anchor.y);
-      best = { x: wp.x, y: wp.y, inward: Math.atan2(anchor.y - wp.y, anchor.x - wp.x) + Math.PI };
+      var ep = this.supplySpawnPoint(side, yHint);
+      best = {
+        x: ep.x, y: ep.y,
+        inward: Math.atan2(T.size / 2 - ep.y, T.size / 2 - ep.x)
+      };
     }
     var ship = SL.Naval.createShip(this, side, best.x, best.y);
     ship.entryX = U.clamp(best.x + Math.cos(best.inward) * 180, 30, T.size - 30);
@@ -1213,7 +1201,7 @@
     this.planes.push({
       kind: 'hellBomber', boss: !heavyOnly, heavyOnly: heavyOnly, name: heavyOnly ? '重型轰炸机' : cfg.name,
       x: sx, y: sy, tx: center.x, ty: center.y, ex: ex, ey: ey,
-      center: center, side: side, speed: cfg.speed, t: 0, dropped: false, bombRadius: cfg.bombRadius,
+      center: center, side: side, speed: cfg.speed, t: 0, dropped: false, bornAt: this.time, bombRadius: cfg.bombRadius,
       hp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
       maxHp: heavyOnly ? Math.round(cfg.hp * ((SL.NAVAL_LAST_STAND && SL.NAVAL_LAST_STAND.heavyHpScale) || 0.42)) : cfg.hp,
       heavyWave: heavyOnly ? heavyWave : 0,
@@ -3427,6 +3415,12 @@
       this.updateAI(dt);
     }
     this.updateStealth(dt);
+    // 自动清理已被全灭的编组
+    if (this.controlGroups && this.controlGroups.length) {
+      this.controlGroups = this.controlGroups.filter(function (grp) {
+        return this.controlGroupUnits(grp).length > 0;
+      }, this);
+    }
 
     for (i = 0; i < this.units.length; i++) {
       u = this.units[i];
@@ -3912,6 +3906,17 @@
     for (var i = 0; i < segs.length; i++) {
       if (!this.barrierBlocksUnit(u, segs[i].type)) continue;
       if (segmentsIntersect(x0, y0, x1, y1, segs[i].a.x, segs[i].a.y, segs[i].b.x, segs[i].b.y)) return true;
+    }
+    // 单个障碍节点本身也阻挡，避免未连成线的铁丝网/拒马失效
+    var dx = x1 - x0, dy = y1 - y0;
+    var len2 = dx * dx + dy * dy || 1;
+    for (var k = 0; k < this.barriers.length; k++) {
+      var b = this.barriers[k];
+      if (!b.alive || !this.barrierBlocksUnit(u, b.type)) continue;
+      var t = ((b.x - x0) * dx + (b.y - y0) * dy) / len2;
+      t = U.clamp(t, 0, 1);
+      var px = x0 + dx * t, py = y0 + dy * t;
+      if (Math.hypot(b.x - px, b.y - py) <= (b.type === 'wire' ? 10 : 13)) return true;
     }
     return false;
   };
@@ -5907,7 +5912,7 @@
       p.orbitTarget = this.hellOrbitPoint(p, y, p.orbitEntryAng);
     }
     // 普通重型轰炸机完成投弹后离场，不在战场上无限盘旋
-    if (p.heavyOnly && p.dropped) {
+    if (p.heavyOnly && (p.dropped || this.time - (p.bornAt || this.time) > 75)) {
       if (p.hellState !== 'leave') {
         p.hellState = 'leave';
         p.altitude = 'low';
@@ -6276,6 +6281,7 @@
         this.updateHellBomber(p, dt);
         continue;
       }
+      if (!p.dropped && p.t > 75) { this.planes.splice(i, 1); continue; }
       if (!p.dropped) {
         var dx = p.tx - p.x, dy = p.ty - p.y;
         var d = U.len(dx, dy);

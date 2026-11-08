@@ -782,15 +782,32 @@
     }
   }
 
+  function drawFortHpBar(x, y, ratio, hp, maxHp) {
+    var w = 30, h = 3;
+    ctx.fillStyle = 'rgba(10,12,9,0.82)';
+    ctx.fillRect(x - w / 2, y, w, h);
+    ctx.fillStyle = ratio > 0.5 ? '#8fd4a0' : (ratio > 0.22 ? '#d8b25e' : '#d06a52');
+    ctx.fillRect(x - w / 2, y, w * U.clamp(ratio, 0, 1), h);
+    ctx.font = '7px ' + SL.FONT_MONO;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillStyle = 'rgba(244,235,210,0.9)';
+    ctx.fillText(Math.ceil(hp) + '/' + Math.ceil(maxHp), x, y - 1);
+  }
+
   function drawFortMarkers(game) {
     if (!game || !SL.Terrain.zones) return;
     for (var i = 0; i < SL.Terrain.zones.length; i++) {
       var z = SL.Terrain.zones[i];
-      if (!z.fortified) continue;
+      if (!z.fortified && !z.site) continue;
       if (game.fogEnabled !== false && !game.isSeen(z.x, z.y)) continue;
       var structs = (z.structures && z.structures.length) ? z.structures : (z.structure ? [z.structure] : []);
       if (!structs.length) continue;
       var sx = R.proj.x(z.x), sy = R.proj.y(z.y);
+      if (z.site) {
+        drawFortHpBar(sx, sy - 24, (z.hp || 0) / Math.max(1, z.maxHp || 1), z.hp || 0, z.maxHp || 0);
+        if (!structs.length) continue;
+      }
       var n = structs.length;
       for (var si = 0; si < n; si++) {
         var st = structs[si];
@@ -825,6 +842,7 @@
           ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
           ctx.stroke();
         }
+        drawFortHpBar(0, -17, (st.hp || 0) / Math.max(1, st.maxHp || 1), st.hp || 0, st.maxHp || 0);
         var aw = 20, ah = 2.2;
         ctx.fillStyle = 'rgba(16,18,14,0.8)';
         ctx.fillRect(-aw / 2, 15, aw, ah);

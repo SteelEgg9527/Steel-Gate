@@ -18,13 +18,13 @@ module.exports = async function handler(req, res) {
   const q = req.query || {};
   const scope = L.text(q.scope, 16) === 'overall' ? 'overall' : 'mode';
   const requested = L.int(q.limit, 100);
-  const limit = Math.max(1, Math.min(200, requested || 50));
+  const limit = Math.max(1, Math.min(200, requested || 100));
   const playerId = L.text(q.playerId, 80);
 
   if (scope === 'overall') {
     const path = L.TABLE + '?select=' + encodeURIComponent(SELECT) +
-      '&order=' + encodeURIComponent('score.desc,created_at.asc') +
-      '&limit=1000';
+      '&order=' + encodeURIComponent('created_at.desc') +
+      '&limit=' + Math.max(limit, 100);
     let rows;
     try {
       rows = await L.sb(path, { method: 'GET' });
@@ -32,30 +32,22 @@ module.exports = async function handler(req, res) {
       console.error('overall query failed', e.status, e.body);
       return L.json(res, 500, { ok: false, error: 'query_failed' });
     }
-    const best = {};
+    const entries = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const weight = DIFF_WEIGHT[r.difficulty] || 1;
-      const points = Math.round((r.score || 0) * weight);
       const out = L.rowOf(r);
       out.difficultyWeight = weight;
-      out.points = points;
+      out.points = Math.round((r.score || 0) * weight);
       out.score = r.score || 0;
       out.wave = r.wave || 0;
       out.holdSec = r.hold_sec || 0;
-      const old = best[r.player_id];
-      if (!old || points > old.points ||
-        (points === old.points && (r.score || 0) > old.score) ||
-        (points === old.points && (r.score || 0) === old.score &&
-          (DIFF_WEIGHT[r.difficulty] || 1) > old.difficultyWeight)) {
-        best[r.player_id] = out;
-      }
+      entries.push(out);
     }
-    const entries = Object.keys(best).map(function (k) { return best[k]; });
     entries.sort(function (a, b) {
       return (b.points - a.points) || (b.score - a.score) ||
         (b.difficultyWeight - a.difficultyWeight) ||
-        String(a.createdAt).localeCompare(String(b.createdAt));
+        String(b.createdAt).localeCompare(String(a.createdAt));
     });
     for (let k = 0; k < entries.length; k++) entries[k].rank = k + 1;
     let myRank = null;
@@ -79,8 +71,8 @@ module.exports = async function handler(req, res) {
   const path = L.TABLE + '?select=' + encodeURIComponent(SELECT) +
     '&mode=eq.' + encodeURIComponent(mode) +
     '&difficulty=eq.' + encodeURIComponent(difficulty) +
-    '&order=' + encodeURIComponent(L.rankFields(mode)) +
-    '&limit=' + Math.max(limit * 8, 400);
+    '&order=' + encodeURIComponent('created_at.desc') +
+    '&limit=' + Math.max(limit, 100);
 
   let rows;
   try {
@@ -90,18 +82,21 @@ module.exports = async function handler(req, res) {
     return L.json(res, 500, { ok: false, error: 'query_failed' });
   }
 
-  const seen = {};
   const entries = [];
   for (let i = 0; i < rows.length; i++) {
-    const r = rows[i];
-    if (seen[r.player_id]) continue;
-    seen[r.player_id] = true;
-    const out = L.rowOf(r);
-    out.rank = entries.length + 1;
+    const out = L.rowOf(rows[i]);
     entries.push(out);
-    if (entries.length >= limit + 20) break;
   }
-
+  entries.sort(function (a, b) {
+    if (mode === 'lastStand' || mode === 'navalLastStand') {
+      return (b.wave - a.wave) || (b.holdSec - a.holdSec) ||
+        (b.kills - a.kills) || (b.score - a.score) ||
+        String(a.createdAt).localeCompare(String(b.createdAt));
+    }
+    return (b.yellowXp - a.yellowXp) || (b.score - a.score) ||
+      (b.kills - a.kills) || String(a.createdAt).localeCompare(String(b.createdAt));
+  });
+  for (let k = 0; k < entries.length; k++) entries[k].rank = k + 1;
   let myRank = null;
   if (playerId) {
     for (let i = 0; i < entries.length; i++) {
