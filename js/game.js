@@ -320,10 +320,10 @@
     this.log(label + '：获得 ' + count + ' 次抽卡', 'order');
   };
 
-  Game.prototype.damageShip = function (ship, dmg, source, ap) {
+  Game.prototype.damageShip = function (ship, dmg, source, ap, forcePen) {
     if (!ship || !ship.alive) return;
     var shipReq = SL.PENETRATION.armorTiers[U.clamp(Math.floor(ship.armor || 0), 0, 4)] || 0;
-    if (ap == null || ap < shipReq) {
+    if (!forcePen && (ap == null || ap < shipReq)) {
       this.fxText(ship.x, ship.y - 18, '无法击穿', '#d8d2b0', ship.side);
       return;
     }
@@ -587,8 +587,8 @@
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
       var aside = SL.SIDE_ORDER[ai];
       if (aside === 'blue') continue;
-      // 背水一战：第 10 波前禁止 AI 购买/补充舰艇
-      if (this.mode === 'navalLastStand' && (!this.defense || this.defense.wave < 10)) continue;
+      // 背水一战：舰艇由防御波次检查生成，不花分数；对抗模式才由 AI 购买
+      if (this.mode === 'navalLastStand') continue;
       if (this.shipOf(aside) || this.navalTowerCount(aside) < 1) continue;
       if (!this.aiShipUsed[aside] || this.aiShipRespawn[aside]) {
         var aiCost = this.aiShipCost[aside] || (SL.NAVAL.shipCost || 2500);
@@ -877,7 +877,7 @@
     if (key === 'ship_support') {
       if (this.shipSupportOwned || ship) return { ok: false, msg: '本阵营已有战舰或战舰增援卡' };
       if (this.teams.blue.score < this.shipPurchaseCost) {
-        return { ok: false, msg: '花费战功不足，需要 ' + this.shipPurchaseCost };
+        return { ok: false, msg: '分数不足，需要 ' + this.shipPurchaseCost };
       }
       var cost = this.shipPurchaseCost;
       this.teams.blue.score -= cost;
@@ -906,7 +906,7 @@
     }
     if (key === 'naval_supply') {
       var supplyCost = SL.NAVAL_CARDS.naval_supply.cost || 500;
-      if (this.teams.blue.score < supplyCost) return { ok: false, msg: '花费战功不足，需要 ' + supplyCost };
+      if (this.teams.blue.score < supplyCost) return { ok: false, msg: '分数不足，需要 ' + supplyCost };
       this.teams.blue.score -= supplyCost;
       var swp = this.supplySpawnPoint('blue', y); this.supplyShips.push({ side: 'blue', x: swp.x, y: swp.y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
       return { ok: true, msg: '补给舰已出发（' + supplyCost + ' 分）' };
@@ -961,7 +961,7 @@
     if (!this.naval || !def) return { ok: false, msg: '无效舰船卡' };
     if (key === 'ship_support' && this.shipSupportOwned) return { ok: false, msg: '本阵营已有战舰或战舰支援卡' };
     var t = this.teams.blue;
-    if (t.score < def.cost) return { ok: false, msg: '花费战功不足，需要 ' + def.cost };
+    if (t.score < def.cost) return { ok: false, msg: '分数不足，需要 ' + def.cost };
     t.score -= def.cost;
     var card = { id: ++this.nextCardId, key: key, name: def.name, icon: def.icon, color: def.color, use: def.use, desc: def.desc, naval: true };
     this.navalCards.push(card);
@@ -1774,7 +1774,7 @@
           cd: u.cd, speedNow: u.speedNow, stamina: u.stamina, fireMode: u.fireMode,
           grenadeMode: u.grenadeMode, kills: u.kills, score: u.score, items: u.items,
           deployState: u.deployState, deployTimer: u.deployTimer,
-          engineerMode: u.engineerMode, engineerValue: u.engineerValue,
+          engineerMode: u.engineerMode, minefieldLay: u.minefieldLay, engineerValue: u.engineerValue,
           engineerMax: u.engineerMax, engLastX: u.engLastX, engLastY: u.engLastY,
           bossKind: u.bossKind, ghostPhase: u.ghostPhase,
           forceConcealed: u.forceConcealed, bossPhase: u.bossPhase,
@@ -2004,7 +2004,7 @@
       this.neutralTimer = this.neutralSpawnGap();
       if (this.aliveCount('neutral') < SL.NEUTRAL.cap) this.spawnNeutral();
     }
-    // 清理没有战功的中立尸体，避免长期堆积
+    // 清理没有分数的中立尸体，避免长期堆积
     var keep = [];
     for (var i = 0; i < this.units.length; i++) {
       var u = this.units[i];
@@ -2862,6 +2862,7 @@
         var yellowGain = side === 'blue' ? gain * (SL.XP.playerXpMult || 2.5) : gain;
         this.teams[side].yellowXp += yellowGain;
         this.addScore(side, net * SL.YELLOW.scorePerUnitSecond * this.navalScoreMult());
+        this.addXp(side, gain);
         this.checkYellowWin(side);
       }
     }
@@ -3902,6 +3903,7 @@
 
     // 工程车：行驶中按当前模式布设障碍
     this.updateEngineerVehicle(u);
+    this.updateMinefieldLay(u, dt);
 
     // 所有通往目标的路线都被障碍封死时，转为拆除敌方障碍
     if (u.noPath) {
@@ -4164,45 +4166,69 @@
     return mine;
   };
 
-  // 点击式区域布雷：以工程车为中心，200m 内随机布设一片雷区
-  Game.prototype.layMinefield = function (units, type) {
+  // 点击式区域布雷：读条完成后以工程车为中心生成 200m 雷区
+  Game.prototype.beginMinefield = function (units, type) {
     var cost = SL.ENGINEER.minefieldCost || 50;
-    var radius = SL.ENGINEER.minefieldRadius || 200;
-    var count = SL.ENGINEER.minefieldMines || 10;
     var made = 0;
     for (var i = 0; i < units.length; i++) {
       var u = units[i];
       if (!u || !u.alive || u.type !== 'engineer_vehicle') continue;
-      if (u.engineerValue < cost || this.mines.length >= 240) continue;
-      var field = {
-        id: nextId++, x: u.x, y: u.y, r: radius, type: type, side: u.side,
-        alive: true, t: this.time, field: true
+      if (u.engineerValue < cost || u.minefieldLay) continue;
+      u.minefieldLay = {
+        type: type, progress: 0, duration: SL.ENGINEER.minefieldLayTime || 3,
+        x: u.x, y: u.y
       };
-      this.minefields.push(field);
-      var placed = 0;
-      for (var k = 0; k < count; k++) {
-        for (var tries = 0; tries < 12; tries++) {
-          var a = Math.random() * Math.PI * 2;
-          var rr = Math.sqrt(Math.random()) * radius * 0.92;
-          var mx = u.x + Math.cos(a) * rr, my = u.y + Math.sin(a) * rr;
-          if (T.naval && SL.Naval && SL.Naval.isWater(mx, my)) continue;
-          if (this.layMine(u, type, mx, my, field.id)) { placed++; }
-          break;
-        }
-      }
-      u.engineerValue = Math.max(0, u.engineerValue - cost);
-      u.engLastX = u.x;
-      u.engLastY = u.y;
       made++;
-      this.fxText(u.x, u.y - 14, type === 'mine_at' ? '布设反坦克雷区' : '布设反步兵雷区', '#e8c47a', u.side);
     }
     return made;
+  };
+
+  Game.prototype.completeMinefield = function (u, type, cx, cy) {
+    var cost = SL.ENGINEER.minefieldCost || 50;
+    var radius = SL.ENGINEER.minefieldRadius || 200;
+    var count = SL.ENGINEER.minefieldMines || 10;
+    if (!u || !u.alive || u.engineerValue < cost) return false;
+    var field = {
+      id: nextId++, x: cx, y: cy, r: radius, type: type, side: u.side,
+      alive: true, t: this.time, field: true
+    };
+    this.minefields.push(field);
+    for (var k = 0; k < count; k++) {
+      for (var tries = 0; tries < 12; tries++) {
+        var a = Math.random() * Math.PI * 2;
+        var rr = Math.sqrt(Math.random()) * radius * 0.92;
+        var mx = cx + Math.cos(a) * rr, my = cy + Math.sin(a) * rr;
+        if (T.naval && SL.Naval && SL.Naval.isWater(mx, my)) continue;
+        this.layMine(u, type, mx, my, field.id);
+        break;
+      }
+    }
+    u.engineerValue = Math.max(0, u.engineerValue - cost);
+    u.engLastX = u.x;
+    u.engLastY = u.y;
+    this.fxText(u.x, u.y - 14, type === 'mine_at' ? '反坦克雷区完成' : '反步兵雷区完成', '#e8c47a', u.side);
+    return true;
+  };
+
+  Game.prototype.updateMinefieldLay = function (u, dt) {
+    var lay = u.minefieldLay;
+    if (!lay) return;
+    if (u.moving || U.dist(u.x, u.y, lay.x, lay.y) > 10) {
+      u.minefieldLay = null;
+      this.fxText(u.x, u.y - 14, '雷区布设中断', '#d8a080', u.side);
+      return;
+    }
+    lay.progress = Math.min(1, (lay.progress || 0) + dt / Math.max(0.1, lay.duration || 3));
+    if (lay.progress >= 1) {
+      u.minefieldLay = null;
+      this.completeMinefield(u, lay.type, lay.x, lay.y);
+    }
   };
 
   Game.prototype.setEngineerMode = function (units, mode) {
     if (mode === 'mine_ap' || mode === 'mine_at') {
       for (var mi = 0; mi < units.length; mi++) if (units[mi] && units[mi].type === 'engineer_vehicle') units[mi].engineerMode = null;
-      return this.layMinefield(units, mode);
+      return this.beginMinefield(units, mode);
     }
     var changed = 0;
     for (var i = 0; i < units.length; i++) {
@@ -5059,7 +5085,7 @@
         }
       }
     }
-    this.damage(target, dmg, u, sniperShot ? 1.2 : w.ap);
+    this.damage(target, dmg, u, sniperShot ? 1.2 : w.ap, !!w.forcePen);
     if (crit) this.fxText(target.x, target.y - 16, '致命一击', '#ffd76a', target.side);
     // 小半径溅射（防空车 5m）
     if (w.splash) {
@@ -5436,7 +5462,7 @@
   };
 
   // 从 5 张候选里选 1 张进卡包
-  // 用战功分数购买一次抽卡机会
+  // 用分数分数购买一次抽卡机会
   Game.prototype.fortCardInfo = function (key) {
     return {
       bunker: { type: 'bunker', hp: SL.FORT.bunkerHp, ammo: SL.FORT.bunkerAmmo, name: '机枪碉堡' },
@@ -5477,7 +5503,7 @@
     var t = this.teams[side];
     if (!t || this.ended) return { ok: false, msg: '战斗已结束' };
     var cost = this.buyDraftPrice(side);
-    if (t.score < cost) return { ok: false, msg: '花费战功不足，需要 ' + cost };
+    if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
     t.score -= cost;
     t.draftBuys = (t.draftBuys || 0) + 1;
     var type = this.pickUnitType(false);
@@ -5500,7 +5526,7 @@
     if (!t) return { ok: false, msg: '无效阵营' };
     if (this.ended) return { ok: false, msg: '战斗已结束' };
     var cost = this.buyDraftPrice(side);
-    if (t.score < cost) return { ok: false, msg: '花费战功不足，需要 ' + cost };
+    if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
     t.score -= cost;
     t.draftBuys = (t.draftBuys || 0) + 1;
     var cards = [];
@@ -6875,7 +6901,7 @@
       var direct = d <= Math.min(12, s.radius * 0.3);
       var mult = u.def.armor ? (direct ? ap : 0.5 * ap) : 1;
       if (u.side === s.side) mult *= s.shipShell ? 0.18 : 0.5;
-      this.damage(u, s.dmg * falloff * mult, s.source, ap, !!(s.mortar && direct));
+      this.damage(u, s.dmg * falloff * mult, s.source, ap, !!(s.forcePen && direct) || !!(s.mortar && direct));
     }
     // 舰船也会被炮弹命中
     for (var bi = 0; bi < this.battleships.length; bi++) {
@@ -6884,7 +6910,7 @@
       var sd = U.dist(sh.x, sh.y, s.x1, s.y1);
       if (sd > s.radius + 14) continue;
       var smult = sh.side === s.side ? (s.shipShell ? 0.12 : 0.5) : 1;
-      this.damageShip(sh, s.dmg * smult * (1 - 0.72 * sd / (s.radius + 14)), s.source, s.ap || 1);
+      this.damageShip(sh, s.dmg * smult * (1 - 0.72 * sd / (s.radius + 14)), s.source, s.ap || 1, !!s.forcePen);
     }
     // 补给舰可被击毁
     for (var ss = this.supplyShips.length - 1; ss >= 0; ss--) {

@@ -1772,7 +1772,7 @@ return null;
         t: 0, dur: U.clamp(U.dist(from.x, from.y, px, py) / 360 + 1.0, 1.2, 3.4),
         dmg: c.dmg, radius: c.splash,
         fortDmg: t.cls === 'main' ? 1200 : (t.cls === 'secondary' ? 450 : 80),
-        ap: c.ap, mortar: true, side: ship.side, source: ship,
+        ap: c.ap, forcePen: !!c.forcePen, mortar: true, side: ship.side, source: ship,
         shipShell: true, caliber: sv.caliber, size: sv.size, trail: sv.trail
       });
     }

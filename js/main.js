@@ -137,10 +137,10 @@
         strongholds.push('<li><b>雷达站</b>：定期搜索海面与空中目标。</li>');
         strongholds.push('<li><b>海岸基地</b>：占领后可获得 406mm 岸防炮。</li>');
         strongholds.push('<li><b>港口</b>：双岸湾地图的港湾，占领方可在港口附近生成舰艇。</li>');
-        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：提供占领区、掩护、连队经验与花费战功。</li>');
+        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：提供占领区、掩护、连队经验与花费分数。</li>');
       } else {
-        strongholds.push('<li><b>黄圈</b>：主要争夺目标，圈内优势单位持续获得黄圈经验与花费战功。</li>');
-        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：可占领区域，提供掩护、连队经验与花费战功。</li>');
+        strongholds.push('<li><b>黄圈</b>：主要争夺目标，圈内优势单位持续获得黄圈经验与花费分数。</li>');
+        strongholds.push('<li><b>村庄 / 林地 / 工事</b>：可占领区域，提供掩护、连队经验与花费分数。</li>');
       }
       var formation = [
         '<li><b>编队系统</b>：选中部队后点击“+”；点击编队可选中全部成员，“←”把当前选择存入编组，“×”删除编组。</li>',
@@ -153,8 +153,8 @@
       }
       systems.push('<li><b>轰炸机系统</b>：打开空中系统购买 B-17 与航弹，拖入编组栏后起飞；返航后可重新配备，或在配备面板选择是否自动补充弹药。</li>');
       var purchases = [
-        '<li><b>购买抽卡</b>：点击“卡片增援”消耗花费战功增加一次抽卡机会；抽卡可获得单位、装备、工事或舰船卡。</li>',
-        '<li><b>购买单位</b>：点击“单位增援”消耗花费战功，在友军附近召唤一个随机单位。</li>'
+        '<li><b>购买抽卡</b>：点击“卡片增援”消耗分数增加一次抽卡机会；抽卡可获得单位、装备、工事或舰船卡。</li>',
+        '<li><b>购买单位</b>：点击“单位增援”消耗分数，在友军附近召唤一个随机单位。</li>'
       ];
       copy.innerHTML =
         '<h3>胜利条件</h3><p>' + winText + '</p>' +
@@ -181,8 +181,8 @@
         : actualMode === 'lastStand'
           ? '<li><span class="chip blue"></span>黄圈本局固定；蓝队守住目标时间即获胜</li><li><span class="chip red"></span>红队分波进攻；黄圈被红队占领即失败</li><li><span class="chip red"></span>每5波BOSS：第30波双BOSS，第50波起三BOSS</li><li><span class="chip red"></span>空袭2架起，每5波+1，第50波10架；三角编队随机投弹</li><li><span class="chip red"></span>AI 工兵占领工事区才形成强化工事；简单1座 / 普通2~3座 / 困难4座</li>'
           : diff.endless
-            ? '<li><span class="chip"></span>本难度无胜利条件；50,000黄圈经验触发一次BOSS，之后AI重生按时间概率召唤</li><li><span class="chip red"></span>AI单位上限32；AI装备上限：15分钟前2件、15~30分钟4件、30分钟后6件</li><li><span class="chip red"></span>AI 工兵占领工事区才形成强化工事；武器上限按时间2 / 4 / 4</li><li><span class="chip"></span>黄圈提供黄圈经验与花费战功；占领区提供连队经验与花费战功，并提供掩护</li><li><span class="chip"></span>隐蔽1秒、幽灵1秒；反坦克炮/指挥车原地5秒进入隐蔽；G键含手雷/火箭筒</li><li><span class="chip"></span>工程车可布设地雷、铁丝网、拒马；铁丝网挡步兵，拒马挡载具</li>'
-            : '<li><span class="chip"></span>黄圈累计100,000经验者获胜；圈内净优势单位持续获得黄圈经验与花费战功</li><li><span class="chip red"></span>' +
+            ? '<li><span class="chip"></span>本难度无胜利条件；50,000黄圈经验触发一次BOSS，之后AI重生按时间概率召唤</li><li><span class="chip red"></span>AI单位上限32；AI装备上限：15分钟前2件、15~30分钟4件、30分钟后6件</li><li><span class="chip red"></span>AI 工兵占领工事区才形成强化工事；武器上限按时间2 / 4 / 4</li><li><span class="chip"></span>黄圈提供黄圈经验/连队经验与花费分数；占领区提供连队经验与花费分数，并提供掩护</li><li><span class="chip"></span>隐蔽1秒、幽灵1秒；反坦克炮/指挥车原地5秒进入隐蔽；G键含手雷/火箭筒</li><li><span class="chip"></span>工程车可布设地雷、铁丝网、拒马；铁丝网挡步兵，拒马挡载具</li>'
+            : '<li><span class="chip"></span>黄圈累计100,000经验者获胜；圈内净优势单位持续获得黄圈经验与花费分数</li><li><span class="chip red"></span>' +
               (diff.id === 'easy' ? '简单难度无BOSS' : diff.id === 'hard' ? '50,000一位BOSS；90,000红绿双方各一位' : '50,000与90,000各召唤一位BOSS') +
               '</li><li><span class="chip red"></span>AI单位上限：简单14 / 普通20 / 困难26；AI装备上限：简单2 / 普通4 / 困难6</li><li><span class="chip"></span>隐蔽1秒、幽灵1秒；反坦克炮/指挥车原地5秒进入隐蔽；G键含手雷/火箭筒</li><li><span class="chip"></span>工程车可布设地雷、铁丝网、拒马；铁丝网挡步兵，拒马挡载具</li>';
     }

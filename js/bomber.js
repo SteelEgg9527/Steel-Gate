@@ -799,7 +799,7 @@
   function buyPlane(g) {
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('花费战功不足，需要 ' + B.planeCost, 'loss'); return; }
+    if ((g.teams.blue.score || 0) < B.planeCost) { toast('分数不足，需要 ' + B.planeCost, 'loss'); return; }
     g.teams.blue.score -= B.planeCost;
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     b.hangarPlanes.push(p);
@@ -813,7 +813,7 @@
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
     var d = B.bombs[type];
     if (!d) return;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('花费战功不足，需要 ' + B.bombGroupCost, 'loss'); return; }
+    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('分数不足，需要 ' + B.bombGroupCost, 'loss'); return; }
     g.teams.blue.score -= B.bombGroupCost;
     b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: d.group, paid: B.bombGroupCost });
     toast('已购买 ' + d.name + '（' + d.group + '枚）', 'win');
@@ -825,7 +825,7 @@
     var b = ensure(g);
     var d = B.bombs[type];
     if (!d || !plane || b.state !== 'base') return false;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('花费战功不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
+    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('分数不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
     if (loadWeight(plane) + d.group * bombWeight(type) > B.maxLoadLb) { toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss'); return false; }
     g.teams.blue.score -= B.bombGroupCost;
     plane.bombGroups.push({ type: type, count: d.group, paid: B.bombGroupCost });
@@ -869,7 +869,7 @@
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return false; }
     if (slot < 0 || slot >= b.formation.length || b.formation[slot]) { toast('该编组位置不可用', 'loss'); return false; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('花费战功不足，需要 ' + B.planeCost, 'loss'); return false; }
+    if ((g.teams.blue.score || 0) < B.planeCost) { toast('分数不足，需要 ' + B.planeCost, 'loss'); return false; }
     g.teams.blue.score -= B.planeCost;
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     p.slot = slot;
@@ -887,7 +887,7 @@
         var bg = b.hangarBombs.splice(i, 1)[0];
         var paid = bg.paid || B.bombGroupCost;
         g.teams.blue.score = (g.teams.blue.score || 0) + paid;
-        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 战功', 'win');
+        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 分数', 'win');
         renderConfig(g); refresh(g);
         return true;
       }
@@ -912,7 +912,7 @@
     rebuildBombs(p);
     snapshotLoadout(p);
     g.teams.blue.score = (g.teams.blue.score || 0) + value;
-    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 战功', 'win');
+    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 分数', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -983,7 +983,7 @@
     if (!refs || !refs.config) return;
     var b = ensure(g);
     if (!b) return;
-    if (refs.configScore) refs.configScore.textContent = '可用战功 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
+    if (refs.configScore) refs.configScore.textContent = '可用分数 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
     if (refs.autoRestock) refs.autoRestock.checked = restockEnabled();
     if (refs.slots) {
       var html = '';
@@ -1014,7 +1014,7 @@
         var bg = b.hangarBombs[bi];
         var bd = B.bombs[bg.type];
         h += '<div class="bomber-hangar-card bomb" draggable="true" data-drag-kind="bomb" data-drag-id="' + bg.id + '" data-bomb-type="' + bg.type + '">' +
-          ICON_BOMB + '<b>' + bd.name + '</b><small>' + bg.count + ' 枚一组 · 500 战功</small></div>';
+          ICON_BOMB + '<b>' + bd.name + '</b><small>' + bg.count + ' 枚一组 · 500 分数</small></div>';
       }
       refs.hangar.innerHTML = h || '<div class="air-none">机库为空，先在左侧购买飞机或航弹</div>';
     }

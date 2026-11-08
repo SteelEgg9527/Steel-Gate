@@ -33,9 +33,9 @@
     </div>
     <div class="status">
       <div class="team-chips">
-        <span class="tchip blue"><i>蓝</i><b id="count-blue">6</b><em id="score-blue" title="可用战功余额（购买抽卡后减少）">0</em></span>
-        <span class="tchip red"><i>红</i><b id="count-red">6</b><em id="score-red" title="可用战功余额">0</em></span>
-        <span class="tchip green"><i>绿</i><b id="count-green">6</b><em id="score-green" title="可用战功余额">0</em></span>
+        <span class="tchip blue"><i>蓝</i><b id="count-blue">6</b><em id="score-blue" title="可用分数余额（购买抽卡后减少）">0</em></span>
+        <span class="tchip red"><i>红</i><b id="count-red">6</b><em id="score-red" title="可用分数余额">0</em></span>
+        <span class="tchip green"><i>绿</i><b id="count-green">6</b><em id="score-green" title="可用分数余额">0</em></span>
       </div>
       <div id="company" title="连队经验：升级抽取卡片">
         <span id="co-lv">Lv.1</span>
@@ -162,10 +162,11 @@
         <button id="ship-repair-btn" class="fire-mode-btn" type="button">消耗舰体修复</button>
       </div>
       <div class="engineer-row" id="engineer-row" style="display:none">
-        <div class="eng-head"><span>工程模式</span><b id="eng-value">200 / 200</b></div>
+        <div class="eng-head"><span>工程作业</span><b id="eng-value">200 / 200</b></div>
+        <div class="eng-lay" id="eng-lay" style="display:none"><div class="eng-lay-track"><i id="eng-lay-fill"></i></div><span id="eng-lay-text">布设雷区 0%</span></div>
         <div class="eng-modes">
-          <button class="ability-btn eng-mode" data-eng="mine_ap" type="button" title="点击在工程车周围200m布设反步兵雷区（50工程值）">反步兵雷区</button>
-          <button class="ability-btn eng-mode" data-eng="mine_at" type="button" title="点击在工程车周围200m布设反坦克雷区（50工程值）">反坦克雷区</button>
+          <button class="ability-btn eng-mode" data-eng="mine_ap" type="button" title="点击后读条3秒，在工程车周围200m布设反步兵雷区（50工程值）">反步兵雷区</button>
+          <button class="ability-btn eng-mode" data-eng="mine_at" type="button" title="点击后读条3秒，在工程车周围200m布设反坦克雷区（50工程值）">反坦克雷区</button>
           <button class="ability-btn eng-mode" data-eng="wire" type="button" title="激活后移动布设；满工程值约800m">铁丝网</button>
           <button class="ability-btn eng-mode" data-eng="hedgehog" type="button" title="激活后移动布设；满工程值约500m">拒马</button>
         </div>
@@ -193,7 +194,7 @@
   <aside id="rightpanels">
     <div id="killfeed"></div>
     <div id="leaderboard">
-      <div class="panel-head"><span>战功榜</span><b>TOP 20</b></div>
+      <div class="panel-head"><span>分数榜</span><b>TOP 20</b></div>
       <div id="lb-rows"></div>
     </div>
   </aside>
@@ -208,8 +209,8 @@
       <span>卡包</span>
       <b id="card-count">0/10</b>
       <small>拖动卡片到单位或战场</small>
-      <button id="buy-draft" class="buy-draft" title="消耗花费战功购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
-      <button id="buy-unit" class="buy-draft" title="消耗花费战功在友军附近召唤一个随机单位">单位增援 <b id="buy-unit-cost">200</b></button>
+      <button id="buy-draft" class="buy-draft" title="消耗分数购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
+      <button id="buy-unit" class="buy-draft" title="消耗分数在友军附近召唤一个随机单位">单位增援 <b id="buy-unit-cost">200</b></button>
       <button id="navy-system" class="buy-draft" type="button" title="购买舰船支援卡片">舰船系统</button>
     </div>
     <div id="cards"></div>
@@ -289,27 +290,27 @@
       </div>
       <div class="bomber-config-body">
         <section class="bomber-buy">
-          <div class="bomber-pane-head"><span>购买栏</span><b id="bomber-config-score">可用战功 0</b></div>
+          <div class="bomber-pane-head"><span>购买栏</span><b id="bomber-config-score">可用分数 0</b></div>
           <div class="bomber-buy-list">
             <button class="bomber-buy-btn plane" type="button" draggable="true" data-drag-kind="shopplane" data-buy-plane="1">
               <span class="bomber-buy-icon plane"><img src="assets/b17-dxf-blue.png" alt=""></span>
-              <span><b>B-17 空中堡垒</b><small>1500 战功 · 一架</small></span>
+              <span><b>B-17 空中堡垒</b><small>1500 分数 · 一架</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb500" data-buy-bomb="lb500">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>500lb 航弹</b><small>500 战功 · 4 枚一组</small></span>
+              <span><b>500lb 航弹</b><small>500 分数 · 4 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb1000" data-buy-bomb="lb1000">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>1000lb 航弹</b><small>500 战功 · 2 枚一组</small></span>
+              <span><b>1000lb 航弹</b><small>500 分数 · 2 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb2000" data-buy-bomb="lb2000">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>2000lb 航弹</b><small>500 战功 · 1 枚一组</small></span>
+              <span><b>2000lb 航弹</b><small>500 分数 · 1 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="incendiary" data-buy-bomb="incendiary">
               <span class="bomber-buy-icon burn"></span>
-              <span><b>300lb 燃烧弹</b><small>500 战功 · 4 枚一组</small></span>
+              <span><b>300lb 燃烧弹</b><small>500 分数 · 4 枚一组</small></span>
             </button>
           </div>
           <p class="tip">左键购买进入机库；右键购买并直接装备到 1 号机（1号满则依序找下一架）。卡片槽支持拖拽调整投弹顺序。</p>
@@ -568,16 +569,16 @@
             </ul>
             <h3>陆战机制</h3>
             <ul class="keys">
-              <li><b>黄圈</b><span>圈内净优势持续获得黄圈经验与花费战功；黄圈经验独立于连队经验，率先达到 100,000 获胜</span></li>
-              <li><b>占领区</b><span>单位进入并保持 3 秒即可占领；村庄、林地、堡垒提供掩体和持续经验/战功</span></li>
+              <li><b>黄圈</b><span>圈内净优势持续获得黄圈经验与花费分数；黄圈经验独立累计，同时提供连队经验；率先达到 100,000 获胜</span></li>
+              <li><b>占领区</b><span>单位进入并保持 3 秒即可占领；村庄、林地、堡垒提供掩体和持续经验/分数</span></li>
               <li><b>掩体</b><span>树林、村庄、工事降低受伤并提高闪避；高地增加射程</span></li>
               <li><b>隐蔽</b><span>步兵在灌木/树林停火 1 秒隐蔽；伪装服可进入幽灵状态</span></li>
               <li><b>侦察</b><span>指挥车建立持续侦察圈；侦察机提供 20 秒侦察区</span></li>
-              <li><b>成长</b><span>连队经验与累计战功为 2.5 倍；升级获得抽卡，花费战功可购买额外抽卡；黄圈经验单独计算</span></li>
+              <li><b>成长</b><span>连队经验与累计分数为 2.5 倍；升级获得抽卡，花费分数可购买额外抽卡；黄圈经验独立累计并提供连队经验</span></li>
               <li><b>工事</b><span>工兵步兵在已占领区构筑强化工事；工事可部署碉堡、迫击炮、反坦克炮、88 炮</span></li>
-              <li><b>穿甲</b><span>穿甲不足无法击穿装甲；穿甲超过装甲等级越多，伤害越高；直射武器有概率造成致命一击</span></li>
+              <li><b>穿甲</b><span>穿甲不足无法击穿装甲；穿甲超过装甲等级越多，伤害越高；直射武器有概率造成致命一击；100mm以上火炮直击强制穿甲</span></li>
               <li><b>工事状态</b><span>地图显示“工事残骸”“修复中 XX%”和“已摧毁”；工兵或工程车修复残骸时显示进度</span></li>
-              <li><b>工程车</b><span>反步兵/反坦克雷区为点击式：点击按钮直接以工程车为中心布设半径200m雷区，单价50工程值（满值4片）；铁丝网/拒马为激活后移动布设</span></li>
+              <li><b>工程车</b><span>反步兵/反坦克雷区为点击式：点击按钮开始3秒读条，完成后以工程车为中心布设半径200m雷区，单价50工程值（满值4片）；移动会中断；铁丝网/拒马为激活后移动布设</span></li>
             </ul>
           </div>
           <div>
@@ -599,12 +600,12 @@
             </ul>
             <h3>卡包与装备</h3>
             <ul class="keys">
-              <li><b>抽卡</b><span>升级后从 5 张候选选 1 张；花费战功可购买额外抽卡</span></li>
+              <li><b>抽卡</b><span>升级后从 5 张候选选 1 张；花费分数可购买额外抽卡</span></li>
               <li><b>单位 / 装备 / 工事包</b><span>自动开出对应卡片</span></li>
               <li><b>支援卡</b><span>补给站、空袭、炮火压制、侦察机、制空盘旋</span></li>
               <li><b>步兵装备</b><span>MG42、迫击炮、火箭筒、狙击小组、伪装服、医疗包、工兵装备</span></li>
               <li><b>工事卡</b><span>机枪碉堡、迫击炮阵地、反坦克炮阵地、88 防空炮阵地</span></li>
-              <li><b>舰船快捷卡</b><span>战舰增援 2500（每次 +50%，AI 同样需要通讯塔和花费战功）、预先瞄准、舰炮压制、水上飞机、舰船补给 500</span></li>
+              <li><b>舰船快捷卡</b><span>战舰增援 2500（每次 +50%，AI 同样需要通讯塔和花费分数）、预先瞄准、舰炮压制、水上飞机、舰船补给 500</span></li>
             </ul>
           </div>
         </div>
@@ -635,7 +636,7 @@
             <tr><td>工程车</td><td>240m</td><td>—</td><td>220</td><td>14m/s</td></tr>
           </tbody>
         </table>
-        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵；MG42 射程 200m。轻型反坦克炮移动后需架设 1 秒。玩家连队经验与累计战功为 2.5 倍；黄圈经验单独计算。</p>
+        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵；MG42 射程 200m。轻型反坦克炮移动后需架设 1 秒。玩家连队经验与累计分数为 2.5 倍；黄圈经验独立累计并提供连队经验。</p>
       </div>
     </div>
   </div>
@@ -667,11 +668,11 @@
           <div><i>作战用时</i><b id="res-time">00:00</b></div>
           <div><i>击毁敌军</i><b id="res-kills">0</b></div>
           <div><i>我方损失</i><b id="res-losses">0</b></div>
-          <div><i title="蓝队本局累计获得，不扣除购买抽卡的消耗">全局累计获得</i><b id="res-earned">0</b></div>
+          <div><i title="蓝队本局累计获得，不扣除购买抽卡的消耗">累计分数</i><b id="res-earned">0</b></div>
           <div><i>黄圈经验</i><b id="res-yellow">0</b></div>
         </div>
         <div class="result-lb">
-          <div class="result-lb-head">单位战功榜 <b>TOP 20</b></div>
+          <div class="result-lb-head">单位分数榜 <b>TOP 20</b></div>
           <div id="result-lb-rows"></div>
         </div>
       </div>

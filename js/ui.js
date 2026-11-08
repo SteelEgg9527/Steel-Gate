@@ -107,6 +107,9 @@
     el.btnEngineer = $('btn-engineer');
     el.engRow = $('engineer-row');
     el.engValue = $('eng-value');
+    el.engLay = $('eng-lay');
+    el.engLayFill = $('eng-lay-fill');
+    el.engLayText = $('eng-lay-text');
     el.engModes = Array.prototype.slice.call(document.querySelectorAll('.eng-mode'));
     el.commandActions = document.querySelector('#unit-actions');
     el.counts = { blue: $('count-blue'), red: $('count-red'), green: $('count-green') };
@@ -317,7 +320,7 @@
       }
       var head = document.createElement('div');
       head.className = 'recent-row recent-head';
-      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '累计战功', '黄圈', '上传'].forEach(function (t) {
+      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '累计分数', '黄圈', '上传'].forEach(function (t) {
         var c = document.createElement('span'); c.textContent = t; head.appendChild(c);
       });
       el.recentResultsList.appendChild(head);
@@ -626,7 +629,7 @@
   UI.buyDraft = function () {
     if (!game || game.ended) return;
     var res = game.buyDraft('blue');
-    UI.pushToast(res.ok ? ('花费 ' + res.cost + ' 战功增加 1 次抽卡机会') : res.msg, res.ok ? 'win' : 'loss');
+    UI.pushToast(res.ok ? ('花费 ' + res.cost + ' 分数增加 1 次抽卡机会') : res.msg, res.ok ? 'win' : 'loss');
     if (res.ok) {
       renderCards();
       // 不自动打开抽卡界面：抽卡次数进入队列，玩家稍后自行点击“抽卡”
@@ -1236,9 +1239,9 @@
       if (el.bkbName) el.bkbName.textContent = ev.name;
       if (el.bkbRewards) {
         el.bkbRewards.textContent = ev.isShip
-          ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 战功   ·   +' + (ev.cards || 0) + ' 张抽卡'
+          ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 分数   ·   +' + (ev.cards || 0) + ' 张抽卡'
           : '+' + ev.xp + ' 经验   ·   +' + ev.score +
-            ' 战功   ·   +' + ev.cards + ' 次抽卡';
+            ' 分数   ·   +' + ev.cards + ' 次抽卡';
       }
       el.bossKillBanner.classList.remove('hidden');
       el.bossKillBanner.classList.remove('show');
@@ -1354,9 +1357,10 @@
     if (mode === 'mine_ap' || mode === 'mine_at') {
       var mn = game.setEngineerMode(game.selected, mode);
       if (mn > 0) {
-        UI.pushToast(mode === 'mine_at' ? '已布设反坦克雷区（半径200m）' : '已布设反步兵雷区（半径200m）', 'win');
+        UI.pushToast(mode === 'mine_at' ? '开始布设反坦克雷区（半径200m）' : '开始布设反步兵雷区（半径200m）', 'win');
       } else {
-        UI.pushToast('工程值不足，每个雷区需要 50 工程值', 'loss');
+        var laying = game.selected.some(function (u) { return !!(u && u.minefieldLay); });
+        UI.pushToast(laying ? '工程车正在布设雷区' : '工程值不足，每个雷区需要 50 工程值', laying ? 'info' : 'loss');
       }
       updateBars();
       return;
@@ -1520,7 +1524,7 @@
     renderControlGroups(g);
     }
 
-    // 战功榜
+    // 分数榜
     lbTick += dt;
     if (lbTick > 0.4) {
       lbTick = 0;
@@ -1884,6 +1888,15 @@
       el.engRow.style.display = isEngineerVehicle ? '' : 'none';
       if (isEngineerVehicle) {
         if (el.engValue) el.engValue.textContent = Math.round(u.engineerValue) + ' / ' + u.engineerMax;
+      if (el.engLay) {
+        var ml = u.minefieldLay;
+        el.engLay.style.display = ml ? '' : 'none';
+        if (ml) {
+          var mp = Math.round((ml.progress || 0) * 100);
+          if (el.engLayFill) el.engLayFill.style.width = mp + '%';
+          if (el.engLayText) el.engLayText.textContent = '布设' + (ml.type === 'mine_at' ? '反坦克' : '反步兵') + '雷区 ' + mp + '%';
+        }
+      }
         el.engModes.forEach(function (btn) {
           btn.classList.toggle('on', (btn.dataset.eng === 'wire' || btn.dataset.eng === 'hedgehog') && u.engineerMode === btn.dataset.eng);
         });
@@ -2077,7 +2090,7 @@
     if (!list.length) {
       var empty = document.createElement('div');
       empty.className = 'lb-empty';
-      empty.textContent = '还没有单位取得战功';
+      empty.textContent = '还没有单位取得分数';
       el.lbRows.appendChild(empty);
       return;
     }
@@ -2105,7 +2118,7 @@
     if (!list.length) {
       var empty = document.createElement('div');
       empty.className = 'lb-empty';
-      empty.textContent = '本局还没有单位取得战功';
+      empty.textContent = '本局还没有单位取得分数';
       box.appendChild(empty);
       return;
     }
@@ -2174,11 +2187,11 @@
     uiCache.buyDraft = sig;
     el.buyCost.textContent = cost;
     el.buyDraft.classList.toggle('disabled', !afford);
-    el.buyDraft.title = afford ? ('消耗 ' + cost + ' 战功购买一次抽卡机会') : ('花费战功不足：需要 ' + cost);
+    el.buyDraft.title = afford ? ('消耗 ' + cost + ' 分数购买一次抽卡机会') : ('分数不足：需要 ' + cost);
     if (el.buyUnitCost) el.buyUnitCost.textContent = cost;
     if (el.buyUnit) {
       el.buyUnit.classList.toggle('disabled', !afford);
-      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 战功在友军附近召唤一个随机单位') : ('花费战功不足：需要 ' + cost);
+      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 分数在友军附近召唤一个随机单位') : ('分数不足：需要 ' + cost);
     }
   }
 

@@ -131,7 +131,7 @@
       canSprint: false,
       weapon: {
         dmg: 95, interval: 7.5, ap: 0.55, accuracy: 1,
-        ammo: 36, kind: 'shell', splash: 100, scatter: 100, label: '105mm leFH 18'
+        ammo: 36, kind: 'shell', splash: 100, scatter: 100, forcePen: true, label: '105mm leFH 18'
       }
     },
     heavy_arty: {
@@ -149,7 +149,7 @@
       canSprint: false,
       weapon: {
         dmg: 180, interval: 14, ap: 1.3, accuracy: 1,
-        ammo: 18, kind: 'shell', splash: 120, scatter: 150, label: '150mm sFH 18'
+        ammo: 18, kind: 'shell', splash: 120, scatter: 150, forcePen: true, label: '150mm sFH 18'
       }
     },
     heavy_tank: {
@@ -222,7 +222,7 @@
       weapon: {
         dmg: 190, interval: 90, ap: 0.65, accuracy: 1,
         ammo: 30, kind: 'shell', splash: 150, scatter: 200,
-        rockets: 10, rocketDelay: 0.5, reload: 90, fixedScatter: true, label: '十联装火箭炮'
+        rockets: 10, rocketDelay: 0.5, reload: 90, fixedScatter: true, forcePen: true, label: '十联装火箭炮'
       }
     },
     boss_super: {
@@ -397,7 +397,7 @@
   SL.MODES = {
     melee: {
       id: 'melee', name: '混战模式',
-      desc: '蓝、红、绿三军混战；普通/困难以100,000黄圈经验获胜，无限无胜利条件。黄圈经验独立于连队经验。'
+      desc: '蓝、红、绿三军混战；普通/困难以100,000黄圈经验获胜，无限无胜利条件。黄圈经验独立累计，同时提供连队经验。'
     },
     lastStand: {
       id: 'lastStand', name: '防御模式',
@@ -405,7 +405,7 @@
     },
     naval: {
       id: 'naval', name: '舰炮轰鸣',
-      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤重型巡洋舰进行岸轰支援；黄圈经验决定胜负。黄圈经验独立于连队经验。'
+      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤重型巡洋舰进行岸轰支援；黄圈经验决定胜负。黄圈经验独立累计，同时提供连队经验。'
     },
     navalLastStand: {
       id: 'navalLastStand', name: '背水一战',
@@ -451,13 +451,13 @@
       main: {
         name: '203mm 主炮', count: 4, hp: 1500, range: 3000,
         maxSpread: 520, splash: 250, dmg: 550, ap: 3.0, shots: 80,
-        interval: 24, turnRate: 0.12, arc: 5.24, side: 'center',
+        interval: 24, turnRate: 0.12, arc: 5.24, side: 'center', forcePen: true,
         color: '#d8c17a'
       },
       secondary: {
         name: '105mm 副炮', count: 6, hp: 300, range: 1500,
         maxSpread: 260, splash: 160, dmg: 180, ap: 1.5, shots: 240,
-        interval: 8, turnRate: 0.30, arc: Math.PI, side: 'split',
+        interval: 8, turnRate: 0.30, arc: Math.PI, side: 'split', forcePen: true,
         color: '#c8b27a'
       },
       aa37: {
@@ -593,12 +593,22 @@
     aiCycle: ['armored', 'tank', 'infantry', 'armored', 'tank']
   };
 
-  /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），战功仍按目标等级 */
+  /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），分数仍按目标等级 */
   SL.REWARD = {
     infantry: { xp: 225, score: 15 },
     armored: { xp: 300, score: 30 },
     tank: { xp: 375, score: 50 },
+    heavy_tank: { xp: 600, score: 80 },
     artillery: { xp: 300, score: 38 },
+    heavy_arty: { xp: 375, score: 55 },
+    at_gun: { xp: 375, score: 40 },
+    aa: { xp: 300, score: 28 },
+    rocket_arty: { xp: 450, score: 65 },
+    command: { xp: 200, score: 20 },
+    engineer_vehicle: { xp: 250, score: 25 },
+    target: { xp: 0, score: 0 },
+    armor_target: { xp: 0, score: 0 },
+    heavy_target: { xp: 0, score: 0 },
     ship: { xp: 6000, score: 3000 }
   };
 
@@ -610,7 +620,7 @@
     handMax: 10,
     draftCount: 5,     // 升级时抽几张供选择
     draftPick: 1,      // 选几张进卡包
-    buyDraftCost: 200, // 首次用花费战功购买抽卡的价格
+    buyDraftCost: 200, // 首次用花费分数购买抽卡的价格
     buyDraftStep: 40,  // 每次购买后价格上涨
     equipCost: 0,      // 已取消：装备步兵装备不再消耗弹药（保留字段兼容旧配置）
     zoneRate: 3,       // 每个有人驻守的占领区每秒经验
@@ -788,6 +798,7 @@
     minefieldCost: 50,
     minefieldRadius: 200,
     minefieldMines: 10,
+    minefieldLayTime: 3,
     // 铁丝网/拒马按米数消耗：满值约 800m 铁丝网 / 500m 拒马
     cost: { mine_ap: 0, mine_at: 0, wire: 7, hedgehog: 11 },
     connectRange: 52,

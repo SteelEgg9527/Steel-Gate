@@ -1101,6 +1101,26 @@
       ctx.restore();
     }
 
+    // 工程车区域布雷读条
+    if (u.type === 'engineer_vehicle' && u.minefieldLay) {
+      var mlp = U.clamp(u.minefieldLay.progress || 0, 0, 1);
+      var mlr = w * 0.72;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(10,18,16,0.85)';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath(); ctx.arc(sx, sy, mlr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#e4c47a';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(sx, sy, mlr, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * mlp); ctx.stroke();
+      ctx.font = '800 8px ' + SL.FONT_UI;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.strokeStyle = 'rgba(10,14,10,0.85)'; ctx.lineWidth = 3;
+      ctx.strokeText('布设雷区 ' + Math.round(mlp * 100) + '%', sx, sy - mlr - 4);
+      ctx.fillStyle = '#f0dca0';
+      ctx.fillText('布设雷区 ' + Math.round(mlp * 100) + '%', sx, sy - mlr - 4);
+      ctx.restore();
+    }
+
     // 血条
     var hpw = w * 1.05;
     var hpr = u.hp / u.maxHp;
