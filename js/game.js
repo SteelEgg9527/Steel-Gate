@@ -2993,8 +2993,14 @@
         if (eng || engVeh) {
           z.hp = Math.min(z.maxHp, z.hp + SL.FORT.repairRate * dt);
           for (var sr = 0; sr < structs.length; sr++) {
+            var wasDown = structs[sr].destroyed || structs[sr].hp <= 0;
             structs[sr].hp = Math.min(structs[sr].maxHp, structs[sr].hp + SL.FORT.repairRate * dt);
-            if (structs[sr].hp > 0) structs[sr].destroyed = false;
+            if (wasDown && structs[sr].hp > 0) {
+              structs[sr].destroyed = false;
+              if (!(structs[sr].ammo > 0)) {
+                structs[sr].ammo = Math.max(1, Math.round((structs[sr].maxAmmo || 0) * (SL.FORT.rubbleAmmoRatio || 0.35)));
+              }
+            }
           }
         }
       } else if (eng) {
