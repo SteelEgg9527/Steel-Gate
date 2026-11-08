@@ -5096,13 +5096,13 @@
   Game.prototype.awardGhostKill = function (u, groupCleared) {
     this.addXp('blue', 1000);
     this.addScore('blue', 1000);
-    this.drawCard('unit', this.pickUnitType(false));
-    var msg = '击毁幽灵步兵班：+1000 经验 / +1000 分 / 1 张单位卡';
+    this.grantDraftChance('blue', 1);
+    var msg = '击毁幽灵步兵班：+1000 经验 / +1000 分 / 1 次抽卡';
     if (groupCleared) {
       this.addXp('blue', 2000);
       this.addScore('blue', 2000);
-      this.drawCard('unit', this.pickLowWeightUnitType());
-      msg += '；幽灵兵团全灭：+2000 经验 / +2000 分 / 1 张低权重单位卡';
+      this.grantDraftChance('blue', 1);
+      msg += '；幽灵兵团全灭：+2000 经验 / +2000 分 / 1 次抽卡';
       this.bossKillEvent = {
         name: '幽灵兵团', xp: 2000, score: 2000, cards: 1,
         t: this.time, id: ++this.feedSeq
@@ -5121,14 +5121,9 @@
     var cfg = SL.BOSS.reward;
     this.addXp('blue', cfg.xp);
     this.addScore('blue', cfg.score);
-    var names = [];
-    for (var i = 0; i < cfg.cards; i++) {
-      var sub = this.pickUnitType(false);
-      this.drawCard('unit', sub);
-      names.push(SL.UNIT_TYPES[sub].name);
-    }
+    this.grantDraftChance('blue', cfg.cards);
     var msg = '击破 ' + (boss && (boss.name || 'BOSS')) + '：+' + cfg.xp + ' 经验 / +' +
-      cfg.score + ' 分 / ' + cfg.cards + ' 张单位卡';
+      cfg.score + ' 分 / ' + cfg.cards + ' 次抽卡';
     this.bossKillEvent = {
       name: boss && (boss.name || 'BOSS') || 'BOSS',
       xp: cfg.xp, score: cfg.score, cards: cfg.cards,
@@ -5145,7 +5140,7 @@
       xp: cfg.xp, score: cfg.score, killer: '', victim: boss ? boss.name : 'BOSS',
       text: msg
     });
-    return { xp: cfg.xp, score: cfg.score, cards: names };
+    return { xp: cfg.xp, score: cfg.score, cards: cfg.cards };
   };
 
   Game.prototype.addScore = function (side, amount) {
@@ -5326,6 +5321,18 @@
       c.desc = SL.EQUIP[sub].desc;
     }
     return c;
+  };
+
+  Game.prototype.grantDraftChance = function (side, count) {
+    var t = this.teams[side];
+    if (!t) return 0;
+    count = Math.max(0, Math.floor(count || 0));
+    for (var i = 0; i < count; i++) {
+      var cards = [];
+      for (var k = 0; k < SL.XP.draftCount; k++) cards.push(this.makeCard(this.randomPoolKey()));
+      this.drafts.push({ level: t.level, cards: cards, purchased: true });
+    }
+    return count;
   };
 
   Game.prototype.drawCard = function (key, sub) {

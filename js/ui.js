@@ -1236,7 +1236,7 @@
         el.bkbRewards.textContent = ev.isShip
           ? '+' + ev.xp + ' 经验   ·   +' + ev.score + ' 战功   ·   +' + (ev.cards || 0) + ' 张抽卡'
           : '+' + ev.xp + ' 经验   ·   +' + ev.score +
-            ' 战功   ·   +' + ev.cards + ' 张单位卡';
+            ' 战功   ·   +' + ev.cards + ' 次抽卡';
       }
       el.bossKillBanner.classList.remove('hidden');
       el.bossKillBanner.classList.remove('show');
