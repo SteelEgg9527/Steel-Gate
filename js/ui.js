@@ -1136,7 +1136,7 @@
         var scanPct = Math.max(0, Math.min(100, Math.floor((g.time - (g.radarScanStart[radarOwner] || g.time)) / scanDur * 100)));
         el.nhScan.textContent = '广域搜索 ' + scanPct + '%';
       } else {
-        el.nhScan.textContent = '广域搜索冷却 ' + Math.ceil(Math.max(0, (g.radarScanNext[radarOwner] || 0) - g.time)) + 's';
+        el.nhScan.textContent = '广域搜索冷却 ' + Math.ceil(Math.max(0, (g.radarCooldownLeft && g.radarCooldownLeft[radarOwner]) || 0)) + 's';
       }
     }
   }

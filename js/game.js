@@ -107,6 +107,7 @@
     this.shipSupportOwned = false;
     this.shipPurchaseCost = (SL.NAVAL && SL.NAVAL.shipCost) || 2500;
     this.radarScanNext = { blue: 30, red: 30, green: 30 };
+    this.radarCooldownLeft = { blue: 30, red: 30, green: 30 };
     this.radarScanUntil = { blue: 0, red: 0, green: 0 };
     this.navalShipLastSeen = { red: null, green: null };
     this.radarScanWas = { blue: false, red: false, green: false };
@@ -451,6 +452,7 @@
       var rside = scanSides[rs];
       if (!this.navalHasRadar(rside)) {
         this.radarScanNext[rside] = 30;
+        this.radarCooldownLeft[rside] = 0;
         this.radarScanUntil[rside] = 0;
         this.radarScanWas[rside] = false;
         this.radarSweepAngle[rside] = 0;
@@ -459,6 +461,7 @@
       if (this.radarScanUntil[rside] > 0 && this.time >= this.radarScanUntil[rside]) {
         this.radarScanUntil[rside] = 0;
         this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 20) + (SL.NAVAL.radarCooldown || 30);
+        this.radarCooldownLeft[rside] = SL.NAVAL.radarCooldown || 30;
         this.radarScanWas[rside] = false;
       }
       if (this.radarScanUntil[rside] > this.time) {
@@ -488,9 +491,11 @@
         }
         continue;
       }
-      this.radarScanNext[rside] -= dt;
-      if (this.radarScanNext[rside] <= 0) {
+      this.radarCooldownLeft[rside] = Math.max(0, (this.radarCooldownLeft[rside] || 0) - dt);
+      this.radarScanNext[rside] = this.time + this.radarCooldownLeft[rside];
+      if (this.radarCooldownLeft[rside] <= 0) {
         this.radarScanNext[rside] = Infinity;
+        this.radarCooldownLeft[rside] = 0;
         this.radarScanStart[rside] = this.time;
         this.radarScanUntil[rside] = this.time + (SL.NAVAL.radarScanDuration || 8);
         this.radarSweepAngle[rside] = 0;
