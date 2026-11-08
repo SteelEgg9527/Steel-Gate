@@ -167,9 +167,13 @@
   };
 
   T.streamDistance = function (x, y) { return distToPath(x, y, T.stream); };
-  T.roadDistance = function (x, y) { return distToPath(x, y, T.road); };
+  T.roadDistance = function (x, y) {
+    var best = Infinity;
+    for (var i = 0; i < T.roads.length; i++) best = Math.min(best, distToPath(x, y, T.roads[i]));
+    return best;
+  };
 
-  T.speedAt = function (x, y) {
+  T.speedAt = function (x, y, type) {
     var m = 1;
     var slope = T.slopeAt(x, y);
     m *= U.clamp(1 - slope * 1.15, 0.52, 1.08);
@@ -177,7 +181,8 @@
     if (f > 0.62) m *= 0.6;
     else if (f > 0.36) m *= 0.78;
     if (T.streamDistance(x, y) < 13) m *= 0.55;
-    if (T.roadDistance(x, y) < 11) m *= 1.28;
+    // 机械化/拖拽单位沿道路获得行军速度；步兵不享受道路加速
+    if (type && type !== 'infantry' && T.roadDistance(x, y) < 11) m *= 1.28;
     return U.clamp(m, 0.34, 1.5);
   };
 
