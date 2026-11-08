@@ -2304,8 +2304,8 @@
       c.strokeStyle = rdc;
       c.lineWidth = 1.2;
       c.save();
-      c.translate(0, -1);
       c.rotate(-0.55);
+      c.translate(0, -4.6);
       c.beginPath();
       c.arc(0, 0, 4.6, 0, Math.PI, false);
       c.closePath();
@@ -2320,9 +2320,12 @@
       c.fillStyle = rdc;
       c.fill();
       c.restore();
+      // A 形支架尖端与圆弧中点重合
       c.beginPath();
-      c.moveTo(0, 3); c.lineTo(0, 5.5);
-      c.moveTo(-3.5, 7.5); c.lineTo(0, 5); c.lineTo(3.5, 7.5);
+      c.moveTo(0, 0);
+      c.lineTo(-3.5, 7.5);
+      c.lineTo(3.5, 7.5);
+      c.closePath();
       c.stroke();
       c.restore();
     }

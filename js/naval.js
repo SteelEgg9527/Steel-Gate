@@ -2045,10 +2045,10 @@ return null;
       ctx.lineWidth = 1.4;
       var radarSymbol = z.kind === 'radar';
       if (radarSymbol) {
-        // 锅盖天线：倾斜抛物面、馈源、A 形支架
+        // 锅盖天线：抛物面中点落在坐标原点，A 形支架尖端正好顶住圆弧中点
         ctx.save();
-        ctx.translate(0, -3);
         ctx.rotate(-0.55);
+        ctx.translate(0, -8);
         ctx.beginPath();
         ctx.arc(0, 0, 8, 0, Math.PI, false);
         ctx.closePath();
@@ -2064,10 +2064,12 @@ return null;
         ctx.fillStyle = ctx.strokeStyle;
         ctx.fill();
         ctx.restore();
-        // A 形支架
+        // A 形支架：尖端 (0,0) 与锅盖圆弧中点重合
         ctx.beginPath();
-        ctx.moveTo(0, 5); ctx.lineTo(0, 9);
-        ctx.moveTo(-6, 13); ctx.lineTo(0, 8); ctx.lineTo(6, 13);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-6, 12);
+        ctx.lineTo(6, 12);
+        ctx.closePath();
         ctx.stroke();
       } else {
         ctx.beginPath();
