@@ -456,6 +456,11 @@
         this.radarSweepAngle[rside] = 0;
         continue;
       }
+      if (this.radarScanUntil[rside] > 0 && this.time >= this.radarScanUntil[rside]) {
+        this.radarScanUntil[rside] = 0;
+        this.radarScanNext[rside] = this.time + (SL.NAVAL.radarCooldown || 30);
+        this.radarScanWas[rside] = false;
+      }
       if (this.radarScanUntil[rside] > this.time) {
         var dur = SL.NAVAL.radarScanDuration || 8;
         var prog = U.clamp((this.time - (this.radarScanStart[rside] || this.time)) / dur, 0, 1);
@@ -483,6 +488,7 @@
         }
         continue;
       }
+      this.radarScanNext[rside] -= dt;
       if (this.radarScanNext[rside] <= 0) {
         this.radarScanNext[rside] = Infinity;
         this.radarScanStart[rside] = this.time;

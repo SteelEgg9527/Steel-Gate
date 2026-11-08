@@ -1130,11 +1130,11 @@
       el.nhRadar.className = radarOwner === 'blue' ? '' : (radarOwner ? 'red' : '');
     }
     if (el.nhScan) {
-      if (!radarOwner) el.nhScan.textContent = '对海搜索 —';
+      if (!radarOwner) el.nhScan.textContent = '广域搜索 —';
       else if (g.time < (g.radarScanUntil[radarOwner] || 0)) {
-        el.nhScan.textContent = '对海搜索 ' + Math.ceil(g.radarScanUntil[radarOwner] - g.time) + 's';
+        el.nhScan.textContent = '广域搜索 ' + Math.ceil(g.radarScanUntil[radarOwner] - g.time) + 's';
       } else {
-        el.nhScan.textContent = '对海搜索冷却 ' + Math.ceil(Math.max(0, g.radarScanNext[radarOwner] || 0)) + 's';
+        el.nhScan.textContent = '广域搜索冷却 ' + Math.ceil(Math.max(0, (g.radarScanNext[radarOwner] || 0) - g.time)) + 's';
       }
     }
   }
