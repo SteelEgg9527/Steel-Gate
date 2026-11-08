@@ -775,6 +775,17 @@
       }
     }
     var enemy = game.enemyAt(w.x, w.y, hitR);
+    if (!enemy && game.selected.length) {
+      var siteTarget = game.siteAt ? game.siteAt(w.x, w.y, hitR) : null;
+      if (siteTarget && siteTarget.owner && siteTarget.owner !== 'blue') {
+        var siteN = game.commandSuppress(game.selected, w.x, w.y);
+        if (siteN > 0) {
+          UI.pushToast('炮兵开始压制 ' + siteTarget.name, 'order');
+          R.addMarker(w.x, w.y, 'attack');
+          return;
+        }
+      }
+    }
     if (!game.selected.length) {
       var own = game.unitAt(w.x, w.y, hitR);
       if (own) game.setSelection([own]);

@@ -420,7 +420,7 @@
     prewarnSpreadBonus: 0.15,
     radarScanInterval: 30,
     radarCooldown: 30,
-    radarScanDuration: 8,
+    radarScanDuration: 20,
     radarSweepTurns: 2,
     radarRange: 2500,
     radarSweepArc: 20,

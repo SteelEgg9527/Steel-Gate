@@ -2294,6 +2294,22 @@
       }
       c.restore();
     }
+    // 已占领雷达站：战术图上的雷达天线标识
+    if (game.radar && game.radar.owner) {
+      var rdm = game.radar;
+      var rdx = rdm.x * s, rdy = rdm.y * s;
+      var rdc = rdm.destroyed ? 'rgba(160,130,112,0.85)' : (rdm.owner === 'blue' ? '#9fd4ef' : rdm.owner === 'red' ? '#ef9e8a' : '#a9da92');
+      c.save();
+      c.translate(rdx, rdy);
+      c.strokeStyle = rdc;
+      c.lineWidth = 1.3;
+      c.beginPath();
+      c.moveTo(0, 5); c.lineTo(0, -2);
+      c.arc(0, -2, 4.5, Math.PI, 0, false);
+      c.moveTo(-4.5, -2); c.lineTo(4.5, -2);
+      c.stroke();
+      c.restore();
+    }
     // 单位
     for (var i = 0; i < game.units.length; i++) {
       var u = game.units[i];

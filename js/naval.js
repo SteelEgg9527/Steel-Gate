@@ -2043,14 +2043,18 @@ return null;
       ctx.fillStyle = z.destroyed ? 'rgba(70,55,48,0.85)' : 'rgba(22,34,32,0.88)';
       ctx.strokeStyle = z.destroyed ? 'rgba(160,120,100,0.8)' : (z.owner === 'blue' ? '#a9d5f2' : z.owner === 'red' ? '#efaa98' : '#e8d59f');
       ctx.lineWidth = 1.4;
+      var radarSymbol = z.kind === 'radar';
       ctx.beginPath();
-      if (z.kind === 'radar') { ctx.arc(0, 0, 7, 0, Math.PI * 2); }
-      else if (z.kind === 'coastbase') {
+      if (radarSymbol) {
+        ctx.moveTo(0, 8); ctx.lineTo(0, -2);
+        ctx.arc(0, -2, 7, Math.PI, 0, false);
+        ctx.moveTo(-7, -2); ctx.lineTo(7, -2);
+      } else if (z.kind === 'coastbase') {
         ctx.rect(-7, -5, 14, 10);
         ctx.moveTo(0, 0); ctx.lineTo(13, 0);
         ctx.moveTo(0, 0); ctx.lineTo(0, 11);
       } else { ctx.moveTo(0, -8); ctx.lineTo(7, 6); ctx.lineTo(-7, 6); ctx.closePath(); }
-      ctx.fill(); ctx.stroke();
+      if (radarSymbol) ctx.stroke(); else { ctx.fill(); ctx.stroke(); }
       ctx.font = '700 9px ' + SL.FONT_UI;
       ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(14,18,14,0.85)';

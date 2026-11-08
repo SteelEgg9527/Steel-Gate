@@ -458,7 +458,7 @@
       }
       if (this.radarScanUntil[rside] > 0 && this.time >= this.radarScanUntil[rside]) {
         this.radarScanUntil[rside] = 0;
-        this.radarScanNext[rside] = this.time + (SL.NAVAL.radarCooldown || 30);
+        this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 20) + (SL.NAVAL.radarCooldown || 30);
         this.radarScanWas[rside] = false;
       }
       if (this.radarScanUntil[rside] > this.time) {
@@ -483,7 +483,7 @@
         }
         if (prog >= 1) {
           this.radarScanUntil[rside] = 0;
-          this.radarScanNext[rside] = this.time + (SL.NAVAL.radarCooldown || 30);
+          this.radarScanNext[rside] = (this.radarScanStart[rside] || this.time) + (SL.NAVAL.radarScanDuration || 20) + (SL.NAVAL.radarCooldown || 30);
           this.radarScanWas[rside] = false;
         }
         continue;
@@ -2317,6 +2317,20 @@
       if (!this.canSee('blue', u.x, u.y)) continue;
       var d = U.dist(x, y, u.x, u.y);
       if (d < bestD) { best = u; bestD = d; }
+    }
+    return best;
+  };
+
+  Game.prototype.siteAt = function (x, y, maxDist) {
+    var best = null, bestD = maxDist || 28;
+    var list = (this.towers || []).concat(this.radar ? [this.radar] : []);
+    if (this.coastBases) list = list.concat(this.coastBases);
+    if (this.ports) list = list.concat(this.ports);
+    for (var i = 0; i < list.length; i++) {
+      var z = list[i];
+      if (!z || z.destroyed) continue;
+      var d = U.dist(x, y, z.x, z.y);
+      if (d < Math.max(bestD, z.r || 0)) { best = z; bestD = d; }
     }
     return best;
   };
@@ -7046,7 +7060,9 @@
       if (!z || z.destroyed || z.owner === u.side) continue;
       var d = U.dist(u.x, u.y, z.x, z.y);
       valid.push({ z: z, d: d });
-      if (d < bd) { bd = d; best = z; }
+      // 雷达站被占领后略微提高 AI 的争夺优先级
+      var priority = (z.kind === 'radar' && z.owner) ? 140 : 0;
+      if (d - priority < bd) { bd = d - priority; best = z; }
     }
     // 小股部队去另一个目标点，避免全军挤在同一条路线上
     if (u.navalRole && valid.length > 1) {
@@ -7217,6 +7233,30 @@
     }
   };
 
+  Game.prototype.revealFogSector = function (cx0, cy0, r, angle, arc) {
+    var res = this.fog.res;
+    var cell = SL.CONFIG.mapSize / res;
+    var vis = this.fog.vis, seen = this.fog.seen;
+    var i0 = U.clamp(Math.floor((cx0 - r) / cell), 0, res - 1);
+    var i1 = U.clamp(Math.ceil((cx0 + r) / cell), 0, res - 1);
+    var j0 = U.clamp(Math.floor((cy0 - r) / cell), 0, res - 1);
+    var j1 = U.clamp(Math.ceil((cy0 + r) / cell), 0, res - 1);
+    var r2 = r * r;
+    for (var j = j0; j <= j1; j++) {
+      var cy = (j + 0.5) * cell;
+      for (var k = i0; k <= i1; k++) {
+        var cx = (k + 0.5) * cell;
+        var dx = cx - cx0, dy = cy - cy0;
+        if (dx * dx + dy * dy > r2) continue;
+        var rel = Math.atan2(Math.sin(Math.atan2(dy, dx) - angle), Math.cos(Math.atan2(dy, dx) - angle));
+        if (rel <= 0 && rel >= -arc) {
+          vis[j * res + k] = 1;
+          seen[j * res + k] = 1;
+        }
+      }
+    }
+  };
+
   Game.prototype.computeFog = function () {
     var f = this.fog;
     f.vis.fill(0);
@@ -7231,13 +7271,11 @@
       if (!bs.alive || bs.side !== 'blue') continue;
       this.revealFogCircle(bs.x, bs.y, bs.vision || 800);
     }
-    // 雷达扫描期间照亮海面
-    if (this.naval && this.radarScanActive('blue')) {
-      for (var sy = 0; sy < SL.CONFIG.mapSize; sy += 500) {
-        for (var sx = 0; sx < SL.CONFIG.mapSize; sx += 500) {
-          if (SL.Naval && SL.Naval.isWater(sx, sy)) this.revealFogCircle(sx, sy, 420);
-        }
-      }
+    // 雷达扫描线经过的扇形区域驱散迷雾
+    if (this.naval && this.radarScanActive('blue') && this.radar) {
+      this.revealFogSector(this.radar.x, this.radar.y,
+        SL.NAVAL.radarRange || 2500, this.radarSweepAngle.blue || 0,
+        (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180);
     }
     for (var k = 0; k < this.recons.length; k++) {
       var r = this.recons[k];
