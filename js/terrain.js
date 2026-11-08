@@ -598,11 +598,11 @@
           ctx.moveTo(z.x + 9 * one, z.y - 9 * one);
           ctx.lineTo(z.x - 9 * one, z.y + 9 * one);
           ctx.stroke();
-          if (z.rubbleProgress > 0.01) {
+          if ((z.repairProgress || z.rubbleProgress || 0) > 0.01) {
             ctx.strokeStyle = 'rgba(230,190,92,0.98)';
             ctx.lineWidth = 3 * one;
             ctx.beginPath();
-            ctx.arc(z.x, z.y, z.r - 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * z.rubbleProgress);
+            ctx.arc(z.x, z.y, z.r - 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (z.repairProgress || z.rubbleProgress || 0));
             ctx.stroke();
           }
         }

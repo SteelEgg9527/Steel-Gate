@@ -611,6 +611,7 @@
     heavy_target: { xp: 0, score: 0 },
     boss_super: { xp: 0, score: 0 },
     boss_ghost: { xp: 0, score: 0 },
+    plane: { xp: 40, score: 20 },
     ship: { xp: 6000, score: 3000 }
   };
 

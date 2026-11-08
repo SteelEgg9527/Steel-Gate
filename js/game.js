@@ -5928,15 +5928,16 @@
     this.effects.push({ kind: 'explosion', x: p.x, y: p.y, t: 0, dur: 0.9, size: 30, side: p.side });
     if (SL.Audio) SL.Audio.explosion(20, p.x, p.y);
     if (source && source.side === 'blue') {
-      this.addXp('blue', 40);
-      source.score += this.scoreCredit(source.side, 20);
-      this.addScore('blue', 20);
+      var pr = SL.REWARD.plane || { xp: 40, score: 20 };
+      this.addXp('blue', pr.xp);
+      source.score += this.scoreCredit(source.side, pr.score);
+      this.addScore('blue', pr.score);
       this.stats.kills.blue = (this.stats.kills.blue || 0) + 1;
       if (p.kind === 'hellBomber') this.awardTrialCards(1, p.x, p.y, '击落重型轰炸机');
       if (p.boss) this.awardBossKill(p);
       this.feed.push({
         id: ++this.feedSeq, t: this.time, kind: 'kill',
-        ks: 'blue', vs: p.side, xp: 40, score: 20,
+        ks: 'blue', vs: p.side, xp: pr.xp, score: pr.score,
         killer: source.name, victim: '飞机', text: '击落飞机'
       });
     }
