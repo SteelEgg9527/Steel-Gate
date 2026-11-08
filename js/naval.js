@@ -2045,24 +2045,29 @@ return null;
       ctx.lineWidth = 1.4;
       var radarSymbol = z.kind === 'radar';
       if (radarSymbol) {
-        // 锅盖/抛物面天线：倾斜的 U 形盘 + 馈源 + 支架
+        // 锅盖天线：倾斜抛物面、馈源、A 形支架
         ctx.save();
-        ctx.translate(0, -2);
-        ctx.rotate(-0.48);
+        ctx.translate(0, -3);
+        ctx.rotate(-0.55);
         ctx.beginPath();
-        ctx.arc(0, 0, 7, 0, Math.PI, false);
+        ctx.arc(0, 0, 8, 0, Math.PI, false);
+        ctx.closePath();
+        ctx.fillStyle = z.destroyed ? 'rgba(60,48,42,0.9)' : 'rgba(18,30,30,0.92)';
+        ctx.fill();
         ctx.stroke();
         ctx.beginPath();
-        ctx.moveTo(0, 0); ctx.lineTo(0, -6);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -7);
         ctx.stroke();
         ctx.beginPath();
-        ctx.arc(0, -6, 1.2, 0, Math.PI * 2);
+        ctx.arc(0, -7, 1.7, 0, Math.PI * 2);
+        ctx.fillStyle = ctx.strokeStyle;
         ctx.fill();
         ctx.restore();
+        // A 形支架
         ctx.beginPath();
-        ctx.moveTo(0, 2); ctx.lineTo(0, 9);
-        ctx.moveTo(0, 9); ctx.lineTo(-3, 12);
-        ctx.moveTo(0, 9); ctx.lineTo(3, 12);
+        ctx.moveTo(0, 5); ctx.lineTo(0, 9);
+        ctx.moveTo(-6, 13); ctx.lineTo(0, 8); ctx.lineTo(6, 13);
         ctx.stroke();
       } else {
         ctx.beginPath();
