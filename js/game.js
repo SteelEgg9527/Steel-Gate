@@ -2455,7 +2455,7 @@
   /* 编队移动：围绕目标点排开 */
   Game.prototype.commandMove = function (units, x, y, sprint) {
     if (!units.length) return;
-    var cols = Math.ceil(Math.sqrt(units.length));    var gap = 26;
+    var cols = Math.ceil(Math.sqrt(units.length));    var gap = 42;
     var count = units.length;
     var anySprint = false;
     var ms = SL.CONFIG.mapSize;
