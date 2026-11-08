@@ -2976,3 +2976,33 @@ html, body {
   .recent-row > span:nth-child(5), .recent-row > span:nth-child(6),
   .recent-row > span:nth-child(7) { display: none; }
 }
+
+
+/* B-17 挂载卡片槽：左键购买，右键直接装备到1号机 */
+.bomber-hardpoints {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  min-height: 26px;
+  margin-top: 4px;
+  padding: 3px;
+  border: 1px solid rgba(177,159,113,0.22);
+  background: rgba(12,15,12,0.35);
+}
+.bomber-hardpoints .air-bomb {
+  min-height: 22px;
+  justify-content: center;
+  border: 1px solid rgba(183,166,120,0.36);
+  background: rgba(36,38,28,0.86);
+  padding: 2px 3px;
+}
+.bomber-hardpoints .air-bomb[data-drag-kind="equippedbomb"]:hover {
+  border-color: #d9bb77;
+}
+.bomber-buy-btn::after {
+  content: "左键购买 · 右键装备";
+  display: block;
+  color: #8f9a86;
+  font-size: 8px;
+  margin-top: 2px;
+}

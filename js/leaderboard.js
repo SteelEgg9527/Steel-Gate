@@ -392,10 +392,10 @@
     var head = lbOverlay.querySelector('#lb-head');
     head.innerHTML = '';
     var fields = currentMode === 'overall'
-      ? ['名次', '玩家', '综合分', '模式', '难度', '得分', '结算']
+      ? ['名次', '玩家', '综合分', '模式', '难度', '累计战功', '结算']
       : (isStand(currentMode)
         ? ['名次', '玩家', '波次', '坚守', '击杀', '难度', '结算']
-        : ['名次', '玩家', '黄圈经验', '得分', '击杀', '难度', '结算']);
+        : ['名次', '玩家', '黄圈经验', '累计战功', '击杀', '难度', '结算']);
     head.className = 'lb-row lb-head-row' + (currentMode === 'overall' ? ' lb-overall-row' : '');
     for (var i = 0; i < fields.length; i++) {
       var s = document.createElement('span');

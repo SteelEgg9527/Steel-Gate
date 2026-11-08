@@ -317,7 +317,7 @@
       }
       var head = document.createElement('div');
       head.className = 'recent-row recent-head';
-      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '分数', '黄圈', '上传'].forEach(function (t) {
+      ['时间', '模式 / 地图', '结果', '用时', '击杀 / 损失', '累计战功', '黄圈', '上传'].forEach(function (t) {
         var c = document.createElement('span'); c.textContent = t; head.appendChild(c);
       });
       el.recentResultsList.appendChild(head);
@@ -626,7 +626,7 @@
   UI.buyDraft = function () {
     if (!game || game.ended) return;
     var res = game.buyDraft('blue');
-    UI.pushToast(res.ok ? ('花费 ' + res.cost + ' 分增加 1 次抽卡机会') : res.msg, res.ok ? 'win' : 'loss');
+    UI.pushToast(res.ok ? ('花费 ' + res.cost + ' 战功增加 1 次抽卡机会') : res.msg, res.ok ? 'win' : 'loss');
     if (res.ok) {
       renderCards();
       // 不自动打开抽卡界面：抽卡次数进入队列，玩家稍后自行点击“抽卡”
@@ -1097,7 +1097,7 @@
       cls = present[0];
     } else if (present.length > 1) {
       if (top > second && leader) {
-        status = '争夺中 · ' + SL.SIDES[leader].name + '净优势 ' + net + ' · +' + (net * SL.YELLOW.xpPerUnit) + ' XP/s';
+        status = '争夺中 · ' + SL.SIDES[leader].name + '净优势 ' + net + ' · +' + (net * SL.YELLOW.xpPerUnit) + ' 黄圈经验/s';
         cls = 'contested';
       } else {
         status = '争夺中 · 势均力敌';
@@ -1351,11 +1351,21 @@
 
   UI.setEngineerMode = function (mode) {
     if (!game || !game.selected || !game.selected.length) return;
+    if (mode === 'mine_ap' || mode === 'mine_at') {
+      var mn = game.setEngineerMode(game.selected, mode);
+      if (mn > 0) {
+        UI.pushToast(mode === 'mine_at' ? '已布设反坦克雷区（半径200m）' : '已布设反步兵雷区（半径200m）', 'win');
+      } else {
+        UI.pushToast('工程值不足，每个雷区需要 50 工程值', 'loss');
+      }
+      updateBars();
+      return;
+    }
     var n = game.setEngineerMode(game.selected, mode);
     if (!n) return;
     var active = game.selected.some(function (u) { return u.engineerMode === mode; });
     UI.pushToast(active ? '工程模式：' + ({
-      mine_ap: '反步兵雷', mine_at: '反坦克雷', wire: '铁丝网', hedgehog: '拒马'
+      wire: '铁丝网', hedgehog: '拒马'
     }[mode] || mode) + '（移动时布设）' : '工程模式已关闭', 'info');
     updateBars();
   };
@@ -1510,7 +1520,7 @@
     renderControlGroups(g);
     }
 
-    // 积分榜
+    // 战功榜
     lbTick += dt;
     if (lbTick > 0.4) {
       lbTick = 0;
@@ -1875,7 +1885,7 @@
       if (isEngineerVehicle) {
         if (el.engValue) el.engValue.textContent = Math.round(u.engineerValue) + ' / ' + u.engineerMax;
         el.engModes.forEach(function (btn) {
-          btn.classList.toggle('on', u.engineerMode === btn.dataset.eng);
+          btn.classList.toggle('on', (btn.dataset.eng === 'wire' || btn.dataset.eng === 'hedgehog') && u.engineerMode === btn.dataset.eng);
         });
       }
     }
@@ -2164,11 +2174,11 @@
     uiCache.buyDraft = sig;
     el.buyCost.textContent = cost;
     el.buyDraft.classList.toggle('disabled', !afford);
-    el.buyDraft.title = afford ? ('消耗 ' + cost + ' 分购买一次抽卡机会') : ('分数不足：需要 ' + cost);
+    el.buyDraft.title = afford ? ('消耗 ' + cost + ' 战功购买一次抽卡机会') : ('花费战功不足：需要 ' + cost);
     if (el.buyUnitCost) el.buyUnitCost.textContent = cost;
     if (el.buyUnit) {
       el.buyUnit.classList.toggle('disabled', !afford);
-      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 分在友军附近召唤一个随机单位') : ('分数不足：需要 ' + cost);
+      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 战功在友军附近召唤一个随机单位') : ('花费战功不足：需要 ' + cost);
     }
   }
 
@@ -2206,7 +2216,7 @@
           nd.className = 'card';
           nd.dataset.navyKey = qd.key;
           nd.style.setProperty('--c', qd.color);
-          var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 2000) : (qd.key === 'naval_supply' ? 500 : 0);
+          var qcost = qd.key === 'ship_support' ? (game.shipPurchaseCost || 2500) : (qd.key === 'naval_supply' ? 500 : 0);
           nd.title = qd.desc + (qcost ? '（' + qcost + ' 分）' : '（免费）');
           var slotsHtml = '';
           if (qd.key === 'seaplane') {

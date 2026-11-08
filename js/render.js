@@ -1537,6 +1537,30 @@
       }
       ctx.restore();
     }
+    // 区域雷区范围
+    if (game.minefields) {
+      for (i = 0; i < game.minefields.length; i++) {
+        var mf = game.minefields[i];
+        if (!mf || !mf.alive) continue;
+        if (!game.isSeen(mf.x, mf.y) && mf.side !== 'blue') continue;
+        var mfx = proj.x(mf.x), mfy = proj.y(mf.y), mfr = mf.r * cam.zoom;
+        ctx.save();
+        ctx.beginPath(); ctx.arc(mfx, mfy, mfr, 0, Math.PI * 2);
+        ctx.fillStyle = mf.type === 'mine_at' ? 'rgba(180,106,78,0.08)' : 'rgba(156,154,122,0.08)';
+        ctx.fill();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = mf.type === 'mine_at' ? 'rgba(214,126,92,0.65)' : 'rgba(210,202,166,0.6)';
+        ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '700 8px ' + SL.FONT_UI;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.strokeStyle = 'rgba(14,18,14,0.8)'; ctx.lineWidth = 3;
+        ctx.strokeText('雷区', mfx, mfy - mfr - 4);
+        ctx.fillStyle = mf.type === 'mine_at' ? '#e0a080' : '#d8d0aa';
+        ctx.fillText('雷区', mfx, mfy - mfr - 4);
+        ctx.restore();
+      }
+    }
     for (i = 0; i < game.mines.length; i++) {
       var m = game.mines[i];
       if (!m.alive || (!game.isSeen(m.x, m.y) && m.side !== 'blue')) continue;
@@ -2405,7 +2429,7 @@
       for (var lk in game.lastKnown) {
         if (drawn[lk]) continue;
         var lv = game.lastKnown[lk];
-        if (!lv || !lv.obj || lv.obj.alive === false) continue;
+        if (!lv || !lv.obj || lv.obj.alive === false || (game.time - (lv.t || 0) > 60)) continue;
         c.strokeStyle = 'rgba(232,198,120,0.55)';
         c.fillStyle = 'rgba(232,198,120,0.18)';
         c.lineWidth = 1;

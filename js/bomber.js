@@ -46,6 +46,13 @@
     bombOrder: ['lb500', 'lb1000', 'lb2000', 'incendiary']
   });
 
+  // 普通空袭与 B-17 的 500lb 航弹保持同一份数据，避免双表漂移
+  if (SL.AIRSTRIKE && B.bombs.lb500) {
+    SL.AIRSTRIKE.damage = B.bombs.lb500.damage;
+    SL.AIRSTRIKE.radius = B.bombs.lb500.radius;
+    SL.AIRSTRIKE.fortDamage = B.bombs.lb500.fortDamage;
+  }
+
   var ICON_PLANE = '<img src="assets/b17-dxf-blue.png" alt="">';
   var ICON_BOMB = [
     '<svg viewBox="0 0 24 38" aria-hidden="true">',
@@ -792,7 +799,7 @@
   function buyPlane(g) {
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('积分不足，需要 ' + B.planeCost, 'loss'); return; }
+    if ((g.teams.blue.score || 0) < B.planeCost) { toast('花费战功不足，需要 ' + B.planeCost, 'loss'); return; }
     g.teams.blue.score -= B.planeCost;
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     b.hangarPlanes.push(p);
@@ -806,7 +813,7 @@
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
     var d = B.bombs[type];
     if (!d) return;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('积分不足，需要 ' + B.bombGroupCost, 'loss'); return; }
+    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('花费战功不足，需要 ' + B.bombGroupCost, 'loss'); return; }
     g.teams.blue.score -= B.bombGroupCost;
     b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: d.group, paid: B.bombGroupCost });
     toast('已购买 ' + d.name + '（' + d.group + '枚）', 'win');
@@ -818,7 +825,7 @@
     var b = ensure(g);
     var d = B.bombs[type];
     if (!d || !plane || b.state !== 'base') return false;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('积分不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
+    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('花费战功不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
     if (loadWeight(plane) + d.group * bombWeight(type) > B.maxLoadLb) { toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss'); return false; }
     g.teams.blue.score -= B.bombGroupCost;
     plane.bombGroups.push({ type: type, count: d.group, paid: B.bombGroupCost });
@@ -829,11 +836,40 @@
     return true;
   }
 
+  function buyBombToFirstPlane(g, type) {
+    var b = ensure(g);
+    var d = B.bombs[type];
+    if (!b || !d) return false;
+    if (b.state !== 'base') { toast('轰炸机不在基地，无法装备', 'loss'); return false; }
+    for (var i = 0; i < b.formation.length; i++) {
+      var p = b.formation[i];
+      if (!p) continue;
+      if (loadWeight(p) + d.group * bombWeight(type) > B.maxLoadLb) continue;
+      if (buyBombToPlane(g, p, type)) {
+        toast('已购买并装备到 ' + (i + 1) + '号机：' + d.name, 'win');
+        return true;
+      }
+      return false;
+    }
+    toast('没有可挂载的飞机，请先购买并编入 1 号机', 'loss');
+    return false;
+  }
+
+  function buyPlaneToFirstSlot(g) {
+    var b = ensure(g);
+    if (!b) return false;
+    for (var i = 0; i < b.formation.length; i++) {
+      if (!b.formation[i]) return buyPlaneToSlot(g, i);
+    }
+    toast('编组栏已满', 'loss');
+    return false;
+  }
+
   function buyPlaneToSlot(g, slot) {
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return false; }
     if (slot < 0 || slot >= b.formation.length || b.formation[slot]) { toast('该编组位置不可用', 'loss'); return false; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('积分不足，需要 ' + B.planeCost, 'loss'); return false; }
+    if ((g.teams.blue.score || 0) < B.planeCost) { toast('花费战功不足，需要 ' + B.planeCost, 'loss'); return false; }
     g.teams.blue.score -= B.planeCost;
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     p.slot = slot;
@@ -851,7 +887,7 @@
         var bg = b.hangarBombs.splice(i, 1)[0];
         var paid = bg.paid || B.bombGroupCost;
         g.teams.blue.score = (g.teams.blue.score || 0) + paid;
-        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 分', 'win');
+        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 战功', 'win');
         renderConfig(g); refresh(g);
         return true;
       }
@@ -876,7 +912,7 @@
     rebuildBombs(p);
     snapshotLoadout(p);
     g.teams.blue.score = (g.teams.blue.score || 0) + value;
-    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 分', 'win');
+    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 战功', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -947,7 +983,7 @@
     if (!refs || !refs.config) return;
     var b = ensure(g);
     if (!b) return;
-    if (refs.configScore) refs.configScore.textContent = '可用积分 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
+    if (refs.configScore) refs.configScore.textContent = '可用战功 ' + Math.floor((g.teams && g.teams.blue && g.teams.blue.score) || 0);
     if (refs.autoRestock) refs.autoRestock.checked = restockEnabled();
     if (refs.slots) {
       var html = '';
@@ -959,7 +995,7 @@
           html += '<div class="bomber-slot-plane">' + ICON_PLANE +
             '<div><b>' + p.name + '</b><small>耐久 ' + Math.ceil(p.hp) + ' / ' + p.maxHp + ' · 挂载 ' + loadWeight(p) + '/6000lb</small>' +
             '<div class="bomber-hardpoints">' + (p.bombGroups.length ? p.bombGroups.map(function (g, bi) { return bombIconHTML(g.type, p.id, bi, g.count); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
-            '<small class="drop-order">投弹顺序：从左到右</small></div></div>';
+            '<small class="drop-order">挂载卡片槽 · 投弹从左到右</small></div></div>';
         } else {
           html += '<div class="bomber-slot-empty">拖动飞机到此编组</div>';
         }
@@ -978,7 +1014,7 @@
         var bg = b.hangarBombs[bi];
         var bd = B.bombs[bg.type];
         h += '<div class="bomber-hangar-card bomb" draggable="true" data-drag-kind="bomb" data-drag-id="' + bg.id + '" data-bomb-type="' + bg.type + '">' +
-          ICON_BOMB + '<b>' + bd.name + '</b><small>' + bg.count + ' 枚一组 · 500 分</small></div>';
+          ICON_BOMB + '<b>' + bd.name + '</b><small>' + bg.count + ' 枚一组 · 500 战功</small></div>';
       }
       refs.hangar.innerHTML = h || '<div class="air-none">机库为空，先在左侧购买飞机或航弹</div>';
     }
@@ -1343,6 +1379,22 @@
     b17Images.green = new Image(); b17Images.green.src = 'assets/b17-dxf-green.png';
     b17SelectedImage = new Image(); b17SelectedImage.src = 'assets/b17-dxf-selected.png';
     b17Images.blue.onload = function () { refresh(SL.UI && SL.UI.currentGame ? SL.UI.currentGame() : null); };
+    document.addEventListener('contextmenu', function (ev) {
+      var bombBtn = ev.target && ev.target.closest ? ev.target.closest('[data-buy-bomb]') : null;
+      if (bombBtn) {
+        ev.preventDefault();
+        var gb = SL.UI.currentGame && SL.UI.currentGame();
+        if (gb) buyBombToFirstPlane(gb, bombBtn.getAttribute('data-buy-bomb'));
+        return;
+      }
+      var planeBtn = ev.target && ev.target.closest ? ev.target.closest('[data-buy-plane]') : null;
+      if (planeBtn) {
+        ev.preventDefault();
+        var gp = SL.UI.currentGame && SL.UI.currentGame();
+        if (gp) buyPlaneToFirstSlot(gp);
+        return;
+      }
+    });
     document.addEventListener('click', function (ev) {
       if (ev.target && ev.target.closest && ev.target.closest('.air-drop-mode-row')) return;
       var tab = ev.target && ev.target.closest ? ev.target.closest('.system-tab') : null;

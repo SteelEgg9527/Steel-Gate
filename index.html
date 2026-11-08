@@ -164,10 +164,10 @@
       <div class="engineer-row" id="engineer-row" style="display:none">
         <div class="eng-head"><span>工程模式</span><b id="eng-value">200 / 200</b></div>
         <div class="eng-modes">
-          <button class="ability-btn eng-mode" data-eng="mine_ap" type="button">反步兵雷</button>
-          <button class="ability-btn eng-mode" data-eng="mine_at" type="button">反坦克雷</button>
-          <button class="ability-btn eng-mode" data-eng="wire" type="button">铁丝网</button>
-          <button class="ability-btn eng-mode" data-eng="hedgehog" type="button">拒马</button>
+          <button class="ability-btn eng-mode" data-eng="mine_ap" type="button" title="点击在工程车周围200m布设反步兵雷区（50工程值）">反步兵雷区</button>
+          <button class="ability-btn eng-mode" data-eng="mine_at" type="button" title="点击在工程车周围200m布设反坦克雷区（50工程值）">反坦克雷区</button>
+          <button class="ability-btn eng-mode" data-eng="wire" type="button" title="激活后移动布设；满工程值约800m">铁丝网</button>
+          <button class="ability-btn eng-mode" data-eng="hedgehog" type="button" title="激活后移动布设；满工程值约500m">拒马</button>
         </div>
       </div>
       <div class="dt-items" id="d-items"></div>
@@ -193,7 +193,7 @@
   <aside id="rightpanels">
     <div id="killfeed"></div>
     <div id="leaderboard">
-      <div class="panel-head"><span>积分榜</span><b>TOP 20</b></div>
+      <div class="panel-head"><span>战功榜</span><b>TOP 20</b></div>
       <div id="lb-rows"></div>
     </div>
   </aside>
@@ -208,8 +208,8 @@
       <span>卡包</span>
       <b id="card-count">0/10</b>
       <small>拖动卡片到单位或战场</small>
-      <button id="buy-draft" class="buy-draft" title="消耗战功分数购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
-      <button id="buy-unit" class="buy-draft" title="消耗战功分数在友军附近召唤一个随机单位">单位增援 <b id="buy-unit-cost">200</b></button>
+      <button id="buy-draft" class="buy-draft" title="消耗花费战功购买一次抽卡机会">卡片增援 <b id="buy-cost">200</b></button>
+      <button id="buy-unit" class="buy-draft" title="消耗花费战功在友军附近召唤一个随机单位">单位增援 <b id="buy-unit-cost">200</b></button>
       <button id="navy-system" class="buy-draft" type="button" title="购买舰船支援卡片">舰船系统</button>
     </div>
     <div id="cards"></div>
@@ -283,36 +283,36 @@
         <span class="stamp">空中</span>
         <div>
           <h1>轰炸机配备</h1>
-          <p class="sub">购买 B-17 与航弹，拖入编组栏完成挂载</p>
+          <p class="sub">左键购买 · 右键直接装备到 1 号机（依序） · 卡片槽拖拽可调整</p>
         </div>
         <button id="bomber-config-close" class="icon-btn" type="button">×</button>
       </div>
       <div class="bomber-config-body">
         <section class="bomber-buy">
-          <div class="bomber-pane-head"><span>购买栏</span><b id="bomber-config-score">可用积分 0</b></div>
+          <div class="bomber-pane-head"><span>购买栏</span><b id="bomber-config-score">可用战功 0</b></div>
           <div class="bomber-buy-list">
             <button class="bomber-buy-btn plane" type="button" draggable="true" data-drag-kind="shopplane" data-buy-plane="1">
               <span class="bomber-buy-icon plane"><img src="assets/b17-dxf-blue.png" alt=""></span>
-              <span><b>B-17 空中堡垒</b><small>1500 分 · 一架</small></span>
+              <span><b>B-17 空中堡垒</b><small>1500 战功 · 一架</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb500" data-buy-bomb="lb500">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>500lb 航弹</b><small>500 分 · 4 枚一组</small></span>
+              <span><b>500lb 航弹</b><small>500 战功 · 4 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb1000" data-buy-bomb="lb1000">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>1000lb 航弹</b><small>500 分 · 2 枚一组</small></span>
+              <span><b>1000lb 航弹</b><small>500 战功 · 2 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="lb2000" data-buy-bomb="lb2000">
               <span class="bomber-buy-icon bomb"></span>
-              <span><b>2000lb 航弹</b><small>500 分 · 1 枚一组</small></span>
+              <span><b>2000lb 航弹</b><small>500 战功 · 1 枚一组</small></span>
             </button>
             <button class="bomber-buy-btn" type="button" draggable="true" data-drag-kind="shopbomb" data-bomb-type="incendiary" data-buy-bomb="incendiary">
               <span class="bomber-buy-icon burn"></span>
-              <span><b>300lb 燃烧弹</b><small>500 分 · 4 枚一组</small></span>
+              <span><b>300lb 燃烧弹</b><small>500 战功 · 4 枚一组</small></span>
             </button>
           </div>
-          <p class="tip">飞机与航弹购买后进入右下方机库，拖到编组栏使用。</p>
+          <p class="tip">左键购买进入机库；右键购买并直接装备到 1 号机（1号满则依序找下一架）。卡片槽支持拖拽调整投弹顺序。</p>
         </section>
         <section class="bomber-right">
           <label class="bomber-restock-row">
@@ -568,15 +568,16 @@
             </ul>
             <h3>陆战机制</h3>
             <ul class="keys">
-              <li><b>黄圈</b><span>圈内净优势持续获得经验和分数；率先达到 100,000 黄圈经验获胜</span></li>
-              <li><b>占领区</b><span>单位进入并保持 3 秒即可占领；村庄、林地、堡垒提供掩体和持续经验</span></li>
+              <li><b>黄圈</b><span>圈内净优势持续获得黄圈经验与花费战功；黄圈经验独立于连队经验，率先达到 100,000 获胜</span></li>
+              <li><b>占领区</b><span>单位进入并保持 3 秒即可占领；村庄、林地、堡垒提供掩体和持续经验/战功</span></li>
               <li><b>掩体</b><span>树林、村庄、工事降低受伤并提高闪避；高地增加射程</span></li>
               <li><b>隐蔽</b><span>步兵在灌木/树林停火 1 秒隐蔽；伪装服可进入幽灵状态</span></li>
               <li><b>侦察</b><span>指挥车建立持续侦察圈；侦察机提供 20 秒侦察区</span></li>
-              <li><b>成长</b><span>玩家所有经验与分数来源为 2.5 倍；升级抽卡，分数可购买额外抽卡</span></li>
+              <li><b>成长</b><span>连队经验与累计战功为 2.5 倍；升级获得抽卡，花费战功可购买额外抽卡；黄圈经验单独计算</span></li>
               <li><b>工事</b><span>工兵步兵在已占领区构筑强化工事；工事可部署碉堡、迫击炮、反坦克炮、88 炮</span></li>
+              <li><b>穿甲</b><span>穿甲不足无法击穿装甲；穿甲超过装甲等级越多，伤害越高；直射武器有概率造成致命一击</span></li>
               <li><b>工事状态</b><span>地图显示“工事残骸”“修复中 XX%”和“已摧毁”；工兵或工程车修复残骸时显示进度</span></li>
-              <li><b>工程车</b><span>点击工程模式会立即在车下布下第一个节点；邻近同类节点自动连接，靠近地图边界自动吸附；再右键移动继续布设</span></li>
+              <li><b>工程车</b><span>反步兵/反坦克雷区为点击式：点击按钮直接以工程车为中心布设半径200m雷区，单价50工程值（满值4片）；铁丝网/拒马为激活后移动布设</span></li>
             </ul>
           </div>
           <div>
@@ -584,26 +585,26 @@
             <ul class="keys">
               <li><b>地图</b><span>5km 海陆地图；3 座通讯塔、1 座雷达站、8 个海岸基地</span></li>
               <li><b>通讯塔</b><span>可占领、摧毁、修复；提供舰炮校射与装填加成；没有通讯塔时舰炮压制不能对陆地使用</span></li>
-              <li><b>雷达</b><span>每 30 秒搜索 5 秒，扫描期间显示海面与空中目标</span></li>
+              <li><b>雷达</b><span>扫描半径3.5km；旋转2圈约30秒，之后冷却30秒；扫描线后方20°扇区点亮单位3秒，并保留最后位置1分钟</span></li>
               <li><b>海岸基地</b><span>占领后获得 406mm 岸防炮；基地需工兵步兵强化后才能部署其他工事武器</span></li>
               <li><b>406mm 岸防炮</b><span>射程 2km、散布 500m、溅射 300m、对舰 1000 伤害、18 秒装填，只对海</span></li>
               <li><b>战舰视野</b><span>1000m，并共享全部友军视野</span></li>
               <li><b>主炮</b><span>自动攻击射程内被友军发现的敌方战舰；不主动攻击地面</span></li>
               <li><b>其他舰炮</b><span>副炮、37mm、20mm 自动攻击地面单位、工事、海岸基地和岸防炮；37mm/20mm 为直射弹道，不显示抛物线</span></li>
               <li><b>压制时的空闲炮塔</b><span>射程外的炮塔会自动寻找射程和视野内目标，不再空转</span></li>
-              <li><b>近岸支援</b><span>离岸 400m 内；每次开火 8% 概率暴露 5 秒，敌方优先攻击</span></li>
+              <li><b>近岸支援</b><span>离岸 500m 内；每次开火 8% 概率暴露 5 秒，敌方优先攻击</span></li>
               <li><b>舰炮压制</b><span>持续 5 分钟；预瞄圈上使用可加速校射；F 停止</span></li>
               <li><b>校射</b><span>约 10 次射击完成，击毁目标加快；校射完成后进入效力射</span></li>
               <li><b>射程圈</b><span>选中战舰显示主炮、副炮、防空圈；工事和岸防炮显示自身射程圈；可在设置中关闭</span></li>
             </ul>
             <h3>卡包与装备</h3>
             <ul class="keys">
-              <li><b>抽卡</b><span>升级后从 5 张候选选 1 张；分数可购买额外抽卡</span></li>
+              <li><b>抽卡</b><span>升级后从 5 张候选选 1 张；花费战功可购买额外抽卡</span></li>
               <li><b>单位 / 装备 / 工事包</b><span>自动开出对应卡片</span></li>
               <li><b>支援卡</b><span>补给站、空袭、炮火压制、侦察机、制空盘旋</span></li>
               <li><b>步兵装备</b><span>MG42、迫击炮、火箭筒、狙击小组、伪装服、医疗包、工兵装备</span></li>
               <li><b>工事卡</b><span>机枪碉堡、迫击炮阵地、反坦克炮阵地、88 防空炮阵地</span></li>
-              <li><b>舰船快捷卡</b><span>战舰增援 2000（每次 +50%，AI 同样需要通讯塔和分数）、预先瞄准、舰炮压制、水上飞机、舰船补给 500</span></li>
+              <li><b>舰船快捷卡</b><span>战舰增援 2500（每次 +50%，AI 同样需要通讯塔和花费战功）、预先瞄准、舰炮压制、水上飞机、舰船补给 500</span></li>
             </ul>
           </div>
         </div>
@@ -613,8 +614,8 @@
           <tbody>
             <tr><td>203mm 主炮</td><td>4</td><td>3km</td><td>550</td><td>250m</td><td>520</td><td>24s</td></tr>
             <tr><td>105mm 副炮</td><td>6</td><td>1.5km</td><td>180</td><td>160m</td><td>260</td><td>8s</td></tr>
-            <tr><td>37mm 防空炮</td><td>6</td><td>对空 800 / 对地 500</td><td>35</td><td>40m</td><td>220</td><td>1.8s</td></tr>
-            <tr><td>20mm 机关炮</td><td>10</td><td>对空 600 / 对地 400</td><td>14</td><td>24m</td><td>170</td><td>0.45s</td></tr>
+            <tr><td>37mm 防空炮</td><td>6</td><td>对空 800 / 对地 500</td><td>35</td><td>46m</td><td>50</td><td>0.6s</td></tr>
+            <tr><td>20mm 机关炮</td><td>10</td><td>对空 600 / 对地 400</td><td>14</td><td>30m</td><td>30</td><td>0.22s</td></tr>
           </tbody>
         </table>
         <h3>地面单位</h3>
@@ -623,8 +624,8 @@
           <tbody>
             <tr><td>步兵班</td><td>350m</td><td>180m</td><td>300</td><td>7.2m/s</td></tr>
             <tr><td>装甲车</td><td>200m</td><td>180m</td><td>300</td><td>14m/s</td></tr>
-            <tr><td>中型坦克</td><td>200m</td><td>220m</td><td>400</td><td>9.5m/s</td></tr>
-            <tr><td>重型坦克</td><td>200m</td><td>250m</td><td>520</td><td>8.5m/s</td></tr>
+            <tr><td>中型坦克</td><td>200m</td><td>220m</td><td>400</td><td>13m/s（加速2.8s）</td></tr>
+            <tr><td>重型坦克</td><td>200m</td><td>250m</td><td>520</td><td>11.5m/s（加速3.6s）</td></tr>
             <tr><td>防空车</td><td>250m</td><td>190m / 对空 600m</td><td>250</td><td>14m/s</td></tr>
             <tr><td>轻型反坦克炮</td><td>250m</td><td>250m</td><td>90</td><td>14m/s</td></tr>
             <tr><td>火炮</td><td>250m</td><td>600m</td><td>65</td><td>14m/s</td></tr>
@@ -634,7 +635,7 @@
             <tr><td>工程车</td><td>240m</td><td>—</td><td>220</td><td>14m/s</td></tr>
           </tbody>
         </table>
-        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵；MG42 射程 200m。轻型反坦克炮移动后需架设 1 秒。玩家经验与分数均为 2.5 倍。</p>
+        <p class="tip">步兵可携带 6 件装备；火箭筒 2 发；迫击炮溅射 90m；狙击对步兵 400m/150，对装甲 300m，对装甲车 75，对中坦 35；火炮溅射 100m，重炮 120m。装甲车对步兵时机炮和 MG42 并列机枪交替射击，机炮本身也可直接打步兵；MG42 射程 200m。轻型反坦克炮移动后需架设 1 秒。玩家连队经验与累计战功为 2.5 倍；黄圈经验单独计算。</p>
       </div>
     </div>
   </div>
@@ -670,7 +671,7 @@
           <div><i>黄圈经验</i><b id="res-yellow">0</b></div>
         </div>
         <div class="result-lb">
-          <div class="result-lb-head">单位积分榜 <b>TOP 20</b></div>
+          <div class="result-lb-head">单位战功榜 <b>TOP 20</b></div>
           <div id="result-lb-rows"></div>
         </div>
       </div>

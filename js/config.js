@@ -371,6 +371,16 @@
     }
   };
 
+  /* 穿甲/致命一击：ap 为武器穿甲值，armor 为装甲等级 */
+  SL.PENETRATION = {
+    armorTiers: [0, 0.35, 1.15, 1.6, 2.1],
+    damagePerExcess: 0.30,
+    damageCap: 0.60,
+    critPerExcess: 0.18,
+    critCap: 0.40,
+    critMultiplier: 2.5
+  };
+
   /* 占领区类型：灌木丛 / 树林 / 村庄 / 城镇 / 工事 */
   SL.ZONE_BONUS = {
     bush: { dr: 0.10, evade: 0.10, label: '灌木丛' },
@@ -387,7 +397,7 @@
   SL.MODES = {
     melee: {
       id: 'melee', name: '混战模式',
-      desc: '蓝、红、绿三军混战；普通/困难以100,000黄圈经验获胜，无限无胜利条件。'
+      desc: '蓝、红、绿三军混战；普通/困难以100,000黄圈经验获胜，无限无胜利条件。黄圈经验独立于连队经验。'
     },
     lastStand: {
       id: 'lastStand', name: '防御模式',
@@ -395,7 +405,7 @@
     },
     naval: {
       id: 'naval', name: '舰炮轰鸣',
-      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤重型巡洋舰进行岸轰支援；黄圈经验决定胜负。'
+      desc: '5km 海陆战场：占领通讯塔与雷达站，召唤重型巡洋舰进行岸轰支援；黄圈经验决定胜负。黄圈经验独立于连队经验。'
     },
     navalLastStand: {
       id: 'navalLastStand', name: '背水一战',
@@ -432,7 +442,7 @@
     hull: {
       name: '欧根亲王号', hp: 5000, armor: 4, vision: 1000,
       length: 212.5, beam: 21.8, maxSpeed: 17, accel: 1.6,
-      turnRate: 0.08, reverseSpeed: 6.5, shoreRange: 600,
+      turnRate: 0.08, reverseSpeed: 6.5, shoreRange: 500,
       suppressDuration: 300,
       nearShoreSpeed: 0.82, repairHullPerTurretHp: 0.2,
       nearShoreExposeChance: 0.08, exposeDuration: 5
@@ -491,7 +501,7 @@
     ship_support: {
       key: 'ship_support', name: '战舰增援', icon: 'BB', color: '#6d8ca0',
       use: 'point', cost: 2500,
-      desc: '在海域边缘召唤欧根亲王号；每次购买涨价 50%'
+      desc: '在已占领港口或海域边缘召唤欧根亲王号；每次购买涨价 50%'
     },
     ship_prewarn: {
       key: 'ship_prewarn', name: '预先瞄准', icon: 'PA', color: '#74a99d',
@@ -583,7 +593,7 @@
     aiCycle: ['armored', 'tank', 'infantry', 'armored', 'tank']
   };
 
-  /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），分数仍按目标等级 */
+  /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），战功仍按目标等级 */
   SL.REWARD = {
     infantry: { xp: 225, score: 15 },
     armored: { xp: 300, score: 30 },
@@ -600,7 +610,7 @@
     handMax: 10,
     draftCount: 5,     // 升级时抽几张供选择
     draftPick: 1,      // 选几张进卡包
-    buyDraftCost: 200, // 首次用分数购买抽卡的价格
+    buyDraftCost: 200, // 首次用花费战功购买抽卡的价格
     buyDraftStep: 40,  // 每次购买后价格上涨
     equipCost: 0,      // 已取消：装备步兵装备不再消耗弹药（保留字段兼容旧配置）
     zoneRate: 3,       // 每个有人驻守的占领区每秒经验
@@ -774,7 +784,12 @@
     rubbleRepairSpeed: 2,
     rubbleRepairCost: 18,
     layGap: { mine_ap: 18, mine_at: 18, wire: 28, hedgehog: 28 },
-    cost: { mine_ap: 8, mine_at: 14, wire: 12, hedgehog: 12 },
+    // 地雷改为点击布设的 200m 雷区，每个雷区固定消耗 50 工程值（满值 4 片）
+    minefieldCost: 50,
+    minefieldRadius: 200,
+    minefieldMines: 10,
+    // 铁丝网/拒马按米数消耗：满值约 800m 铁丝网 / 500m 拒马
+    cost: { mine_ap: 0, mine_at: 0, wire: 7, hedgehog: 11 },
     connectRange: 52,
     edgeSnap: 36,
     nodeHp: 3000,
@@ -942,10 +957,10 @@
     unitpack: { key: 'unitpack', name: '单位包', icon: '▣', color: '#5c7fa8', use: 'open', desc: '升级选中后立即开出一张单位卡' },
     equippack: { key: 'equippack', name: '装备包', icon: '✦', color: '#8a7a4a', use: 'open', desc: '升级选中后立即开出一张装备卡' },
     ammo: { key: 'ammo', name: '补给站', icon: '补', color: '#4f7a45', use: 'point', desc: '绿色运输机投送：可投到海面，为范围内战舰补充舰体与炮塔弹药；补给箱可被摧毁' },
-    airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：半径 125m 伤害圈，高额杀伤' },
+    airstrike: { key: 'airstrike', name: '空袭申请', icon: '空', color: '#a63f33', use: 'point', desc: '拖到地图：500lb 航弹，100m 杀伤半径，高额杀伤' },
     artillery: { key: 'artillery', name: '炮火申请', icon: '☄', color: '#a65c33', use: 'point', desc: '拖到地图：重炮支援 15s 30 发，直径 300m' },
     recon: { key: 'recon', name: '侦察申请', icon: '◎', color: '#3f7a7a', use: 'point', desc: '拖到地图：侦察机从边缘进入，抵达后盘旋 20 秒，侦察直径 500m' },
-    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机沿直径 600m 圈盘旋 40 秒，对地攻击 600m；追击敌机范围 1200m，不显示' },
+    airpatrol: { key: 'airpatrol', name: '制空盘旋', icon: '战', color: '#5a6f8a', use: 'point', desc: '拖到地图：3 架战斗机沿直径 600m 圈盘旋 40 秒，对地攻击 300m；追击敌机范围 1200m，不显示' },
     fortpack: { key: 'fortpack', name: '工事装备包', icon: '堡', color: '#7c5a32', use: 'open', desc: '升级选中后立即开出一张工事卡' },
     bunker: { key: 'bunker', name: '机枪碉堡', icon: '堡', color: '#7c5a32', use: 'point', desc: '拖到强化工事区：300m 机枪火力 + 额外减伤' },
     mortar_nest: { key: 'mortar_nest', name: '迫击炮阵地', icon: '迫', color: '#6e6a3a', use: 'point', desc: '拖到强化工事区：3 门迫击炮陆续射击，射程 500m，散布 50m' },

@@ -91,6 +91,7 @@
     this.planes = [];       // 飞机
     this.drops = [];        // 战场掉落的步兵装备
     this.mines = [];        // 工程车布设的地雷
+    this.minefields = [];   // 区域雷区（200m 半径）
     this.barriers = [];     // 铁丝网 / 拒马节点
     this.barrierVersion = 0;
     this.barrierGridCache = {};
@@ -284,11 +285,23 @@
     var home = (T.spawns && T.spawns[side]) || anchor;
     anchor = { x: home.x, y: yHint != null ? yHint : home.y };
     var best = null;
-    var ep = this.shipSpawnPoint(side, yHint);
-    best = {
-      x: ep.x, y: ep.y,
-      inward: Math.atan2(T.size / 2 - ep.y, T.size / 2 - ep.x)
-    };
+    var port = this.portOf ? this.portOf(side) : null;
+    if (port && !port.destroyed && SL.Naval && SL.Naval.nearestWaterPoint) {
+      var pw = SL.Naval.nearestWaterPoint(port.x, port.y);
+      if (pw && SL.Naval.isWater(pw.x, pw.y)) {
+        best = {
+          x: pw.x, y: pw.y,
+          inward: Math.atan2(pw.y - port.y, pw.x - port.x)
+        };
+      }
+    }
+    if (!best) {
+      var ep = this.shipSpawnPoint(side, yHint);
+      best = {
+        x: ep.x, y: ep.y,
+        inward: Math.atan2(T.size / 2 - ep.y, T.size / 2 - ep.x)
+      };
+    }
     var ship = SL.Naval.createShip(this, side, best.x, best.y);
     ship.entryX = U.clamp(best.x + Math.cos(best.inward) * 180, 30, T.size - 30);
     ship.entryY = U.clamp(best.y + Math.sin(best.inward) * 180, 30, T.size - 30);
@@ -309,6 +322,11 @@
 
   Game.prototype.damageShip = function (ship, dmg, source, ap) {
     if (!ship || !ship.alive) return;
+    var shipReq = SL.PENETRATION.armorTiers[U.clamp(Math.floor(ship.armor || 0), 0, 4)] || 0;
+    if (ap == null || ap < shipReq) {
+      this.fxText(ship.x, ship.y - 18, '无法击穿', '#d8d2b0', ship.side);
+      return;
+    }
     var armored = Math.max(0.25, 1 - (ship.armor || 0) * 0.07 * Math.min(1, ap || 1));
     ship.hp -= dmg * armored;
     ship.lastHit = this.time;
@@ -365,19 +383,40 @@
   Game.prototype.shipSpawnPoint = function (side, yHint) {
     var size = T.size || SL.CONFIG.mapSize || 2000;
     var home = (T.spawns && T.spawns[side]) || { x: size / 2, y: size / 2 };
-    var best = null, bestD = Infinity;
+    var enemies = [];
+    for (var ui = 0; ui < this.units.length; ui++) {
+      var uu = this.units[ui];
+      if (uu.alive && uu.side !== side) enemies.push(uu);
+    }
+    for (var bi = 0; bi < this.battleships.length; bi++) {
+      var bb = this.battleships[bi];
+      if (bb.alive && bb.side !== side) enemies.push(bb);
+    }
+    function nearestEnemy(x, y) {
+      var md = Infinity;
+      for (var ei = 0; ei < enemies.length; ei++) {
+        var ed = U.dist2(x, y, enemies[ei].x, enemies[ei].y);
+        if (ed < md) md = ed;
+      }
+      return md;
+    }
+    var best = null, bestEnemy = -1, bestHome = Infinity;
     var fallback = null, fallbackShore = -1;
     for (var e = 0; e < 4; e++) {
       for (var i = 1; i < 60; i++) {
-        var t = i / 60;
-        var x = e <= 1 ? size * t : (e === 2 ? 24 : size - 24);
-        var y = e <= 1 ? (e === 0 ? 24 : size - 24) : size * t;
+        var tt = i / 60;
+        var x = e <= 1 ? size * tt : (e === 2 ? 24 : size - 24);
+        var y = e <= 1 ? (e === 0 ? 24 : size - 24) : size * tt;
         if (!SL.Naval || !SL.Naval.isWater(x, y)) continue;
         var shore = SL.Naval.shoreDistance ? SL.Naval.shoreDistance(x, y) : 0;
-        var d = U.dist2(x, y, home.x, home.y);
+        var dh = U.dist2(x, y, home.x, home.y);
         if (!fallback || shore > fallbackShore) { fallback = { x: x, y: y }; fallbackShore = shore; }
-        if (shore < 600) continue;
-        if (d < bestD) { bestD = d; best = { x: x, y: y }; }
+        // 地图边缘海域、离岸至少500m，并优先远离敌军
+        if (shore < 500) continue;
+        var de = nearestEnemy(x, y);
+        if (!best || de > bestEnemy || (de === bestEnemy && dh < bestHome)) {
+          best = { x: x, y: y }; bestEnemy = de; bestHome = dh;
+        }
       }
     }
     return best || fallback || (SL.Naval && SL.Naval.nearestWaterPoint ? SL.Naval.nearestWaterPoint(size - 90, yHint) : { x: size - 90, y: yHint });
@@ -514,7 +553,7 @@
       var aiSides = ['red', 'green'];
       for (var ss = 0; ss < aiSides.length; ss++) {
         var asi = aiSides[ss];
-        if (this.unitVisibleTo(asi, seenShip) || this.radarScanActive(asi) ||
+        if (this.unitVisibleTo(asi, seenShip) ||
             (seenShip.exposedUntil && seenShip.exposedUntil > this.time)) {
           this.navalShipLastSeen[asi] = { x: seenShip.x, y: seenShip.y, t: this.time };
         }
@@ -537,12 +576,12 @@
       }
       if (!visible && litFor) visible = true;
       if (visible) {
-        this.lastKnown[ko.id] = { x: ko.x, y: ko.y, side: ko.side, name: ko.name, obj: ko };
+        this.lastKnown[ko.id] = { x: ko.x, y: ko.y, side: ko.side, name: ko.name, obj: ko, t: this.time };
       }
     }
     for (var lk in this.lastKnown) {
       var lv = this.lastKnown[lk];
-      if (!lv || !lv.obj || lv.obj.alive === false || (lv.obj.hp != null && lv.obj.hp <= 0)) delete this.lastKnown[lk];
+      if (!lv || !lv.obj || lv.obj.alive === false || (lv.obj.hp != null && lv.obj.hp <= 0) || (this.time - (lv.t || 0) > 60)) delete this.lastKnown[lk];
     }
     // AI 海军：拥有通讯塔并支付足够分数即可召唤战舰
     for (var ai = 1; ai < SL.SIDE_ORDER.length; ai++) {
@@ -605,7 +644,7 @@
         this.aiShipTimer[s.side] = interval;
         var target = null;
         var playerShip = this.shipOf('blue');
-        if (playerShip && ((playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.radarScanActive(s.side) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
+        if (playerShip && ((playerShip.exposedUntil && playerShip.exposedUntil > this.time) || this.unitVisibleTo(s.side, playerShip))) target = playerShip;
         if (!target) {
           var lastPos = this.navalShipLastSeen && this.navalShipLastSeen[s.side];
           if (lastPos && this.time - lastPos.t <= (SL.NAVAL.lastSeenMemory || 12) && U.dist(s.x, s.y, lastPos.x, lastPos.y) <= 3000) target = lastPos;
@@ -810,8 +849,25 @@
     return !!(this.radarScanUntil && this.time < (this.radarScanUntil[side] || 0));
   };
 
+  Game.prototype.radarLit = function (side, id) {
+    var lit = this.radarLitUntil && this.radarLitUntil[side];
+    return !!(lit && lit[id] != null && lit[id] > this.time);
+  };
+
+  Game.prototype.radarSectorSees = function (side, x, y) {
+    var radar = this.radar;
+    if (!radar || radar.destroyed || radar.owner !== side || !this.radarScanActive(side)) return false;
+    var range = SL.NAVAL.radarRange || 3500;
+    if (U.dist(x, y, radar.x, radar.y) > range) return false;
+    var angle = this.radarSweepAngle[side] || 0;
+    var target = Math.atan2(y - radar.y, x - radar.x);
+    var rel = Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
+    var arc = (SL.NAVAL.radarSweepArc || 20) * Math.PI / 180;
+    return rel <= 0 && rel >= -arc;
+  };
+
   Game.prototype.radarAirContact = function (side, plane) {
-    return !!(plane && plane.hp > 0 && plane.side !== side && this.radarScanActive(side));
+    return !!(plane && plane.hp > 0 && plane.side !== side && this.radarLit(side, plane.id));
   };
 
   Game.prototype.quickNavalCard = function (key, x, y) {
@@ -821,7 +877,7 @@
     if (key === 'ship_support') {
       if (this.shipSupportOwned || ship) return { ok: false, msg: '本阵营已有战舰或战舰增援卡' };
       if (this.teams.blue.score < this.shipPurchaseCost) {
-        return { ok: false, msg: '积分不足，需要 ' + this.shipPurchaseCost };
+        return { ok: false, msg: '花费战功不足，需要 ' + this.shipPurchaseCost };
       }
       var cost = this.shipPurchaseCost;
       this.teams.blue.score -= cost;
@@ -850,7 +906,7 @@
     }
     if (key === 'naval_supply') {
       var supplyCost = SL.NAVAL_CARDS.naval_supply.cost || 500;
-      if (this.teams.blue.score < supplyCost) return { ok: false, msg: '积分不足，需要 ' + supplyCost };
+      if (this.teams.blue.score < supplyCost) return { ok: false, msg: '花费战功不足，需要 ' + supplyCost };
       this.teams.blue.score -= supplyCost;
       var swp = this.supplySpawnPoint('blue', y); this.supplyShips.push({ side: 'blue', x: swp.x, y: swp.y, tx: ship ? ship.x : T.size - 300, ty: y, heading: Math.PI, r: SL.NAVAL.supplyRadius || 170, life: 300, hp: 500, maxHp: 500, resource: 1200 });
       return { ok: true, msg: '补给舰已出发（' + supplyCost + ' 分）' };
@@ -905,7 +961,7 @@
     if (!this.naval || !def) return { ok: false, msg: '无效舰船卡' };
     if (key === 'ship_support' && this.shipSupportOwned) return { ok: false, msg: '本阵营已有战舰或战舰支援卡' };
     var t = this.teams.blue;
-    if (t.score < def.cost) return { ok: false, msg: '分数不足，需要 ' + def.cost };
+    if (t.score < def.cost) return { ok: false, msg: '花费战功不足，需要 ' + def.cost };
     t.score -= def.cost;
     var card = { id: ++this.nextCardId, key: key, name: def.name, icon: def.icon, color: def.color, use: def.use, desc: def.desc, naval: true };
     this.navalCards.push(card);
@@ -1654,6 +1710,7 @@
       supplies: this.supplies,
       drops: this.drops,
       mines: this.mines,
+      minefields: this.minefields,
       barriers: this.barriers,
       recons: [],
       planes: this.planes.filter(function (p) { return !p.playerBomber; }),
@@ -1816,6 +1873,7 @@
     this.supplies = data.supplies || [];
     this.drops = data.drops || [];
     this.mines = data.mines || [];
+    this.minefields = data.minefields || [];
     this.barriers = data.barriers || [];
     this.barrierVersion++;
     this.barrierGridCache = {};
@@ -2804,7 +2862,6 @@
         var yellowGain = side === 'blue' ? gain * (SL.XP.playerXpMult || 2.5) : gain;
         this.teams[side].yellowXp += yellowGain;
         this.addScore(side, net * SL.YELLOW.scorePerUnitSecond * this.navalScoreMult());
-        this.addXp(side, gain);
         this.checkYellowWin(side);
       }
     }
@@ -3178,7 +3235,7 @@
             st.ammo--;
             st.cd = st.type === 'at_nest' ? SL.FORT.atNestInterval : SL.FORT.flakGroundInterval;
             this.effects.push({ kind: 'tracer', x1: z.x, y1: z.y, x2: coastShip.x, y2: coastShip.y, t: 0, dur: 0.1, side: side, heavy: true });
-            this.damageShip(coastShip, st.type === 'at_nest' ? SL.FORT.atNestDmg : SL.FORT.flakGroundDmg, source, st.type === 'flak88' ? 1.2 : 1.4);
+            this.damageShip(coastShip, st.type === 'at_nest' ? SL.FORT.atNestDmg : SL.FORT.flakGroundDmg, source, 4);
             continue;
           }
         }
@@ -4093,10 +4150,11 @@
     return node;
   };
 
-  Game.prototype.layMine = function (u, type) {
+  Game.prototype.layMine = function (u, type, px, py, fieldId) {
     if (this.mines.length >= 260) return null;
     var mine = {
-      id: nextId++, type: type, x: u.x, y: u.y, side: u.side, alive: true,
+      id: nextId++, type: type, x: px == null ? u.x : px, y: py == null ? u.y : py,
+      side: u.side, alive: true, fieldId: fieldId || null,
       trigger: SL.ENGINEER.mineTrigger,
       radius: SL.ENGINEER.mineSplash[type] || 34,
       damage: SL.ENGINEER.mineDamage[type] || 190,
@@ -4106,7 +4164,46 @@
     return mine;
   };
 
+  // 点击式区域布雷：以工程车为中心，200m 内随机布设一片雷区
+  Game.prototype.layMinefield = function (units, type) {
+    var cost = SL.ENGINEER.minefieldCost || 50;
+    var radius = SL.ENGINEER.minefieldRadius || 200;
+    var count = SL.ENGINEER.minefieldMines || 10;
+    var made = 0;
+    for (var i = 0; i < units.length; i++) {
+      var u = units[i];
+      if (!u || !u.alive || u.type !== 'engineer_vehicle') continue;
+      if (u.engineerValue < cost || this.mines.length >= 240) continue;
+      var field = {
+        id: nextId++, x: u.x, y: u.y, r: radius, type: type, side: u.side,
+        alive: true, t: this.time, field: true
+      };
+      this.minefields.push(field);
+      var placed = 0;
+      for (var k = 0; k < count; k++) {
+        for (var tries = 0; tries < 12; tries++) {
+          var a = Math.random() * Math.PI * 2;
+          var rr = Math.sqrt(Math.random()) * radius * 0.92;
+          var mx = u.x + Math.cos(a) * rr, my = u.y + Math.sin(a) * rr;
+          if (T.naval && SL.Naval && SL.Naval.isWater(mx, my)) continue;
+          if (this.layMine(u, type, mx, my, field.id)) { placed++; }
+          break;
+        }
+      }
+      u.engineerValue = Math.max(0, u.engineerValue - cost);
+      u.engLastX = u.x;
+      u.engLastY = u.y;
+      made++;
+      this.fxText(u.x, u.y - 14, type === 'mine_at' ? '布设反坦克雷区' : '布设反步兵雷区', '#e8c47a', u.side);
+    }
+    return made;
+  };
+
   Game.prototype.setEngineerMode = function (units, mode) {
+    if (mode === 'mine_ap' || mode === 'mine_at') {
+      for (var mi = 0; mi < units.length; mi++) if (units[mi] && units[mi].type === 'engineer_vehicle') units[mi].engineerMode = null;
+      return this.layMinefield(units, mode);
+    }
     var changed = 0;
     for (var i = 0; i < units.length; i++) {
       var u = units[i];
@@ -4140,7 +4237,6 @@
     if (u.engineerValue < cost) return;
     var made = null;
     if (mode === 'wire' || mode === 'hedgehog') made = this.layBarrier(u, mode);
-    else made = this.layMine(u, mode);
     if (!made) return;
     u.engineerValue = Math.max(0, u.engineerValue - cost);
     this.fxText(u.x, u.y - 14,
@@ -4413,8 +4509,8 @@
       if (!ship.alive || ship.side !== side) continue;
       if (U.dist2(ship.x, ship.y, x, y) <= ship.vision * ship.vision) return true;
     }
-    // 雷达每 30 秒扫描一次，扫描期间提供海面视野
-    if (this.naval && this.radarScanActive(side) && SL.Naval && SL.Naval.isWater(x, y)) return true;
+    // 雷达扫描扇区提供海面视野
+    if (this.naval && this.radarSectorSees(side, x, y)) return true;
     for (var k = 0; k < this.recons.length; k++) {
       var r = this.recons[k];
       if (r.side !== side || this.time >= r.until) continue;
@@ -4474,6 +4570,7 @@
   Game.prototype.unitVisibleToRaw = function (side, u) {
     if (!u || !u.alive) return false;
     if (u.side === side) return true;
+    if (this.radarLit(side, u.id)) return true;
     // 近岸支援每次开火有概率向全图暴露；暴露期间任何敌方都能看到
     if (u.isShip && u.exposedUntil && u.exposedUntil > this.time) return true;
     // 试验场中幽灵兵团始终可见，便于测试
@@ -4525,7 +4622,7 @@
       if (!sh.alive || sh.side === ownSide) continue;
       var sd = U.dist(sh.x, sh.y, x, y);
       if (sd > radius + (sh.hitRadius || 40)) continue;
-      this.damageShip(sh, damage * 0.18 * (1 - 0.6 * Math.min(1, sd / radius)), source, 1);
+      this.damageShip(sh, damage * 0.18 * (1 - 0.6 * Math.min(1, sd / radius)), source, 4);
     }
     if (this.damageFortifications) this.damageFortifications(x, y, damage * 0.35, radius);
   };
@@ -4951,7 +5048,19 @@
     if (w.mg && target.type === 'infantry' && target.cover.zone && target.cover.zone.fortified) {
       dmg *= SL.FORT.mgDamageVsGarrison;
     }
+    var crit = false;
+    if (w.kind === 'direct') {
+      var pinfo2 = this.penetrationInfo(target, sniperShot ? 1.2 : (w.ap || 0));
+      if (pinfo2.ok && pinfo2.excess > 0) {
+        var critChance = Math.min(SL.PENETRATION.critCap, pinfo2.excess * SL.PENETRATION.critPerExcess);
+        if (Math.random() < critChance) {
+          crit = true;
+          dmg *= SL.PENETRATION.critMultiplier;
+        }
+      }
+    }
     this.damage(target, dmg, u, sniperShot ? 1.2 : w.ap);
+    if (crit) this.fxText(target.x, target.y - 16, '致命一击', '#ffd76a', target.side);
     // 小半径溅射（防空车 5m）
     if (w.splash) {
       for (var si = 0; si < this.units.length; si++) {
@@ -4978,26 +5087,42 @@
     this.log(u.name + ' 的 ' + SL.EQUIP[item.key].name + ' 已耗尽', 'loss');
   };
 
+  Game.prototype.armorRequired = function (target) {
+    var tier = target && target.def ? (target.def.armor || 0) : 0;
+    tier = U.clamp(Math.floor(tier), 0, 4);
+    return (SL.PENETRATION.armorTiers[tier] || 0);
+  };
+
+  Game.prototype.penetrationInfo = function (target, ap) {
+    var tier = target && target.def ? (target.def.armor || 0) : 0;
+    var req = this.armorRequired(target);
+    var pen = ap == null ? 0 : ap;
+    return {
+      required: req,
+      penetration: pen,
+      ok: req <= 0 || pen >= req,
+      // 无装甲目标不存在“穿甲溢出”，避免高 AP 武器对步兵额外滚雪球
+      excess: tier > 0 ? Math.max(0, pen - req) : 0
+    };
+  };
+
   Game.prototype.damage = function (target, amount, source, ap, bypassArmorImmunity) {
     if (!target.alive) return;
     if (target.isBarrier) {
       this.hitBarrier(target, amount, source);
       return;
     }
-    // 重型坦克免疫步兵 / 装甲车 / 防空车的低穿甲火力；迫击炮直击可绕过此限制
-    if (!bypassArmorImmunity && target.type === 'heavy_tank' && source &&
-      (source.type === 'infantry' || source.type === 'armored' || source.type === 'aa') &&
-      (ap === undefined || ap < 1)) {
-      this.fxText(target.x, target.y - 10, '免疫', '#d8d2b0', target.side);
-      return;
-    }
-    // 步兵轻武器无法伤害坦克；迫击炮直击可绕过此限制
-    if (!bypassArmorImmunity && target.type === 'tank' && source && source.type === 'infantry' && (ap === undefined || ap < 1)) {
-      this.fxText(target.x, target.y - 10, '免疫', '#d8d2b0', target.side);
+    var pinfo = this.penetrationInfo(target, ap);
+    if (!bypassArmorImmunity && !pinfo.ok) {
+      this.fxText(target.x, target.y - 10, '无法击穿', '#d8d2b0', target.side);
       return;
     }
     var dr = target.cover ? target.cover.dr : 0;
     var incoming = amount;
+    if (pinfo.ok) {
+      incoming *= 1 + Math.min(SL.PENETRATION.damageCap,
+        pinfo.excess * SL.PENETRATION.damagePerExcess);
+    }
     if (this.isMeleeLike() && target.side === 'blue' && source &&
       (source.side === 'red' || source.side === 'green')) {
       incoming *= this.meleeMods().enemyDamage;
@@ -5177,7 +5302,7 @@
 
   /* ---------------- 经验 / 卡片 ---------------- */
 
-  // 等级落后的阵营获得后追经验加成：每落后 1 级 +10%，上限 +150%
+  // 等级落后的阵营获得后追经验加成：每落后 1 级 +10%，上限 +100%
   Game.prototype.catchUpBonus = function (side) {
     var t = this.teams[side];
     if (!t) return 0;
@@ -5352,7 +5477,7 @@
     var t = this.teams[side];
     if (!t || this.ended) return { ok: false, msg: '战斗已结束' };
     var cost = this.buyDraftPrice(side);
-    if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
+    if (t.score < cost) return { ok: false, msg: '花费战功不足，需要 ' + cost };
     t.score -= cost;
     t.draftBuys = (t.draftBuys || 0) + 1;
     var type = this.pickUnitType(false);
@@ -5375,7 +5500,7 @@
     if (!t) return { ok: false, msg: '无效阵营' };
     if (this.ended) return { ok: false, msg: '战斗已结束' };
     var cost = this.buyDraftPrice(side);
-    if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
+    if (t.score < cost) return { ok: false, msg: '花费战功不足，需要 ' + cost };
     t.score -= cost;
     t.draftBuys = (t.draftBuys || 0) + 1;
     var cards = [];
@@ -5726,7 +5851,9 @@
 
   Game.prototype.airstrikeBomb = function (x, y, side, antiShip) {
     side = side || 'blue';
-    var radius = SL.AIRSTRIKE.radius;
+    var lb500 = (SL.BOMBER && SL.BOMBER.bombs && SL.BOMBER.bombs.lb500) || null;
+    var radius = lb500 ? lb500.radius : SL.AIRSTRIKE.radius;
+    var bombDamage = lb500 ? lb500.damage : SL.AIRSTRIKE.damage;
     if (SL.Audio) SL.Audio.explosion(radius, x, y);
     this.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 1.3, r: radius, side: side });
     this.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 1.1, size: 80, side: side });
@@ -5736,8 +5863,9 @@
       if (!u.alive) continue;
       var d = U.dist(u.x, u.y, x, y);
       if (d > radius) continue;
-      var falloff = 1 - 0.8 * (d / radius);
-      this.damage(u, SL.AIRSTRIKE.damage * falloff * (u.def.armor ? 0.75 : 1), credit, 2);
+      var falloff = 1 - 0.68 * (d / radius);
+      var friendly = u.side === side ? 0.30 : 1;
+      this.damage(u, bombDamage * falloff * friendly * (u.def.armor ? 0.72 : 1), credit, 2);
     }
     // 空袭对舰船造成伤害
     for (var bi = 0; bi < this.battleships.length; bi++) {
@@ -5748,10 +5876,10 @@
       if (bd > shipR) continue;
       var bfall = 1 - 0.72 * Math.min(1, bd / shipR);
       var shipMul = antiShip ? ((SL.AI_AIR && SL.AI_AIR.antiShipDamageMul) || 2.4) : 1.35;
-      this.damageShip(bs, SL.AIRSTRIKE.damage * shipMul * bfall, credit, antiShip ? 3.2 : 2.5);
+      this.damageShip(bs, bombDamage * shipMul * bfall, credit, antiShip ? 3.2 : 2.5);
     }
-    // 空袭对工事造成 500 点直击攻坚伤害
-    this.damageFortifications(x, y, SL.AIRSTRIKE.fortDamage, radius);
+    // 500lb 航弹对工事造成直击攻坚伤害
+    this.damageFortifications(x, y, lb500 ? lb500.fortDamage : SL.AIRSTRIKE.fortDamage, radius);
     this.damageSupplies(x, y, SL.AIRSTRIKE.supplyDamage, radius);
     if (side === 'blue') this.log('空袭命中', 'kill');
   };
@@ -6944,7 +7072,7 @@
       var airShip = null;
       if (this.naval) {
         var ps = this.shipOf('blue');
-        if (ps && ps.alive && (this.unitVisibleTo(side, ps) || this.radarScanActive(side))) airShip = ps;
+        if (ps && ps.alive && this.unitVisibleTo(side, ps)) airShip = ps;
       }
       var antiShip = !!airShip;
       if (airShip) {
