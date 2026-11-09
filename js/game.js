@@ -2286,9 +2286,9 @@
     u.objective = { x: lane[1].x, y: lane[1].y };
   };
 
-  Game.prototype.spawnReinforcement = function (side, force) {
+  Game.prototype.spawnReinforcement = function (side, bypassCap) {
     if (this.aliveCount(side) === 0) return null;   // 等待重生期间没有增援
-    if (!force && this.aliveCount(side) >= this.aiUnitCap()) return null;
+    if (!bypassCap && this.aliveCount(side) >= this.aiUnitCap()) return null;
     var type = this.pickUnitType(true);
     var mates = this.units.filter(function (u) { return u.alive && u.side === side; });
     var mapSize = SL.CONFIG.mapSize;
