@@ -537,10 +537,10 @@
     waveGap: 60,
     captureTime: 30,
     firstWave: 9,
-    maxWaveUnits: 48,
+    maxWaveUnits: 34,
     bigWaveEvery: 10,
-    bigWaveExtraRatio: 0.12,
-    bigWaveExtraPlayer: 0.20,
+    bigWaveExtraRatio: 0.15,
+    bigWaveExtraPlayer: 0.05,
     unitWeights: {
       first: { infantry: 48, armored: 24, at_gun: 15, tank: 10, artillery: 3 },
       normal: { infantry: 42, armored: 21, at_gun: 12, tank: 12, aa: 6, heavy_tank: 4, artillery: 3 },
