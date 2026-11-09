@@ -338,8 +338,8 @@
     state.roads.forEach(r=>drawRoute(r, r.type==='highway'?'#c7b078':'#ad956c', [], ''));
     state.aiLanes.forEach(r=>drawRoute(r,'rgba(178,105,84,0.85)',[8,6],'AI'));
     state.bridges.forEach(f=>{
-      const s=worldScale(); ctx.save(); ctx.strokeStyle='#6e5b3d';ctx.lineWidth=4;
-      ctx.beginPath();ctx.moveTo((f.x-22)*s,(f.y-12)*s);ctx.lineTo((f.x+22)*s,(f.y-12)*s);ctx.lineTo((f.x+22)*s,(f.y+12)*s);ctx.lineTo((f.x-22)*s,(f.y+12)*s);ctx.stroke();ctx.restore();
+      const s=worldScale(), br=f.r||30; ctx.save(); ctx.strokeStyle='#6e5b3d';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo((f.x-br)*s,(f.y-12)*s);ctx.lineTo((f.x+br)*s,(f.y-12)*s);ctx.lineTo((f.x+br)*s,(f.y+12)*s);ctx.lineTo((f.x-br)*s,(f.y+12)*s);ctx.stroke();ctx.restore();
       drawCircleFeature({x:f.x,y:f.y,r:18},'rgba(122,96,58,0.35)','#6e5b3d');
     });
     state.zones.forEach(z=>{
@@ -391,7 +391,7 @@
     } else if(tool==='spawn-blue'){state.spawns.blue={x:pt.x,y:pt.y};}
     else if(tool==='spawn-red'){state.spawns.red={x:pt.x,y:pt.y};}
     else if(tool==='spawn-green'){state.spawns.green={x:pt.x,y:pt.y};}
-    else if(tool==='bridge'){state.bridges.push({x:pt.x,y:pt.y});}
+    else if(tool==='bridge'){state.bridges.push({x:pt.x,y:pt.y,r:30});}
   }
   function eraseAt(pt){
     const radius=Number($('brush').value)||120;
@@ -613,7 +613,7 @@
       water:state.water.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
       forests:state.forests.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
       roads:state.roads.map(r=>({type:r.type,width:r.width,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
-      bridges:state.bridges.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1)})),
+      bridges:state.bridges.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:f.r||30})),
       zones:state.zones.map(z=>({id:z.id,name:z.name,kind:z.kind,x:+z.x.toFixed(1),y:+z.y.toFixed(1),r:z.r})),
       sites:state.sites.map(z=>({id:z.id,kind:z.kind,name:z.name,x:+z.x.toFixed(1),y:+z.y.toFixed(1),r:z.r})),
       spawns:state.spawns, yellow:state.yellow,
