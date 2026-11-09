@@ -1268,15 +1268,6 @@
     var at = this.findDefenseEdgeSpawn(this.yellow.x, this.yellow.y, this.yellow.r + 180, b.x, b.y, 700);
     var bigExtra = this.lastStandBigWaveBonus(wave, count);
     count += bigExtra;
-    // 防止未击杀的旧波次无限叠加：战场敌方总人数有硬上限
-    var fieldCap = (this.mode === 'navalLastStand' ? (SL.LAST_STAND.navalFieldCap || 110) : (SL.LAST_STAND.fieldCap || 72));
-    var redAlive = this.aliveCount('red');
-    var room = Math.max(0, fieldCap - redAlive);
-    if (count > room) count = room;
-    if (count <= 0) {
-      this.log('第 ' + wave + ' 波：敌方战场已满，暂停投入', 'info');
-      return;
-    }
     var cols = Math.ceil(Math.sqrt(count));
     this.teams.red.level = Math.max(this.teams.red.level || 1, wave);
     for (var i = 0; i < count; i++) {
@@ -2099,21 +2090,15 @@
     return m[this.difficulty] || m.normal || 1.0;
   };
 
-  Game.prototype.aiCapTotal = function () {
-    if (this.mode === 'lastStand' || this.mode === 'navalLastStand') return 20;
-    var player = Math.max(1, this.aliveCount('blue') || 0);
-    return Math.max(2, Math.round(player * this.aiDifficultyMult()));
-  };
-
   Game.prototype.aiUnitCap = function () {
     if (this.mode === 'lastStand' || this.mode === 'navalLastStand') return 20;
-    return Math.max(1, Math.ceil(this.aiCapTotal() / 2));
+    var player = Math.max(1, this.aliveCount('blue') || 0);
+    return Math.max(1, Math.round(player * this.aiDifficultyMult()));
   };
 
   Game.prototype.aiRespawnPerSide = function () {
-    // 以玩家开局 6 单位为参考，再按难度拆分到红绿两方
-    var total = Math.max(2, Math.round(6 * this.aiDifficultyMult()));
-    return Math.max(1, Math.ceil(total / 2));
+    // 以玩家开局 6 单位为参考，按各自阵营的难度倍率重生
+    return Math.max(1, Math.round(6 * this.aiDifficultyMult()));
   };
 
   // 无限难度按时间分档：15 分钟前 2 件、15~30 分钟 4 件、30 分钟后 6 件
@@ -7296,28 +7281,18 @@
     if (this.time < (this.aiReinforceAtGlobal || 0)) return;
     this.aiReinforceAtGlobal = this.time + (SL.AI_REINFORCE_INTERVAL || 15);
     var sides = ['red', 'green'];
-    var cap = this.aiCapTotal();
-    var room = Math.max(0, cap - (this.aliveCount('red') + this.aliveCount('green')));
-    var budget = Math.min(SL.AI_REINFORCE_BATCH || 6, room);
-    var addedBySide = { red: 0, green: 0 };
-    // 红绿轮流补员，双方同时获得机会
-    var guard = 0;
-    while (budget > 0 && guard++ < 30) {
-      var progressed = false;
-      for (var i = 0; i < sides.length && budget > 0; i++) {
-        var side = sides[i];
-        if (this.aliveCount(side) === 0) continue;
-        if (this.aliveCount(side) >= this.aiUnitCap()) continue;
-        var u = this.spawnReinforcement(side, true);
-        if (!u) continue;
-        addedBySide[side]++;
-        budget--;
-        progressed = true;
+    var batch = SL.AI_REINFORCE_BATCH || 6;
+    for (var i = 0; i < sides.length; i++) {
+      var side = sides[i];
+      if (this.aliveCount(side) === 0) continue;
+      var room = Math.max(0, this.aiUnitCap() - this.aliveCount(side));
+      var add = Math.min(batch, room);
+      var added = 0;
+      for (var k = 0; k < add; k++) {
+        if (!this.spawnReinforcement(side, true)) break;
+        added++;
       }
-      if (!progressed) break;
-    }
-    for (var s = 0; s < sides.length; s++) {
-      if (addedBySide[sides[s]]) this.log(SL.SIDES[sides[s]].name + ' 增援 ' + addedBySide[sides[s]] + ' 个单位', 'info');
+      if (added) this.log(SL.SIDES[side].name + ' 增援 ' + added + ' 个单位', 'info');
     }
   };
 

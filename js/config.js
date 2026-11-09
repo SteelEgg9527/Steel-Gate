@@ -538,8 +538,6 @@
     captureTime: 30,
     firstWave: 9,
     maxWaveUnits: 48,
-    fieldCap: 72,
-    navalFieldCap: 110,
     bigWaveEvery: 10,
     bigWaveExtraRatio: 0.12,
     bigWaveExtraPlayer: 0.20,
@@ -887,7 +885,7 @@
     aiCap: 14,
     playerCap: 12
   };
-  /* 新版 AI 总兵力上限倍率（相对玩家单位） */
+  /* 新版 AI 每方兵力上限倍率（相对玩家单位） */
 SL.AI_CAP_MULT = { easy: 0.8, normal: 1.0, hard: 1.2, endless: 1.2 };
 SL.AI_REINFORCE_INTERVAL = 15;
 SL.AI_REINFORCE_BATCH = 6;
