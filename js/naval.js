@@ -2119,7 +2119,7 @@ return null;
     }
     for (var i = 0; i < SL.Terrain.zones.length; i++) {
       var z = SL.Terrain.zones[i];
-      if (!z.owner || z.site) continue;
+      if (!z.owner || z.site || z.owner !== 'blue') continue;
       var structs = game.zoneStructures(z);
       for (var j = 0; j < structs.length; j++) {
         var def = defs[structs[j].type];
@@ -2129,6 +2129,7 @@ return null;
     }
     for (var k = 0; k < game.coastalGuns.length; k++) {
       var gun = game.coastalGuns[k];
+      if (gun.side && gun.side !== 'blue') continue;
       ring(gun.x, gun.y, gun.range, '406岸防炮 ' + (gun.range / 1000).toFixed(1) + 'km', 'rgba(222,150,100,0.55)');
     }
   };

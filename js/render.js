@@ -385,7 +385,7 @@
       var z = SL.Terrain.zones[i];
       var structs = (z.structures && z.structures.length) ? z.structures : (z.structure ? [z.structure] : []);
       if (!structs.length || !z.owner) continue;
-      if (game.fogEnabled !== false && z.owner !== 'blue' && !game.isSeen(z.x, z.y)) continue;
+      if (z.owner !== 'blue') continue;
       for (var sfi = 0; sfi < structs.length; sfi++) {
         var st = structs[sfi];
         if (!st || st.hp <= 0) continue;
@@ -466,10 +466,22 @@
       ctx.stroke();
     }
 
-    // 射程圈（含装备）
-    ctx.setLineDash([7, 5]);
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = 'rgba(30,84,140,' + (0.62 * k).toFixed(2) + ')';
+    // 射程圈（含装备）：选中时强化填充、描边、光晕与数值
+    if (k > 0.3) {
+      ctx.fillStyle = 'rgba(66,142,210,' + (0.065 * k).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy, rRange, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.setLineDash([]);
+    ctx.lineWidth = 5.5;
+    ctx.strokeStyle = 'rgba(38,108,176,' + (0.14 * k).toFixed(2) + ')';
+    ctx.beginPath();
+    ctx.arc(sx, sy, rRange, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([10, 5]);
+    ctx.lineWidth = 2.15;
+    ctx.strokeStyle = 'rgba(34,104,174,' + (0.92 * k).toFixed(2) + ')';
     ctx.beginPath();
     ctx.arc(sx, sy, rRange, 0, Math.PI * 2);
     ctx.stroke();
@@ -477,11 +489,23 @@
     // 最小射程
     if (u.def.minRange) {
       ctx.setLineDash([2, 4]);
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(176,100,38,' + (0.5 * k).toFixed(2) + ')';
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(196,112,44,' + (0.62 * k).toFixed(2) + ')';
       ctx.beginPath();
       ctx.arc(sx, sy, u.def.minRange * cam.zoom, 0, Math.PI * 2);
       ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    if (k > 0.5) {
+      var rangeText = '射程 ' + Math.round(rRange / Math.max(0.001, cam.zoom)) + 'm';
+      ctx.font = '800 10px ' + SL.FONT_MONO;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = 'rgba(12,22,18,0.75)';
+      ctx.strokeText(rangeText, sx, sy - rRange - 7);
+      ctx.fillStyle = '#a9d7f4';
+      ctx.fillText(rangeText, sx, sy - rRange - 7);
     }
     ctx.restore();
   }
@@ -1693,13 +1717,20 @@
         sx = proj.x(e.x1); sy = proj.y(e.y1);
         var ex = proj.x(e.x2), ey = proj.y(e.y2);
         ctx.save();
-        ctx.globalAlpha = (1 - k) * 0.9;
+        ctx.globalAlpha = (1 - k) * 0.18;
         ctx.strokeStyle = e.heavy ? '#ffd27a' : '#ffe8b0';
-        ctx.lineWidth = e.heavy ? 2 : 1.1;
+        ctx.lineWidth = e.heavy ? 6.5 : 4;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+        ctx.globalAlpha = (1 - k) * 0.95;
+        ctx.strokeStyle = e.heavy ? '#ffd27a' : '#fff0c8';
+        ctx.lineWidth = e.heavy ? 2.2 : 1.4;
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.lineTo(ex, ey);
         ctx.stroke();
+        ctx.globalAlpha = (1 - k) * 0.9;
+        ctx.fillStyle = '#fff2c8';
+        ctx.beginPath(); ctx.arc(ex, ey, e.heavy ? 2.2 : 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       } else if (e.kind === 'muzzle') {
         sx = proj.x(e.x); sy = proj.y(e.y);
@@ -1834,6 +1865,9 @@
         ctx.save();
         ctx.translate(gx, gy);
         ctx.rotate(ra);
+        ctx.globalAlpha = 0.16;
+        ctx.fillStyle = '#ffb36b';
+        ctx.beginPath(); ctx.arc(-2, 0, 13, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 0.95;
         ctx.fillStyle = '#171714';
         ctx.strokeStyle = '#6a6a5c';
@@ -1892,33 +1926,55 @@
       var arc = Math.sin(Math.PI * p) * Math.min(120, dist * 0.32) * cam.zoom * sz;
       var shellAng = Math.atan2(s2.y1 - s2.y0, s2.x1 - s2.x0);
       var trail = (s2.trail || 8) * cam.zoom;
+      // 弹道弧线：更容易看清炮弹从哪里来、飞向哪里
+      var zx0 = proj.x(s2.x0), zy0 = proj.y(s2.y0);
+      var zcx = (zx0 + gx) * 0.5;
+      var zcy = Math.min(zy0, gy) - Math.max(10, arc * 1.15);
+      ctx.save();
+      ctx.globalAlpha = 0.16;
+      ctx.strokeStyle = s2.caliber >= 200 ? '#ffd78a' : '#e8c990';
+      ctx.lineWidth = s2.caliber >= 88 ? 5.5 : 3.5;
+      ctx.beginPath(); ctx.moveTo(zx0, zy0); ctx.quadraticCurveTo(zcx, zcy, gx, gy - arc); ctx.stroke();
+      ctx.globalAlpha = 0.52;
+      ctx.strokeStyle = s2.caliber >= 200 ? 'rgba(255,220,145,0.8)' : 'rgba(238,205,145,0.7)';
+      ctx.lineWidth = s2.caliber >= 88 ? 1.8 : 1.2;
+      ctx.beginPath(); ctx.moveTo(zx0, zy0); ctx.quadraticCurveTo(zcx, zcy, gx, gy - arc); ctx.stroke();
+      ctx.restore();
+
       ctx.save();
       ctx.globalAlpha = 0.25;
       ctx.fillStyle = '#201a12';
       ctx.beginPath();
       ctx.ellipse(gx, gy, 2.5 * sz, 1.4 * sz, 0, 0, Math.PI * 2);
       ctx.fill();
-      if (s2.caliber >= 88) {
-        ctx.globalAlpha = 0.5;
-        ctx.strokeStyle = s2.caliber >= 200 ? '#e8c27a' : '#b69a68';
-        ctx.lineWidth = s2.caliber >= 200 ? 2.4 : 1.5;
-        ctx.beginPath();
-        ctx.moveTo(gx - Math.cos(shellAng) * trail, gy - Math.sin(shellAng) * trail);
-        ctx.lineTo(gx, gy - arc);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 0.6;
-      ctx.strokeStyle = 'rgba(220,190,130,0.6)';
-      ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.7;
+      ctx.strokeStyle = s2.caliber >= 200 ? '#e8c27a' : '#c9ad7c';
+      ctx.lineWidth = s2.caliber >= 200 ? 2.6 : 1.6;
+      ctx.beginPath();
+      ctx.moveTo(gx - Math.cos(shellAng) * trail, gy - Math.sin(shellAng) * trail);
+      ctx.lineTo(gx, gy - arc);
+      ctx.stroke();
+      ctx.globalAlpha = 0.62;
+      ctx.strokeStyle = 'rgba(238,205,145,0.7)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(gx, gy);
       ctx.lineTo(gx, gy - arc);
       ctx.stroke();
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = s2.caliber >= 88 ? '#4a3923' : '#3a3126';
+      // 弹头光晕 + 本体
+      ctx.globalAlpha = 0.20;
+      ctx.fillStyle = s2.caliber >= 200 ? '#ffd27a' : '#f0c98a';
       ctx.beginPath();
-      ctx.arc(gx, gy - arc, Math.max(1.6, 2.2 * sz), 0, Math.PI * 2);
+      ctx.arc(gx, gy - arc, Math.max(5.5, 7 * sz), 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = s2.caliber >= 88 ? '#5b4426' : '#4a3a2a';
+      ctx.beginPath();
+      ctx.arc(gx, gy - arc, Math.max(2.0, 2.8 * sz), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,236,190,0.9)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
       ctx.restore();
     }
   }
