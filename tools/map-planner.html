@@ -67,6 +67,7 @@
       <div class="field"><label>高度强度</label><input id="strength" type="number" value="0.04" min="0.005" max="0.2" step="0.005"></div>
     </div>
     <div class="tools">
+      <button class="tool" data-tool="select">选择 / 编辑</button>
       <button class="tool" data-tool="height-up">▲ 抬高地形</button>
       <button class="tool" data-tool="height-down">▼ 压低地形</button>
       <button class="tool" data-tool="water">水域</button>
@@ -100,6 +101,7 @@
 
     <div class="divider"></div>
     <div class="row"><button id="finishRoad" class="primary">完成路线（Enter）</button><button id="undo">撤销 Ctrl+Z</button></div>
+    <div class="row" style="margin-top:6px"><button id="deleteSelected" class="danger">删除选中（Delete）</button><button id="deselect">取消选择</button></div>
     <div class="row" style="margin-top:6px"><button id="gridBtn">网格开/关</button><button id="contourBtn">等高线开/关</button></div>
     <div class="row" style="margin-top:6px"><button id="export">导出 map.json</button><button id="importBtn">导入 JSON</button></div>
     <div class="row" style="margin-top:6px"><button id="png">导出预览 PNG</button><button id="localSave">保存到本地</button></div>
@@ -150,6 +152,9 @@
   let tool = 'height-up';
   let draft = null;
   let painting = false;
+  let selected = null;
+  let drag = null;
+  let erasing = false;
   let undoStack = [];
   const heightCanvas = document.createElement('canvas');
   const hctx = heightCanvas.getContext('2d');
@@ -173,6 +178,7 @@
   }
   let hoverPt = null;
   function brushWorldRadius(){
+    if (tool === 'select') return 12;
     if (tool === 'zone' || tool === 'comm' || tool === 'radar' || tool === 'port' || tool === 'coastbase') {
       return Number($('objectRadius').value) || 72;
     }
@@ -358,6 +364,7 @@
     if(draft){
       drawRoute({points:draft.points,width:draft.type==='ai-lane'?10:16}, draft.type==='ai-lane'?'#b26954':'#9b7c4e', draft.type==='ai-lane'?[8,6]:[], '绘制中');
     }
+    drawSelection();
     // 罗盘与比例尺
     ctx.save();ctx.fillStyle='rgba(38,44,33,.7)';ctx.fillRect(10,10,120,22);ctx.fillStyle='#ead9b5';ctx.font='10px monospace';ctx.fillText(state.name+' · '+state.size+'m',18,25);ctx.restore();
   }
@@ -398,12 +405,148 @@
     if(state.spawns.blue && dist(state.spawns.blue,pt)<=radius){state.spawns.blue=null;return;}
     if(state.spawns.red && dist(state.spawns.red,pt)<=radius){state.spawns.red=null;return;}
     if(state.spawns.green && dist(state.spawns.green,pt)<=radius){state.spawns.green=null;return;}
+    // 道路 / AI 路线：按整条线擦除，避免橡皮擦对线状物无效
+    var roadHit = function(list){
+      for (var i=list.length-1;i>=0;i--){
+        var r=list[i];
+        for (var j=0;j<r.points.length-1;j++){
+          if (distToSegment(pt.x,pt.y,r.points[j].x,r.points[j].y,r.points[j+1].x,r.points[j+1].y) <= radius) return i;
+        }
+      }
+      return -1;
+    };
+    var ri = roadHit(state.roads);
+    if (ri>=0){state.roads.splice(ri,1);return;}
+    var li = roadHit(state.aiLanes);
+    if (li>=0){state.aiLanes.splice(li,1);return;}
+    if((i=near(state.bridges))>=0){state.bridges.splice(i,1);return;}
+  }
+  function distToSegment(px,py,x1,y1,x2,y2){
+    var dx=x2-x1,dy=y2-y1,l2=dx*dx+dy*dy||1;
+    var t=Math.max(0,Math.min(1,((px-x1)*dx+(py-y1)*dy)/l2));
+    return Math.hypot(px-(x1+dx*t),py-(y1+dy*t));
+  }
+  function hitTest(pt){
+    function nearObj(o){ return dist(o,pt) <= Math.max(14,o.r||14); }
+    if(state.yellow && nearObj(state.yellow)) return {kind:'yellow',obj:state.yellow};
+    for(var i=state.zones.length-1;i>=0;i--) if(nearObj(state.zones[i])) return {kind:'zone',obj:state.zones[i]};
+    for(var j=state.sites.length-1;j>=0;j--) if(nearObj(state.sites[j])) return {kind:'site',obj:state.sites[j]};
+    for(var k=state.water.length-1;k>=0;k--) if(nearObj(state.water[k])) return {kind:'water',obj:state.water[k]};
+    for(var m=state.forests.length-1;m>=0;m--) if(nearObj(state.forests[m])) return {kind:'forest',obj:state.forests[m]};
+    for(var b=state.bridges.length-1;b>=0;b--) if(nearObj(state.bridges[b])) return {kind:'bridge',obj:state.bridges[b]};
+    var sk=['blue','red','green'];
+    for(var si=0;si<sk.length;si++){var sp=state.spawns[sk[si]];if(sp&&dist(sp,pt)<=20)return{kind:'spawn',side:sk[si],obj:sp};}
+    var lineHit=function(list,kind){
+      for(var li=list.length-1;li>=0;li--){
+        var r=list[li];
+        for(var pi=0;pi<r.points.length-1;pi++){
+          if(distToSegment(pt.x,pt.y,r.points[pi].x,r.points[pi].y,r.points[pi+1].x,r.points[pi+1].y)<=Math.max(16,(r.width||12)*0.8))
+            return {kind:kind,obj:r};
+        }
+      }
+      return null;
+    };
+    return lineHit(state.roads,'road') || lineHit(state.aiLanes,'aiLane');
+  }
+  function selectedLabel(sel){
+    if(!sel)return '';
+    var names={water:'水域',forest:'森林',zone:'占领区',site:'站点',yellow:'黄圈',spawn:'出生点',bridge:'桥梁',road:'道路',aiLane:'AI 路线'};
+    return names[sel.kind] || sel.kind;
+  }
+  function handlePoint(sel){
+    var o=sel.obj;
+    if(sel.kind==='road'||sel.kind==='aiLane') return null;
+    var r=o.r||0;
+    if(!r) return null;
+    return {x:o.x+r,y:o.y,r:r};
+  }
+  function beginDrag(pt){
+    if(!selected)return false;
+    var o=selected.obj;
+    if(selected.kind==='road'||selected.kind==='aiLane'){
+      var best=-1,bd=14;
+      for(var i=0;i<o.points.length;i++){
+        var d=dist(o.points[i],pt);
+        if(d<bd){bd=d;best=i;}
+      }
+      if(best>=0){drag={type:'point',index:best,start:pt};return true;}
+      drag={type:'line',start:pt,orig:o.points.map(function(p){return{x:p.x,y:p.y};})};return true;
+    }
+    var h=handlePoint(selected);
+    if(h && dist(h,pt)<=18){drag={type:'radius',start:pt};return true;}
+    drag={type:'move',start:pt,ox:o.x,oy:o.y};return true;
+  }
+  function moveSelected(pt){
+    if(!drag||!selected)return;
+    var o=selected.obj;
+    if(drag.type==='move'){
+      o.x=drag.ox+(pt.x-drag.start.x);o.y=drag.oy+(pt.y-drag.start.y);
+    } else if(drag.type==='radius'){
+      o.r=Math.max(16,dist(o,pt));
+    } else if(drag.type==='point'){
+      o.points[drag.index]={x:pt.x,y:pt.y};
+    } else if(drag.type==='line'){
+      var dx=pt.x-drag.start.x,dy=pt.y-drag.start.y;
+      o.points=drag.orig.map(function(p){return{x:p.x+dx,y:p.y+dy};});
+    }
+  }
+  function removeSelected(){
+    if(!selected)return false;
+    snapshot();
+    var k=selected.kind,o=selected.obj;
+    if(k==='water')state.water=state.water.filter(function(x){return x!==o;});
+    else if(k==='forest')state.forests=state.forests.filter(function(x){return x!==o;});
+    else if(k==='zone')state.zones=state.zones.filter(function(x){return x!==o;});
+    else if(k==='site')state.sites=state.sites.filter(function(x){return x!==o;});
+    else if(k==='bridge')state.bridges=state.bridges.filter(function(x){return x!==o;});
+    else if(k==='road')state.roads=state.roads.filter(function(x){return x!==o;});
+    else if(k==='aiLane')state.aiLanes=state.aiLanes.filter(function(x){return x!==o;});
+    else if(k==='yellow')state.yellow=null;
+    else if(k==='spawn')state.spawns[selected.side]=null;
+    selected=null;drag=null;requestDraw();return true;
+  }
+  function drawSelection(){
+    if(!selected)return;
+    var o=selected.obj,s=worldScale();
+    ctx.save();
+    ctx.strokeStyle='#ffe08a';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    if(selected.kind==='road'||selected.kind==='aiLane'){
+      ctx.beginPath();o.points.forEach(function(p,i){i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s);});ctx.stroke();
+      ctx.setLineDash([]);
+      o.points.forEach(function(p){ctx.fillStyle='#ffe08a';ctx.fillRect(p.x*s-4,p.y*s-4,8,8);ctx.strokeStyle='#3a2e18';ctx.strokeRect(p.x*s-4,p.y*s-4,8,8);});
+    } else {
+      var r=o.r||14;
+      ctx.beginPath();ctx.arc(o.x*s,o.y*s,r*s,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+      if(o.r){
+        ctx.fillStyle='#ffe08a';ctx.fillRect((o.x+o.r)*s-5,o.y*s-5,10,10);
+        ctx.strokeStyle='#3a2e18';ctx.strokeRect((o.x+o.r)*s-5,o.y*s-5,10,10);
+      }
+    }
+    ctx.restore();
   }
 
   canvas.addEventListener('pointerdown', e=>{
     if(e.button!==0)return;
     const pt=point(e);
     hoverPt=pt; drawCursor(pt);
+    if(tool==='select'){
+      var hit=hitTest(pt);
+      if(hit){
+        selected=hit;
+        snapshot();
+        beginDrag(pt);
+        status('已选中：'+selectedLabel(selected)+'（拖动移动，方点拉伸）');
+      } else {
+        selected=null; drag=null;
+        status('未选中对象');
+      }
+      requestDraw();
+      return;
+    }
+    if(tool==='erase'){
+      snapshot(); erasing=true; eraseAt(pt); requestDraw(); return;
+    }
     if(tool==='height-up'||tool==='height-down'){
       snapshot();painting=true;
       paintHeight(pt, (tool==='height-up'?1:-1)*Number($('strength').value||0.04));
@@ -432,13 +575,19 @@
   canvas.addEventListener('pointermove', e=>{
     const pt=point(e);
     hoverPt=pt; drawCursor(pt);
+    if(drag){ moveSelected(pt); requestDraw(); return; }
+    if(erasing){ eraseAt(pt); requestDraw(); return; }
     if(!painting)return;
     paintHeight(pt,(tool==='height-up'?1:-1)*Number($('strength').value||0.04));
     buildHeightCanvas(); requestDraw();
   });
   canvas.addEventListener('pointerleave', ()=>{ hoverPt=null; drawCursor(null); });
   canvas.addEventListener('pointerenter', e=>{ const pt=point(e); hoverPt=pt; drawCursor(pt); });
-  window.addEventListener('pointerup', ()=>{if(painting){painting=false;buildHeightCanvas();requestDraw();status('地形已修改');}});
+  window.addEventListener('pointerup', ()=>{
+    if(painting){painting=false;buildHeightCanvas();requestDraw();status('地形已修改');}
+    if(erasing){erasing=false;status('橡皮擦已结束');}
+    if(drag){drag=null;requestDraw();}
+  });
   canvas.addEventListener('dblclick', ()=>{ if(draft) finishRoad(); });
 
   function finishRoad(){
@@ -481,6 +630,7 @@
     state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
     state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
     state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];state.backgroundName=data.backgroundName||'';
+    selected=null;drag=null;
     $('mapName').value=state.name;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
     buildHeightCanvas();
     if(!silent) status('JSON 已导入');
@@ -502,8 +652,10 @@
   $('png').addEventListener('click',()=>{canvas.toBlob(b=>{if(b)download((state.name||'map')+'-preview.png',b);},'image/png');});
   $('localSave').addEventListener('click',()=>{try{localStorage.setItem('steel_map_planner_v1',JSON.stringify(exportData()));status('已保存到浏览器本地');}catch(e){status('保存失败：'+e.message);}});
   $('localLoad').addEventListener('click',()=>{try{const raw=localStorage.getItem('steel_map_planner_v1');if(!raw){status('本地没有地图');return;}snapshot();importData(JSON.parse(raw));}catch(e){status('读取失败：'+e.message);}});
-  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];buildHeightCanvas();draw();status('已清空');});
+  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];selected=null;drag=null;buildHeightCanvas();draw();status('已清空');});
   $('undo').addEventListener('click',undo);
+  $('deleteSelected').addEventListener('click',removeSelected);
+  $('deselect').addEventListener('click',()=>{selected=null;drag=null;requestDraw();status('已取消选择');});
   $('gridBtn').addEventListener('click',()=>{state.grid=!state.grid;$('gridBtn').textContent=state.grid?'网格：开':'网格：关';$('gridBtn').classList.toggle('on',state.grid);draw();});
   $('contourBtn').addEventListener('click',()=>{state.contour=!state.contour;$('contourBtn').textContent=state.contour?'等高线：开':'等高线：关';$('contourBtn').classList.toggle('on',state.contour);draw();status(state.contour?'等高线已开启':'等高线已关闭');});
   $('brush').addEventListener('input',()=>{if(hoverPt)drawCursor(hoverPt);});
@@ -520,6 +672,7 @@
   window.addEventListener('keydown',e=>{
     if(e.key==='Enter'){finishRoad();e.preventDefault();}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){undo();e.preventDefault();}
+    if((e.key==='Delete'||e.key==='Backspace') && !/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))){ if(removeSelected())e.preventDefault(); }
   });
   styleToolButtons();
   $('gridBtn').textContent='网格：开'; $('contourBtn').textContent='等高线：开';
