@@ -2180,18 +2180,20 @@
   function renderBuyDraft(g) {
     if (!el.buyDraft) return;
     var cost = g.buyDraftPrice('blue');
+    var unitCost = g.buyUnitPrice ? g.buyUnitPrice('blue') : cost;
     var score = Math.floor(g.teams.blue.score || 0);
     var afford = !g.ended && score >= cost;
-    var sig = cost + '|' + afford + '|' + score;
+    var unitAfford = !g.ended && score >= unitCost;
+    var sig = cost + '|' + unitCost + '|' + afford + '|' + unitAfford + '|' + score;
     if (uiCache.buyDraft === sig) return;
     uiCache.buyDraft = sig;
     el.buyCost.textContent = cost;
     el.buyDraft.classList.toggle('disabled', !afford);
     el.buyDraft.title = afford ? ('消耗 ' + cost + ' 分数购买一次抽卡机会') : ('分数不足：需要 ' + cost);
-    if (el.buyUnitCost) el.buyUnitCost.textContent = cost;
+    if (el.buyUnitCost) el.buyUnitCost.textContent = unitCost;
     if (el.buyUnit) {
-      el.buyUnit.classList.toggle('disabled', !afford);
-      el.buyUnit.title = afford ? ('消耗 ' + cost + ' 分数在友军附近召唤一个随机单位') : ('分数不足：需要 ' + cost);
+      el.buyUnit.classList.toggle('disabled', !unitAfford);
+      el.buyUnit.title = unitAfford ? ('消耗 ' + unitCost + ' 分数在友军附近召唤一个随机单位') : ('分数不足：需要 ' + unitCost);
     }
   }
 

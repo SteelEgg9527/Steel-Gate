@@ -625,7 +625,9 @@
     draftCount: 5,     // 升级时抽几张供选择
     draftPick: 1,      // 选几张进卡包
     buyDraftCost: 200, // 首次用花费分数购买抽卡的价格
-    buyDraftStep: 40,  // 每次购买后价格上涨
+    buyDraftStep: 20,  // 每次购买抽卡后价格上涨（独立）
+    buyUnitCost: 200,  // 首次用花费分数购买单位的价格
+    buyUnitStep: 20,   // 每次购买单位后价格上涨（独立）
     equipCost: 0,      // 已取消：装备步兵装备不再消耗弹药（保留字段兼容旧配置）
     zoneRate: 3,       // 每个有人驻守的占领区每秒经验
     zoneMax: 8,        // 最多按 8 个占领区结算
@@ -879,6 +881,8 @@
     playerCap: 12
   };
   SL.AI_UNIT_CAP = { easy: 10, normal: 16, hard: 22, endless: 28 };
+/* 玩家单位越多，AI 单位倍率轻微下降；玩家减少后自动恢复 */
+SL.AI_PLAYER_SCALE = { start: 6, perExtra: 0.015, maxReduction: 0.20 };
   SL.AI_REINFORCE_GAP = { easy: 45, normal: 35, hard: 25, endless: 18 };
   SL.AI_NAVAL_REPLENISH = { interval: 24, cost: 120, first: 16 };
 

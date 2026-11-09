@@ -139,7 +139,7 @@
       this.teams[side] = {
         side: side, xp: 0, level: 1, nextXp: SL.XP.first,
         score: 0, scoreEarned: 0, kills: 0, hand: [], respawnAt: 0, company: 0,
-        draftBuys: 0,
+        draftBuys: 0, unitBuys: 0,
         yellowXp: 0,
         airTimer: 30 + Math.random() * 50
       };
@@ -147,7 +147,7 @@
     // 中立单位只用于给击杀方提供经验，不参与三阵营循环
     this.teams.neutral = {
       side: 'neutral', xp: 0, level: 1, nextXp: SL.XP.first,
-      score: 0, scoreEarned: 0, kills: 0, hand: [], respawnAt: 0, company: 0, draftBuys: 0, airTimer: 9999
+      score: 0, scoreEarned: 0, kills: 0, hand: [], respawnAt: 0, company: 0, draftBuys: 0, unitBuys: 0, airTimer: 9999
     };
     this.yellow = {
       x: 0, y: 0, r: SL.YELLOW.r,
@@ -1262,7 +1262,7 @@
 
   Game.prototype.defenseWaveCount = function (wave) {
     var player = this.aliveCount('blue') || 0;
-    var playerAdd = Math.floor(player * 0.5);
+    var playerAdd = Math.floor(player * 0.5 * (1 - this.playerCrowdDamp()));
     var base;
     if (wave <= 1) base = SL.LAST_STAND.firstWave + playerAdd;
     else {
@@ -1716,7 +1716,7 @@
         xp: t.xp, level: t.level, nextXp: t.nextXp, score: t.score,
         scoreEarned: t.scoreEarned, kills: t.kills, respawnAt: t.respawnAt,
         yellowXp: t.yellowXp,
-        company: t.company, draftBuys: t.draftBuys, hand: t.hand
+        company: t.company, draftBuys: t.draftBuys, unitBuys: t.unitBuys, hand: t.hand
       };
     });
     return {
@@ -2052,13 +2052,20 @@
     this.units = keep;
   };
 
+  Game.prototype.playerCrowdDamp = function () {
+    var cfg = SL.AI_PLAYER_SCALE || { start: 6, perExtra: 0.015, maxReduction: 0.20 };
+    var n = this.aliveCount('blue') || 0;
+    return U.clamp((n - (cfg.start || 6)) * (cfg.perExtra || 0), 0, cfg.maxReduction || 0.20);
+  };
+
   Game.prototype.aiUnitCap = function () {
     if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return 20;
     var player = this.aliveCount('blue') || 0;
     var mult = this.difficulty === 'easy' ? 1.8
       : this.difficulty === 'hard' ? 3.2
       : this.difficulty === 'endless' ? 4.0 : 2.5;
-    var total = Math.max(8, Math.ceil(player * mult));
+    var effMult = mult * (1 - this.playerCrowdDamp());
+    var total = Math.max(8, Math.ceil(player * effMult));
     return Math.max(4, Math.ceil(total / 2));
   };
 
@@ -5653,14 +5660,19 @@
     return SL.XP.buyDraftCost + (t.draftBuys || 0) * SL.XP.buyDraftStep;
   };
 
+  Game.prototype.buyUnitPrice = function (side) {
+    var t = this.teams[side] || this.teams.blue;
+    return (SL.XP.buyUnitCost || 200) + (t.unitBuys || 0) * (SL.XP.buyUnitStep || 20);
+  };
+
   Game.prototype.buyUnitReinforcement = function (side) {
     side = side || 'blue';
     var t = this.teams[side];
     if (!t || this.ended) return { ok: false, msg: '战斗已结束' };
-    var cost = this.buyDraftPrice(side);
+    var cost = this.buyUnitPrice(side);
     if (t.score < cost) return { ok: false, msg: '分数不足，需要 ' + cost };
     t.score -= cost;
-    t.draftBuys = (t.draftBuys || 0) + 1;
+    t.unitBuys = (t.unitBuys || 0) + 1;
     var type = this.pickUnitType(false);
     var mates = this.units.filter(function (u) { return u.alive && u.side === side; });
     var anchor = mates.length ? mates[Math.floor(Math.random() * mates.length)] : null;
