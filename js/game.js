@@ -1961,10 +1961,11 @@
       this.spawnDefenseWave(this.defenseWaveCount(d.wave), d.wave);
       var nearEnd = d.holdTarget !== Infinity &&
         d.holdTarget - d.hold <= (SL.BOSS.finalSafety || 60);
-      if (!nearEnd && d.wave % SL.BOSS.interval === 0) {
+      if (!nearEnd) {
+        // 波次与数量只由 defenseBossCount 决定，避免 interval 在两层重复判断
         var bossCount = this.defenseBossCount(d.wave);
         for (var bi = 0; bi < bossCount; bi++) this.spawnBossForSide('red');
-        if (bossCount) this.log('BOSS 加入战场：第 ' + d.wave + ' 波', 'loss');
+        if (bossCount) this.log('BOSS 加入战场：第 ' + d.wave + ' 波（' + bossCount + ' 个）', 'loss');
       }
       d.nextWaveAt += SL.LAST_STAND.waveGap;
     }
