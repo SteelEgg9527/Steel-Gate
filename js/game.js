@@ -126,7 +126,6 @@
     this.aiPatrolAt = { red: 22 + Math.random() * 12, green: 32 + Math.random() * 14 };
     this.aiRaidCd = { red: 0, green: 0 };
     this.aiPlaneLosses = [];
-    this.aiNavalReplenishTimer = (SL.AI_NAVAL_REPLENISH && SL.AI_NAVAL_REPLENISH.first) || 16;
     this.shipCards = [];
     this.seaplanes = [];
     this.supplyShips = [];
@@ -479,25 +478,6 @@
     }
     if (best) return best;
     return SL.Naval && SL.Naval.nearestWaterPoint ? SL.Naval.nearestWaterPoint(size - 90, yHint) : { x: size - 90, y: yHint };
-  };
-
-  Game.prototype.updateAINavalReplenish = function (dt) {
-    var cfg = SL.AI_NAVAL_REPLENISH || { interval: 24, cost: 120 };
-    this.aiNavalReplenishTimer = (this.aiNavalReplenishTimer || 0) - dt;
-    if (this.aiNavalReplenishTimer > 0) return;
-    this.aiNavalReplenishTimer = cfg.interval;
-    var sides = ['red', 'green'];
-    for (var i = 0; i < sides.length; i++) {
-      var side = sides[i];
-      if (this.aliveCount(side) <= 0) continue; // 全灭时等待固定重生
-      if (this.aliveCount(side) >= this.aiUnitCap()) continue;
-      var team = this.teams[side];
-      if (!team || (team.score || 0) < cfg.cost) continue;
-      team.score -= cfg.cost;
-      var u = this.spawnReinforcement(side);
-      if (u) this.log(SL.SIDES[side].name + ' 花费 ' + cfg.cost + ' 分补充 ' + u.name, 'info');
-      else team.score += cfg.cost;
-    }
   };
 
   Game.prototype.moveWaterToward = function (obj, tx, ty, speed, dt) {
@@ -1261,25 +1241,42 @@
   };
 
   Game.prototype.defenseWaveCount = function (wave) {
+    var first = SL.LAST_STAND.firstWave || 9;
+    var max = (this.mode === 'navalLastStand' && SL.NAVAL_LAST_STAND)
+      ? (SL.NAVAL_LAST_STAND.maxWaveUnits || 80)
+      : (SL.LAST_STAND.maxWaveUnits || 48);
+    // 第1波到第30波平滑递增，第30波恰好达到最大值
+    var t = U.clamp((wave - 1) / 29, 0, 1);
+    var base = first + (max - first) * t;
+    if (wave >= 30) base = max;
+    return Math.max(1, Math.min(max, Math.round(base)));
+  };
+
+  Game.prototype.lastStandBigWaveBonus = function (wave, count) {
+    if (wave % (SL.LAST_STAND.bigWaveEvery || 10) !== 0) return 0;
     var player = this.aliveCount('blue') || 0;
-    var playerAdd = Math.floor(player * 0.5 * (1 - this.playerCrowdDamp()));
-    var base;
-    if (wave <= 1) base = SL.LAST_STAND.firstWave + playerAdd;
-    else {
-      var d = SL.LAST_STAND.difficulties[this.difficulty];
-      base = Math.round(SL.LAST_STAND.firstWave + (wave - 1) * d.waveAdd * d.waveScale) + playerAdd;
-    }
-    if (this.mode === 'navalLastStand' && SL.NAVAL_LAST_STAND) {
-      base = Math.round(base * (SL.NAVAL_LAST_STAND.enemyMultiplier || 2));
-      return Math.min(SL.NAVAL_LAST_STAND.maxWaveUnits || 80, base);
-    }
-    return Math.min(SL.LAST_STAND.maxWaveUnits, base);
+    var d = SL.LAST_STAND.difficulties[this.difficulty] || SL.LAST_STAND.difficulties.normal;
+    var diffMul = d.waveAdd ? (d.waveAdd / 3) : 1;
+    var extra = Math.round(count * (SL.LAST_STAND.bigWaveExtraRatio || 0.12) * diffMul +
+      player * (SL.LAST_STAND.bigWaveExtraPlayer || 0.2));
+    return Math.max(2, extra);
   };
 
   Game.prototype.spawnDefenseWave = function (count, wave) {
     var ms = SL.CONFIG.mapSize;
     var b = this.defense.blueSpawn;
     var at = this.findDefenseEdgeSpawn(this.yellow.x, this.yellow.y, this.yellow.r + 180, b.x, b.y, 700);
+    var bigExtra = this.lastStandBigWaveBonus(wave, count);
+    count += bigExtra;
+    // 防止未击杀的旧波次无限叠加：战场敌方总人数有硬上限
+    var fieldCap = (this.mode === 'navalLastStand' ? (SL.LAST_STAND.navalFieldCap || 110) : (SL.LAST_STAND.fieldCap || 72));
+    var redAlive = this.aliveCount('red');
+    var room = Math.max(0, fieldCap - redAlive);
+    if (count > room) count = room;
+    if (count <= 0) {
+      this.log('第 ' + wave + ' 波：敌方战场已满，暂停投入', 'info');
+      return;
+    }
     var cols = Math.ceil(Math.sqrt(count));
     this.teams.red.level = Math.max(this.teams.red.level || 1, wave);
     for (var i = 0; i < count; i++) {
@@ -1291,8 +1288,13 @@
       u.aggressive = true;
     }
     this.log('第 ' + wave + ' 波敌军抵达（' + count + ' 个单位）', 'loss');
-    if (this.mode === 'navalLastStand' && wave >= 10 && wave % 5 === 0) {
-      var waveShips = Math.min(3, 1 + Math.floor((wave - 10) / 10));
+    if (bigExtra > 0) {
+      this.log('第 ' + wave + ' 波：敌人大举进攻！额外投入 ' + bigExtra + ' 个单位', 'loss');
+      this.feed.push({ id: ++this.feedSeq, t: this.time, kind: 'level', ks: 'red', vs: null, xp: 0, score: 0, killer: '', victim: '', text: '敌人大举进攻！' });
+      if (SL.UI && SL.UI.pushToast) SL.UI.pushToast('敌人大举进攻！', 'loss');
+    }
+    if (this.mode === 'navalLastStand' && wave >= 10 && wave % 10 === 0) {
+      var waveShips = 1;
       for (var ws = 0; ws < waveShips; ws++) {
         this.spawnShip('red', 260 + Math.random() * (T.size - 520), true);
       }
@@ -1326,9 +1328,8 @@
   };
 
   Game.prototype.defenseBossCount = function (wave) {
-    if (wave >= 50) return 3;
-    if (wave === 30) return 2;
-    return wave % SL.BOSS.interval === 0 ? 1 : 0;
+    if (wave < 10 || wave % 10 !== 0) return 0;
+    return Math.min(3, Math.floor(wave / 10));
   };
 
   Game.prototype.spawnBoss = function (wave, log) {
@@ -1452,11 +1453,44 @@
     this.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 0.45, r: radius, side: u.side });
   };
 
+  Game.prototype.yellowHasBlue = function () {
+    var y = this.yellow;
+    if (!y) return false;
+    for (var i = 0; i < this.units.length; i++) {
+      var u = this.units[i];
+      if (!u.alive || u.side !== 'blue') continue;
+      if (U.dist(u.x, u.y, y.x, y.y) <= y.r) return true;
+    }
+    return false;
+  };
+
+  Game.prototype.bossFreeTarget = function (u) {
+    var best = null, bd = Infinity;
+    for (var i = 0; i < this.units.length; i++) {
+      var e = this.units[i];
+      if (!e.alive || e.side === u.side) continue;
+      if (this.yellow && U.dist(e.x, e.y, this.yellow.x, this.yellow.y) <= this.yellow.r) continue;
+      if (!this.unitVisibleTo(u.side, e)) continue;
+      var d = U.dist(u.x, u.y, e.x, e.y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  };
+
   Game.prototype.updateBossSuper = function (u, dt) {
     var y = this.yellow;
     var cfg = SL.BOSS.superTank;
     var srange = cfg.range || 400;
     u.turret = u.turret || 0;
+    var freeTarget = !this.yellowHasBlue() ? this.bossFreeTarget(u) : null;
+    if (freeTarget) {
+      u.bossPhase = 'free';
+      if (U.dist(u.x, u.y, freeTarget.x, freeTarget.y) > srange * 0.82) {
+        this.moveToward(u, freeTarget.x, freeTarget.y, dt);
+      }
+    } else if (u.bossPhase === 'free' && this.yellowHasBlue()) {
+      u.bossPhase = 'patrol';
+    }
     if (u.bossPhase === 'enter') {
       // 加速冲向黄圈中心
       var dx = y.x - u.x, dy = y.y - u.y, d = Math.hypot(dx, dy);
@@ -1658,9 +1692,12 @@
       return;
     }
     if (u.ghostPhase === 'approach') {
-      // 隐蔽接近黄圈时也会攻击，但弹道不会破除强制隐身
+      // 黄圈没有蓝方时，进入自由行动，寻找黄圈外的敌人
+      var freeGhost = !this.yellowHasBlue() ? this.bossFreeTarget(u) : null;
       this.updateBossGhostAttack(u);
-      if (U.dist(u.x, u.y, y.x, y.y) > (gcfg.revealRadius || 30)) this.moveToward(u, y.x, y.y, dt);
+      if (freeGhost) {
+        if (U.dist(u.x, u.y, freeGhost.x, freeGhost.y) > 20) this.moveToward(u, freeGhost.x, freeGhost.y, dt);
+      } else if (U.dist(u.x, u.y, y.x, y.y) > (gcfg.revealRadius || 30)) this.moveToward(u, y.x, y.y, dt);
       else {
         u.ghostPhase = 'spread';
         u.forceConcealed = false;
@@ -1673,7 +1710,12 @@
         this.log('幽灵兵团现身', 'loss');
       }
     } else {
-      if (U.dist(u.x, u.y, u.bossTarget.x, u.bossTarget.y) > 12) this.moveToward(u, u.bossTarget.x, u.bossTarget.y, dt);
+      var freeSpread = !this.yellowHasBlue() ? this.bossFreeTarget(u) : null;
+      if (freeSpread) {
+        if (U.dist(u.x, u.y, freeSpread.x, freeSpread.y) > 20) this.moveToward(u, freeSpread.x, freeSpread.y, dt);
+      } else if (U.dist(u.x, u.y, u.bossTarget.x, u.bossTarget.y) > 12) {
+        this.moveToward(u, u.bossTarget.x, u.bossTarget.y, dt);
+      }
     }
   };
 
@@ -2052,21 +2094,26 @@
     this.units = keep;
   };
 
-  Game.prototype.playerCrowdDamp = function () {
-    var cfg = SL.AI_PLAYER_SCALE || { start: 6, perExtra: 0.015, maxReduction: 0.20 };
-    var n = this.aliveCount('blue') || 0;
-    return U.clamp((n - (cfg.start || 6)) * (cfg.perExtra || 0), 0, cfg.maxReduction || 0.20);
+  Game.prototype.aiDifficultyMult = function () {
+    var m = SL.AI_CAP_MULT || { easy: 0.8, normal: 1.0, hard: 1.2, endless: 1.2 };
+    return m[this.difficulty] || m.normal || 1.0;
+  };
+
+  Game.prototype.aiCapTotal = function () {
+    if (this.mode === 'lastStand' || this.mode === 'navalLastStand') return 20;
+    var player = Math.max(1, this.aliveCount('blue') || 0);
+    return Math.max(2, Math.round(player * this.aiDifficultyMult()));
   };
 
   Game.prototype.aiUnitCap = function () {
-    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return 20;
-    var player = this.aliveCount('blue') || 0;
-    var mult = this.difficulty === 'easy' ? 1.8
-      : this.difficulty === 'hard' ? 3.2
-      : this.difficulty === 'endless' ? 4.0 : 2.5;
-    var effMult = mult * (1 - this.playerCrowdDamp());
-    var total = Math.max(8, Math.ceil(player * effMult));
-    return Math.max(4, Math.ceil(total / 2));
+    if (this.mode === 'lastStand' || this.mode === 'navalLastStand') return 20;
+    return Math.max(1, Math.ceil(this.aiCapTotal() / 2));
+  };
+
+  Game.prototype.aiRespawnPerSide = function () {
+    // 以玩家开局 6 单位为参考，再按难度拆分到红绿两方
+    var total = Math.max(2, Math.round(6 * this.aiDifficultyMult()));
+    return Math.max(1, Math.ceil(total / 2));
   };
 
   // 无限难度按时间分档：15 分钟前 2 件、15~30 分钟 4 件、30 分钟后 6 件
@@ -2104,7 +2151,7 @@
     var cycle = SL.COMPANY.aiCycle;
     var aiMax = this.isMeleeLike() ? this.aiUnitCap() : SL.RESPAWN.aiCap;
     var target = ai
-      ? Math.min(aiMax, SL.RESPAWN.aiBase + Math.max(0, (level || 1) - 1) * SL.RESPAWN.aiPerLevel)
+      ? Math.min(aiMax, this.aiRespawnPerSide())
       : Math.min(SL.RESPAWN.playerCap, SL.RESPAWN.playerBase + Math.max(0, (level || 1) - 1));
     var ci = 0;
     while (list.length < target) {
@@ -2474,6 +2521,16 @@
       var d = U.dist(x, y, u.x, u.y);
       if (d < bestD) { best = u; bestD = d; }
     }
+    // 通讯塔/雷达/海岸基地等站点也可以被右键选中为攻击目标
+    if (T.zones) {
+      for (var zi = 0; zi < T.zones.length; zi++) {
+        var z = T.zones[zi];
+        if (!z || !z.site || z.destroyed || z.owner === 'blue') continue;
+        if (!this.isSeen(z.x, z.y)) continue;
+        var zd = U.dist(x, y, z.x, z.y);
+        if (zd < bestD) { best = z; bestD = zd; }
+      }
+    }
     return best;
   };
 
@@ -2643,7 +2700,11 @@
     var u = null, item = null;
     for (var i = 0; i < units.length; i++) {
       var cand = units[i];
-      if (!cand.alive || cand.type !== 'infantry' || cand.side !== 'blue') continue;
+      if (!cand.alive || cand.side !== 'blue') continue;
+      if (cand.type === 'engineer_vehicle' && cand.engineerValue >= 20) {
+        u = cand; item = null; break;
+      }
+      if (cand.type !== 'infantry') continue;
       for (var k = 0; k < cand.items.length; k++) {
         if (cand.items[k].key !== 'engineer') continue;
         var uses = cand.items[k].uses === undefined ? 1 : cand.items[k].uses;
@@ -2651,10 +2712,11 @@
       }
       if (u) break;
     }
-    if (!u || !item) return null;
+    if (!u) return null;
     if (U.dist(u.x, u.y, x, y) > SL.FORT.fieldBuildRange) return null;
     if (T.zoneAt(x, y)) return null;
-    item.uses = (item.uses === undefined ? 1 : item.uses) - 1;
+    if (item) item.uses = (item.uses === undefined ? 1 : item.uses) - 1;
+    else u.engineerValue = Math.max(0, u.engineerValue - 20);
     var z = T.addZone({
       id: 'field_' + (++nextId), name: '野战工事', kind: 'fort',
       x: x, y: y, r: 64, owner: u.side, built: true
@@ -3205,6 +3267,7 @@
               z.hp = z.maxHp;
               if (z.destroyed) this.log(SL.SIDES[z.owner].name + ' 修复了 ' + z.name, 'order');
               z.destroyed = false;
+              z.alive = true;
             }
           }
         }
@@ -3270,13 +3333,13 @@
             }
           }
         }
-      } else if (eng) {
+      } else if (eng || engVeh) {
         z.fortifyProgress = Math.min(1, z.fortifyProgress + dt / SL.FORT.buildTime);
         if (z.fortifyProgress >= 1) {
           z.fortified = true;
           z.hp = z.maxHp;
           z.fortifyProgress = 0;
-          this.log(SL.SIDES[z.owner].name + ' 在 ' + z.name + ' 构筑强化工事', 'order');
+          this.log(SL.SIDES[z.owner].name + ' ' + (eng ? '工兵' : '工程车') + ' 在 ' + z.name + ' 构筑强化工事', 'order');
           if (SL.Audio) SL.Audio.build(z.x, z.y);
         }
       }
@@ -3506,7 +3569,8 @@
       if (!item) continue;
       if (U.dist(u.x, u.y, x, y) > SL.SNIPER.spotRange) continue;
       if (T.zoneAt(x, y)) continue;
-      item.uses = (item.uses === undefined ? 1 : item.uses) - 1;
+      if (item) item.uses = (item.uses === undefined ? 1 : item.uses) - 1;
+    else u.engineerValue = Math.max(0, u.engineerValue - 20);
       T.addZone({
         id: 'sniper_bush_' + (++nextId), name: '狙击隐蔽', kind: 'bush',
         x: x, y: y, r: SL.SNIPER.bushRadius, owner: null, built: true, tempBush: true
@@ -3585,6 +3649,7 @@
         if (z.hp <= 0) {
           z.hp = 0;
           z.destroyed = true;
+          z.alive = false;
           z.cap = 0;
           z.capSide = null;
           this.log(z.name + ' 被摧毁，战略功能失效', 'loss');
@@ -4753,6 +4818,10 @@
 
   Game.prototype.unitVisibleToRaw = function (side, u) {
     if (!u || !u.alive) return false;
+    if (u.isSite) {
+      if (u.owner === side) return true;
+      return this.isSeen(u.x, u.y);
+    }
     if (u.side === side) return true;
     if (this.radarLit(side, u.id)) return true;
     // 近岸支援每次开火有概率向全图暴露；暴露期间任何敌方都能看到
@@ -4918,6 +4987,17 @@
       var score = d;
       if (mortar) score += e.def.armor ? 900 : -260;
       if (score < bestScore) { best = e; bestScore = score; }
+    }
+    // 敌方通讯塔/雷达/岸防基地也可作为自动攻击目标
+    if (T.zones) {
+      for (var zi = 0; zi < T.zones.length; zi++) {
+        var z = T.zones[zi];
+        if (!z || !z.site || z.destroyed || z.owner === u.side) continue;
+        var zd = U.dist(u.x, u.y, z.x, z.y);
+        if (zd > range || zd >= bestScore) continue;
+        if (!this.unitVisibleTo(u.side, z)) continue;
+        best = z; bestScore = zd;
+      }
     }
     return best;
   };
@@ -5292,6 +5372,19 @@
 
   Game.prototype.damage = function (target, amount, source, ap, bypassArmorImmunity) {
     if (!target.alive) return;
+    if (target.isSite || target.site) {
+      target.hp -= amount;
+      target.hitFlash = 0.16;
+      if (target.hp <= 0) {
+        target.hp = 0;
+        target.alive = false;
+        target.destroyed = true;
+        target.owner = null;
+        this.log(target.name + ' 被摧毁', 'loss');
+        this.fxText(target.x, target.y - 12, '站点被摧毁', '#ffb08a', 'blue');
+      }
+      return;
+    }
     if (target.isBarrier) {
       this.hitBarrier(target, amount, source);
       return;
@@ -6078,6 +6171,11 @@
 
   Game.prototype.damagePlane = function (p, dmg, source) {
     if (!p || p.hp <= 0) return;
+    if (p.kind === 'b17' && p.altitude === 'high') {
+      dmg *= (1 - (SL.BOMBER.b17.highAltitudeEvade || 0.22));
+      p.hitFlash = 0.12;
+      this.fxText(p.x, p.y - 12, '高空规避', '#b8e6d2');
+    }
     if (p.kind === 'hellBomber' && p.altitude === 'high') {
       dmg *= (SL.BOSS.hell.highDamageMul || 0.15);
       p.hitFlash = 0.12;
@@ -6313,7 +6411,14 @@
   };
 
   Game.prototype.updateHellBomber = function (p, dt) {
-    var cfg = SL.BOSS.hell, y = p.center || this.yellow;
+    var cfg = SL.BOSS.hell;
+    if (!this.yellowHasBlue()) {
+      var freeHell = this.bossFreeTarget(p);
+      if (freeHell) p.center = { x: freeHell.x, y: freeHell.y, r: p.center && p.center.r ? p.center.r : (this.yellow.r || 300) };
+    } else if (p.center && this.yellow && p.center !== this.yellow) {
+      p.center = this.yellow;
+    }
+    var y = p.center || this.yellow;
     var yx = y.x, yy = y.y;
     if (!isFinite(p.orbitR) || p.orbitR < 90) p.orbitR = Math.max(150, (y.r || 300) + 60);
     if (!isFinite(p.orbitAng)) p.orbitAng = 0;
@@ -6662,7 +6767,7 @@
       var p = this.planes[i];
       p.t += dt;
       if (p.hitFlash > 0) p.hitFlash -= dt;
-      if (p.kind === 'b17') continue;
+      if (p.kind === 'b17') { if (p.aiHeavy) { if (p.hp <= 0) { this.planes.splice(i, 1); continue; } this.updateAIHeavyBomber(p, dt); } continue; }
       if (p.kind === 'fighter') {
         if (!this.updateFighter(p, dt)) this.planes.splice(i, 1);
         continue;
@@ -7066,10 +7171,22 @@
       if (d > s.radius) continue;
       var falloff = 1 - 0.8 * (d / s.radius);
       var ap = s.ap || 1;
+      var inner = s.radius * (SL.PENETRATION.splashInnerRatio || 0.45);
+      var forced = false;
+      if (s.forcePen) {
+        if (d <= inner) {
+          forced = true;
+          ap += (1 - d / Math.max(1, inner)) * (SL.PENETRATION.splashCenterApBonus || 4);
+        } else {
+          // 外圈只有爆炸杀伤，没有穿甲能力
+          forced = false;
+          ap = 0;
+        }
+      }
       var direct = d <= Math.min(12, s.radius * 0.3);
-      var mult = u.def.armor ? (direct ? ap : 0.5 * ap) : 1;
+      var mult = u.def.armor ? (forced ? 0.75 : (direct ? ap : 0.5 * ap)) : 1;
       if (u.side === s.side) mult *= s.shipShell ? 0.18 : 0.5;
-      this.damage(u, s.dmg * falloff * mult, s.source, ap, !!(s.forcePen && direct) || !!(s.mortar && direct));
+      this.damage(u, s.dmg * falloff * mult, s.source, ap, forced || !!(s.mortar && direct));
     }
     // 舰船也会被炮弹命中
     for (var bi = 0; bi < this.battleships.length; bi++) {
@@ -7078,7 +7195,18 @@
       var sd = U.dist(sh.x, sh.y, s.x1, s.y1);
       if (sd > s.radius + 14) continue;
       var smult = sh.side === s.side ? (s.shipShell ? 0.12 : 0.5) : 1;
-      this.damageShip(sh, s.dmg * smult * (1 - 0.72 * sd / (s.radius + 14)), s.source, s.ap || 1, !!s.forcePen);
+      var shipInner = s.radius * (SL.PENETRATION.splashInnerRatio || 0.45);
+      var shipPen = s.ap || 1;
+      var shipForce = false;
+      if (s.forcePen) {
+        if (sd <= shipInner) {
+          shipForce = true;
+          shipPen += (1 - sd / Math.max(1, shipInner)) * (SL.PENETRATION.splashCenterApBonus || 4);
+        } else {
+          shipPen = 0;
+        }
+      }
+      this.damageShip(sh, s.dmg * smult * (1 - 0.72 * sd / (s.radius + 14)), s.source, shipPen, shipForce);
     }
     // 补给舰可被击毁
     for (var ss = this.supplyShips.length - 1; ss >= 0; ss--) {
@@ -7164,26 +7292,32 @@
   };
 
   Game.prototype.updateAIReinforcements = function () {
-    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return; // 防御模式 / 背水一战仍按波次强化
+    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) return; // 防御模式 / 背水一战不补员
     if (this.time < (this.aiReinforceAtGlobal || 0)) return;
-    this.aiReinforceAtGlobal = this.time + 10;
+    this.aiReinforceAtGlobal = this.time + (SL.AI_REINFORCE_INTERVAL || 15);
     var sides = ['red', 'green'];
-    var budget = 10;
-    for (var i = 0; i < sides.length; i++) {
-      if (budget <= 0) break;
-      var side = sides[i];
-      if (this.aliveCount(side) === 0) continue;
-      var cap = this.aiUnitCap();
-      var room = Math.min(budget, cap - this.aliveCount(side));
-      if (room <= 0) continue;
-      var added = 0;
-      for (var k = 0; k < room; k++) {
+    var cap = this.aiCapTotal();
+    var room = Math.max(0, cap - (this.aliveCount('red') + this.aliveCount('green')));
+    var budget = Math.min(SL.AI_REINFORCE_BATCH || 6, room);
+    var addedBySide = { red: 0, green: 0 };
+    // 红绿轮流补员，双方同时获得机会
+    var guard = 0;
+    while (budget > 0 && guard++ < 30) {
+      var progressed = false;
+      for (var i = 0; i < sides.length && budget > 0; i++) {
+        var side = sides[i];
+        if (this.aliveCount(side) === 0) continue;
+        if (this.aliveCount(side) >= this.aiUnitCap()) continue;
         var u = this.spawnReinforcement(side, true);
-        if (!u) break;
-        added++;
+        if (!u) continue;
+        addedBySide[side]++;
+        budget--;
+        progressed = true;
       }
-      budget -= added;
-      if (added) this.log(SL.SIDES[side].name + ' 增援 ' + added + ' 个单位', 'info');
+      if (!progressed) break;
+    }
+    for (var s = 0; s < sides.length; s++) {
+      if (addedBySide[sides[s]]) this.log(SL.SIDES[sides[s]].name + ' 增援 ' + addedBySide[sides[s]] + ' 个单位', 'info');
     }
   };
 
@@ -7204,6 +7338,55 @@
     var a = SL.AI_AIR;
     return Math.min(a.maxGroup || 10,
       (a.groupBase || 2) + Math.floor(this.time / (a.groupTier || 300)));
+  };
+
+  Game.prototype.spawnAIHeavyBomber = function (side, tx, ty) {
+    side = side || 'red';
+    var ms = SL.CONFIG.mapSize;
+    var dl = tx, dr = ms - tx, dtp = ty, db = ms - ty;
+    var m = Math.min(dl, dr, dtp, db), sx, sy, ex, ey;
+    if (m === dl) { sx = -180; sy = ty; ex = ms + 200; ey = ty; }
+    else if (m === dr) { sx = ms + 180; sy = ty; ex = -200; ey = ty; }
+    else if (m === dtp) { sx = tx; sy = -180; ex = tx; ey = ms + 200; }
+    else { sx = tx; sy = ms + 180; ex = tx; ey = -200; }
+    var bp = SL.BOMBER && SL.BOMBER.b17 ? SL.BOMBER.b17 : {};
+    var p = {
+      kind: 'b17', aiHeavy: true, side: side, alt: 'high', altitude: 'high',
+      x: sx, y: sy, tx: tx, ty: ty, ex: ex, ey: ey, t: 0,
+      heading: Math.atan2(ty - sy, tx - sx), bank: 0,
+      speed: bp.speed || 88, hp: bp.hp || 1500, maxHp: bp.hp || 1500,
+      evade: bp.highAltitudeEvade || 0.22, hitFlash: 0,
+      aiBombs: 4, aiBombCd: 1.2, aiState: 'enter', bombTx: tx, bombTy: ty
+    };
+    this.planes.push(p);
+    return p;
+  };
+
+  Game.prototype.updateAIHeavyBomber = function (p, dt) {
+    var ms = SL.CONFIG.mapSize;
+    if (p.hitFlash > 0) p.hitFlash -= dt;
+    if (p.aiState === 'enter') {
+      var dx = p.tx - p.x, dy = p.ty - p.y, d = Math.hypot(dx, dy) || 1;
+      p.heading = Math.atan2(dy, dx);
+      var step = p.speed * dt;
+      if (d > 80) { p.x += dx / d * step; p.y += dy / d * step; }
+      else { p.aiState = 'bomb'; p.aiBombCd = 0.35; }
+    } else if (p.aiState === 'bomb') {
+      p.bank *= Math.max(0, 1 - dt * 2);
+      p.aiBombCd -= dt;
+      if (p.aiBombs > 0 && p.aiBombCd <= 0) {
+        var a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 95;
+        this.airstrikeBomb(p.tx + Math.cos(a) * r, p.ty + Math.sin(a) * r, p.side, false);
+        p.aiBombs--;
+        p.aiBombCd = 1.1;
+      }
+      if (p.aiBombs <= 0) { p.aiState = 'leave'; p.ex = p.x > ms / 2 ? ms + 200 : -200; p.ey = p.y; }
+    } else {
+      var lx = p.ex - p.x, ly = p.ey - p.y, ld = Math.hypot(lx, ly) || 1;
+      p.heading = Math.atan2(ly, lx);
+      p.x += lx / ld * p.speed * dt; p.y += ly / ld * p.speed * dt;
+      if (p.x < -250 || p.x > ms + 250 || p.y < -250 || p.y > ms + 250) p.hp = 0;
+    }
   };
 
   // 两种模式共用：三角编队 + 每架飞机独立随机落点
@@ -7236,7 +7419,7 @@
         var count = Math.max(1, group.count || 1);
         if (group.heavy) {
           for (var hb = 0; hb < count; hb++) {
-            this.spawnBossHell(this.yellow.x, this.yellow.y, 'red', true);
+            this.spawnAIHeavyBomber('red', this.yellow.x, this.yellow.y);
           }
           continue;
         }

@@ -17,6 +17,9 @@
       hp: 1500,
       speed: 88,
       turnRate: 0.18,
+      turnSmooth: 2.2,
+      formationStability: 0.82,
+      highAltitudeEvade: 0.22,
       orbitRadius: 340,
       aaRadius: 400,
       mgCount: 13,
@@ -82,7 +85,7 @@
     return {
       id: 'b17_' + (++g.bombers.planeSeq),
       name: name || ('B-17 ' + ((g.bombers.planeSeq || 1)) + '号机'),
-      hp: B.b17.hp, maxHp: B.b17.hp,
+      hp: B.b17.hp, maxHp: B.b17.hp, evade: B.b17.highAltitudeEvade || 0.22, altitude: 'high',
       bombs: [], bombGroups: [], loadout: [], loadoutGroups: [], x: 0, y: 0, heading: 0, bank: 0, mgCd: 0, t: 0,
       jitter: Math.random() * Math.PI * 2,
       speedJitter: 0.97 + Math.random() * 0.06,
@@ -193,8 +196,8 @@
       var bank = b.bank || 0;
       var inside = bank * s.lateral > 0;
       var lateral = s.lateral * (inside ? 0.90 : 1.035);
-      var forward = s.forward - Math.abs(s.lateral) * Math.abs(bank) * 0.10;
-      var drift = Math.sin((g.time || 0) * 1.0 + (p.jitter || 0)) * 3;
+      var forward = s.forward - Math.abs(s.lateral) * Math.abs(bank) * 0.035;
+      var drift = Math.sin((g.time || 0) * 0.7 + (p.jitter || 0)) * 0.8 * (1 - (B.b17.formationStability || 0.82));
       var tx = b.groupX + fx * forward + sx * (lateral + drift);
       var ty = b.groupY + fy * forward + sy * (lateral + drift);
       var dx = tx - p.x, dy = ty - p.y;
@@ -202,7 +205,7 @@
       var diff = desired - (p.heading || 0);
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
-      var max = B.b17.turnRate * dt * 2.8;
+      var max = B.b17.turnRate * dt * (2.0 + (B.b17.formationStability || 0.82) * 0.8);
       var step = U.clamp(diff, -max, max);
       p.heading += step;
       p.bank = U.clamp(step / Math.max(0.001, max) * 0.6, -0.6, 0.6);
@@ -661,7 +664,9 @@
     var max = B.b17.turnRate * dt;
     var step = U.clamp(diff, -max, max);
     b.heading += step;
-    b.bank = U.clamp(step / Math.max(0.001, max) * 0.85, -0.85, 0.85);
+    var targetBank = U.clamp(step / Math.max(0.001, max) * (B.b17.bankGain || 0.55), -0.55, 0.55);
+    var bankK = 1 - Math.exp(-dt * (B.b17.bankSmooth || 3.2));
+    b.bank += (targetBank - b.bank) * bankK;
   }
 
   function updateMovement(g, b, dt) {

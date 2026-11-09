@@ -125,7 +125,7 @@
       hp: 65,
       armor: 0,
       vision: 250,
-      range: 1200,
+      range: 1800,
       minRange: 70,
       speed: 14,
       radius: 9,
@@ -143,7 +143,7 @@
       hp: 85,
       armor: 0,
       vision: 250,
-      range: 1500,
+      range: 2000,
       minRange: 100,
       speed: 14,
       radius: 10,
@@ -216,7 +216,7 @@
       hp: 150,
       armor: 1,
       vision: 200,
-      range: 1200,
+      range: 1800,
       speed: 10,
       radius: 10,
       canSprint: false,
@@ -262,7 +262,7 @@
       armor: 1,
       vision: 240,
       range: 0,
-      speed: 14,
+      speed: 17,
       radius: 10,
       canSprint: false,
       weapon: {
@@ -331,7 +331,7 @@
   SL.COMMAND_RECON = { range: 600, radius: 150 };
 
   SL.BOSS = {
-    interval: 5,
+    interval: 10,
     finalSafety: 60,       // 坚守目标前 60 秒不再刷新 BOSS，避免登场即结束
     meleeThreshold: 0.9,
     reward: { xp: 10000, score: 10000, cards: 6 },
@@ -374,6 +374,8 @@
 
   /* 穿甲/致命一击：ap 为武器穿甲值，armor 为装甲等级 */
   SL.PENETRATION = {
+    splashInnerRatio: 0.45,
+    splashCenterApBonus: 4.0,
     armorTiers: [0, 0.35, 1.15, 1.6, 2.1],
     damagePerExcess: 0.30,
     damageCap: 0.60,
@@ -431,11 +433,11 @@
     prewarnSpreadBonus: 0.15,
     radarScanInterval: 30,
     radarCooldown: 30,
-    radarScanDuration: 30,
-    radarSweepTurns: 2,
+    radarScanDuration: 60,
+    radarSweepTurns: 3,
     radarRange: 3500,
-    radarSweepArc: 20,
-    radarLitTime: 3,
+    radarSweepArc: 30,
+    radarLitTime: 8,
     seaplaneHp: 120,
     seaplaneRadius: 250,
     seaplaneSpeed: 220,
@@ -536,6 +538,11 @@
     captureTime: 30,
     firstWave: 9,
     maxWaveUnits: 48,
+    fieldCap: 72,
+    navalFieldCap: 110,
+    bigWaveEvery: 10,
+    bigWaveExtraRatio: 0.12,
+    bigWaveExtraPlayer: 0.20,
     unitWeights: {
       first: { infantry: 48, armored: 24, at_gun: 15, tank: 10, artillery: 3 },
       normal: { infantry: 42, armored: 21, at_gun: 12, tank: 12, aa: 6, heavy_tank: 4, artillery: 3 },
@@ -800,14 +807,14 @@
     modeSpeedMul: 0.8,
     rubbleRepairSpeed: 2,
     rubbleRepairCost: 18,
-    layGap: { mine_ap: 18, mine_at: 18, wire: 28, hedgehog: 28 },
+    layGap: { mine_ap: 18, mine_at: 18, wire: 30, hedgehog: 28 },
     // 地雷改为点击布设的 200m 雷区，每个雷区固定消耗 50 工程值（满值 4 片）
     minefieldCost: 50,
     minefieldRadius: 200,
     minefieldMines: 10,
     minefieldLayTime: 3,
-    // 铁丝网/拒马按米数消耗：满值约 800m 铁丝网 / 500m 拒马
-    cost: { mine_ap: 0, mine_at: 0, wire: 7, hedgehog: 11 },
+    // 铁丝网/拒马按米数消耗：满值约 1500m 铁丝网 / 1000m 拒马
+    cost: { mine_ap: 0, mine_at: 0, wire: 4, hedgehog: 5.6 },
     connectRange: 52,
     edgeSnap: 36,
     nodeHp: 3000,
@@ -872,7 +879,7 @@
     { key: 'artillery', w: 3 },
     { key: 'heavy_arty', w: 2 }
   ];
-  /* 玩家基础连队保持 6；AI 重生更高 */
+  /* 玩家基础连队保持 6；AI 重生按难度倍率，随后补员到上限 */
   SL.RESPAWN = {
     playerBase: 6,
     aiBase: 8,
@@ -880,11 +887,11 @@
     aiCap: 14,
     playerCap: 12
   };
-  SL.AI_UNIT_CAP = { easy: 10, normal: 16, hard: 22, endless: 28 };
-/* 玩家单位越多，AI 单位倍率轻微下降；玩家减少后自动恢复 */
-SL.AI_PLAYER_SCALE = { start: 6, perExtra: 0.015, maxReduction: 0.20 };
+  /* 新版 AI 总兵力上限倍率（相对玩家单位） */
+SL.AI_CAP_MULT = { easy: 0.8, normal: 1.0, hard: 1.2, endless: 1.2 };
+SL.AI_REINFORCE_INTERVAL = 15;
+SL.AI_REINFORCE_BATCH = 6;
   SL.AI_REINFORCE_GAP = { easy: 45, normal: 35, hard: 25, endless: 18 };
-  SL.AI_NAVAL_REPLENISH = { interval: 24, cost: 120, first: 16 };
 
   /* 黄圈争夺区：同一落点持续 2.5 分钟，结束后换点 */
   SL.YELLOW = {

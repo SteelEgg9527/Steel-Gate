@@ -807,12 +807,12 @@
   }
 
   function drawFortHpBar(x, y, ratio, hp, maxHp) {
-    var w = 30, h = 3;
-    ctx.fillStyle = 'rgba(10,12,9,0.82)';
+    var w = 46, h = 5;
+    ctx.fillStyle = 'rgba(10,12,9,0.86)';
     ctx.fillRect(x - w / 2, y, w, h);
     ctx.fillStyle = ratio > 0.5 ? '#8fd4a0' : (ratio > 0.22 ? '#d8b25e' : '#d06a52');
     ctx.fillRect(x - w / 2, y, w * U.clamp(ratio, 0, 1), h);
-    ctx.font = '7px ' + SL.FONT_MONO;
+    ctx.font = '800 8px ' + SL.FONT_MONO;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillStyle = 'rgba(244,235,210,0.9)';

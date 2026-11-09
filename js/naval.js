@@ -346,8 +346,9 @@
       id: id, name: name, kind: kind, x: x, y: y,
       r: kind === 'radar' ? 66 : (kind === 'coastbase' ? 74 : (kind === 'port' ? 90 : 58)),
       owner: null, cap: 0, capSide: null,
-      site: true, siteHp: 2600, siteKind: kind, towerIndex: towerIndex,
-      hp: 2600, maxHp: 2600, destroyed: false,
+      site: true, isSite: true, siteHp: 2600, siteKind: kind, towerIndex: towerIndex,
+      hp: 2600, maxHp: 2600, destroyed: false, alive: true,
+      def: { armor: 0 }, cover: { dr: 0, evade: 0 },
       fortified: false, fortifyProgress: 0, structure: null, structures: [],
       rubbles: [], rubble: null, rubbleProgress: 0
     };
@@ -1492,7 +1493,7 @@ return null;
     ctx.strokeText(z.name, z.x, z.y - z.r - 8);
     ctx.fillStyle = z.destroyed ? '#a68b78' : (z.owner === 'blue' ? '#a9d5f2' : (z.owner === 'red' ? '#efaa98' : '#eee0b4'));
     ctx.fillText(z.name, z.x, z.y - z.r - 8);
-    var bw = z.r * 1.35, bh = 3.5 * Math.max(0.8, one);
+    var bw = z.r * 1.55, bh = 5.5 * Math.max(0.8, one);
     var bx = z.x - bw / 2, by = z.y + z.r + 5;
     ctx.fillStyle = 'rgba(12,16,13,0.8)'; ctx.fillRect(bx, by, bw, bh);
     ctx.fillStyle = z.destroyed ? '#6d5144' : (z.hp / z.maxHp > 0.35 ? '#d6b76c' : '#c56c55');

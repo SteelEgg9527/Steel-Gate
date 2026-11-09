@@ -92,7 +92,8 @@
       var sm = m.sites[si2];
       T.zones.push({
         id: sm.id || ('site_' + si2), name: sm.name || '站点', kind: 'fort',
-        site: true, siteKind: sm.kind, siteHp: sm.hp || 2600,
+        site: true, isSite: true, siteKind: sm.kind, siteHp: sm.hp || 2600, alive: true,
+        def: { armor: 0 }, cover: { dr: 0, evade: 0 },
         x: sm.x, y: sm.y, r: sm.r || 72,
         owner: null, cap: 0, capSide: null,
         fortified: false, hp: sm.hp || 2600, maxHp: sm.hp || 2600,
