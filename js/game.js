@@ -1332,11 +1332,6 @@
     return Math.min(3, Math.floor(wave / interval));
   };
 
-  Game.prototype.spawnBoss = function (wave, log) {
-    this.spawnBossForSide('red');
-    if (log !== false) this.log('BOSS 加入战场：第 ' + wave + ' 波', 'loss');
-  };
-
   Game.prototype.spawnBossForSide = function (side) {
     side = side || 'red';
     if (this.naval && SL.SIDES[side] && SL.SIDES[side].ai && !this.shipOf(side)) this.aiShipRespawn[side] = true;
@@ -1968,7 +1963,8 @@
         d.holdTarget - d.hold <= (SL.BOSS.finalSafety || 60);
       if (!nearEnd && d.wave % SL.BOSS.interval === 0) {
         var bossCount = this.defenseBossCount(d.wave);
-        for (var bi = 0; bi < bossCount; bi++) this.spawnBoss(d.wave, bi === 0);
+        for (var bi = 0; bi < bossCount; bi++) this.spawnBossForSide('red');
+        if (bossCount) this.log('BOSS 加入战场：第 ' + d.wave + ' 波', 'loss');
       }
       d.nextWaveAt += SL.LAST_STAND.waveGap;
     }
@@ -7436,7 +7432,8 @@
       var side = sides[i];
       if (this.aliveCount(side) === 0) continue;
       if (this.time < (this.aiPatrolAt[side] || 0)) continue;
-      this.aiPatrolAt[side] = this.time + 55 + Math.random() * 20;
+      var pa = SL.AI_AIR || {};
+      this.aiPatrolAt[side] = this.time + (pa.patrolGapMin || 55) + Math.random() * ((pa.patrolGapMax || 75) - (pa.patrolGapMin || 55));
       var cx = 0, cy = 0, n = 0;
       for (var k = 0; k < this.units.length; k++) {
         var u = this.units[k];
@@ -7446,9 +7443,9 @@
       if (!n && T.spawns && T.spawns[side]) { cx = T.spawns[side].x; cy = T.spawns[side].y; n = 1; }
       if (!n) continue;
       cx /= n; cy /= n;
-      var groups = Math.min(3, 1 + Math.floor(this.time / 600));
+      var groups = Math.min((SL.AI_AIR && SL.AI_AIR.patrolGroupMax) || 3, 1 + Math.floor(this.time / ((SL.AI_AIR && SL.AI_AIR.patrolGroupTier) || 600)));
       for (var g = 0; g < groups; g++) {
-        if (this.planes.length + 3 > 34) break;
+        if (this.planes.length + ((SL.AI_AIR && SL.AI_AIR.patrolPerGroup) || 3) > ((SL.AI_AIR && SL.AI_AIR.patrolPlaneCap) || 34)) break;
         var ang = (g / Math.max(1, groups)) * Math.PI * 2;
         this.spawnAirPatrol(cx + Math.cos(ang) * 120, cy + Math.sin(ang) * 120, side, 60);
       }
@@ -7459,15 +7456,15 @@
   Game.prototype.tryAILargeRaid = function () {
     if (!this.aiPlaneLosses) this.aiPlaneLosses = [];
     if (!this.aiRaidCd) this.aiRaidCd = { red: 0, green: 0 };
-    var cutoff = this.time - 60;
+    var cutoff = this.time - ((SL.AI_AIR && SL.AI_AIR.raidWindow) || 60);
     this.aiPlaneLosses = this.aiPlaneLosses.filter(function (e) { return e.t >= cutoff; });
     var sides = ['red', 'green'];
     for (var i = 0; i < sides.length; i++) {
       var side = sides[i];
       var losses = 0;
       for (var k = 0; k < this.aiPlaneLosses.length; k++) if (this.aiPlaneLosses[k].side === side) losses++;
-      if (losses < 4 || this.time < (this.aiRaidCd[side] || 0)) continue;
-      this.aiRaidCd[side] = this.time + 120;
+      if (losses < ((SL.AI_AIR && SL.AI_AIR.raidLosses) || 4) || this.time < (this.aiRaidCd[side] || 0)) continue;
+      this.aiRaidCd[side] = this.time + ((SL.AI_AIR && SL.AI_AIR.raidCooldown) || 120);
       this.aiPlaneLosses = this.aiPlaneLosses.filter(function (e) { return e.side !== side; });
       var tx = 0, ty = 0, tn = 0, detected = false;
       // 只使用真正被 AI 发现/侦察到的玩家单位位置，禁止借迷雾直接瞄准全军
@@ -7483,8 +7480,8 @@
         if (this.yellow) { tx = this.yellow.x; ty = this.yellow.y; }
         else continue;
       }
-      var count = Math.min(14, 6 + Math.floor(this.time / 300));
-      if (this.planes.length + count + 3 > 38) continue;
+      var count = Math.min((SL.AI_AIR && SL.AI_AIR.raidMax) || 14, ((SL.AI_AIR && SL.AI_AIR.raidBase) || 6) + Math.floor(this.time / ((SL.AI_AIR && SL.AI_AIR.raidTier) || 300)));
+      if (this.planes.length + count + ((SL.AI_AIR && SL.AI_AIR.raidEscort) || 3) > ((SL.AI_AIR && SL.AI_AIR.raidPlaneCap) || 38)) continue;
       this.spawnAirGroup(side, tx + (Math.random() - 0.5) * 100, ty + (Math.random() - 0.5) * 100,
         tx, ty, 260, count, false);
       this.spawnAirPatrol(tx, ty, side, 60);

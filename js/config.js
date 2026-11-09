@@ -948,7 +948,12 @@ SL.AI_REINFORCE_BATCH = 6;
     maxGroup: 10,
     antiShipRadius: 24,
     antiShipDamageMul: 2.4,
-    antiShipCountBonus: 2
+    antiShipCountBonus: 2,
+    patrolGapMin: 55, patrolGapMax: 75,
+    patrolGroupMax: 3, patrolGroupTier: 600,
+    patrolPerGroup: 3, patrolPlaneCap: 34,
+    raidWindow: 60, raidLosses: 4, raidCooldown: 120,
+    raidBase: 6, raidTier: 300, raidMax: 14, raidPlaneCap: 38, raidEscort: 3
   };
 
   /* 炮火支援：显示圈与落点共用 radius */
