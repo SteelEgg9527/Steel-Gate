@@ -333,7 +333,6 @@
   SL.BOSS = {
     interval: 10,
     finalSafety: 60,       // 坚守目标前 60 秒不再刷新 BOSS，避免登场即结束
-    meleeThreshold: 0.9,
     reward: { xp: 10000, score: 10000, cards: 6 },
     hell: {
       name: '地狱轰炸机', hp: 3000, speed: 60, length: 80,
@@ -565,10 +564,6 @@
     airMultiplier: 1.5,
     heavyEvery: 5,
     heavyMax: 5,
-    heavyBombMinLb: 500,
-    heavyBombMaxLb: 2000,
-    heavyHpScale: 0.42,
-    bossExtraEvery: 5
   };
 
   /* ---------------- 三阵营 ---------------- */
@@ -595,8 +590,7 @@
   /* 基础连队 / AI 重生补员循环
      注意：修改这里的单位类型时，必须保证 SL.UNIT_TYPES 中存在对应 key。 */
   SL.COMPANY = {
-    base: ['infantry', 'infantry', 'infantry', 'armored', 'armored', 'tank'],
-    aiCycle: ['armored', 'tank', 'infantry', 'armored', 'tank']
+    base: ['infantry', 'infantry', 'infantry', 'armored', 'armored', 'tank']
   };
 
   /* 击杀奖励：经验大幅提高（1 级时一个击杀即可升级），分数仍按目标等级 */
@@ -880,16 +874,12 @@
   /* 玩家基础连队保持 6；AI 重生按难度倍率，随后补员到上限 */
   SL.RESPAWN = {
     playerBase: 6,
-    aiBase: 8,
-    aiPerLevel: 1,
-    aiCap: 14,
     playerCap: 12
   };
   /* 新版 AI 每方兵力上限倍率（相对玩家单位） */
 SL.AI_CAP_MULT = { easy: 0.8, normal: 1.0, hard: 1.2, endless: 1.2 };
 SL.AI_REINFORCE_INTERVAL = 15;
 SL.AI_REINFORCE_BATCH = 6;
-  SL.AI_REINFORCE_GAP = { easy: 45, normal: 35, hard: 25, endless: 18 };
 
   /* 黄圈争夺区：同一落点持续 2.5 分钟，结束后换点 */
   SL.YELLOW = {
