@@ -33,8 +33,10 @@
   .divider{height:1px;background:var(--line);margin:12px 0}
   #main{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:18px;position:relative}
   #canvasWrap{position:relative;width:min(86vh,900px);height:min(86vh,900px);max-width:100%;max-height:100%}
-  canvas{width:100%;height:100%;display:block;background:#c7b991;border:1px solid #5e5b45;box-shadow:0 0 0 4px rgba(0,0,0,.18)}
-  #hint{position:absolute;left:0;right:0;bottom:-32px;text-align:center;color:#8e997f;font-size:10px}
+  #map,#cursorLayer{position:absolute;inset:0;width:100%;height:100%;display:block}
+  #map{background:#c7b991;border:1px solid #5e5b45;box-shadow:0 0 0 4px rgba(0,0,0,.18);touch-action:none}
+  #cursorLayer{pointer-events:none;z-index:2}
+  #hint{position:absolute;left:0;right:0;bottom:-32px;text-align:center;color:#8e997f;font-size:10px;z-index:3}
   #stats{color:#8e997f;font-size:10px;line-height:1.7;margin-top:6px}
   #legend{font-size:10px;color:#aab49a;line-height:1.8}
   .swatch{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
@@ -122,6 +124,7 @@
   <main id="main">
     <div id="canvasWrap">
       <canvas id="map" width="900" height="900"></canvas>
+      <canvas id="cursorLayer" width="900" height="900"></canvas>
       <div id="hint">左键绘制 · 道路连续点击 · Enter 完成路线</div>
     </div>
   </main>
@@ -131,6 +134,8 @@
   'use strict';
   const canvas = document.getElementById('map');
   const ctx = canvas.getContext('2d');
+  const cursorCanvas = document.getElementById('cursorLayer');
+  const cctx = cursorCanvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
   const $ = id => document.getElementById(id);
 
@@ -160,6 +165,38 @@
   function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
   function snap(v, step){ return step ? Math.round(v/step)*step : v; }
 
+  let drawPending = false;
+  function requestDraw(){
+    if (drawPending) return;
+    drawPending = true;
+    requestAnimationFrame(function(){ drawPending = false; draw(); });
+  }
+  let hoverPt = null;
+  function brushWorldRadius(){
+    if (tool === 'zone' || tool === 'comm' || tool === 'radar' || tool === 'port' || tool === 'coastbase') {
+      return Number($('objectRadius').value) || 72;
+    }
+    if (tool === 'yellow') return Number($('objectRadius').value) || 300;
+    if (tool === 'bridge') return 26;
+    if (tool === 'road-highway' || tool === 'road-dirt' || tool === 'ai-lane') return 18;
+    return Number($('brush').value) || 120;
+  }
+  function drawCursor(pt){
+    cctx.clearRect(0,0,W,H);
+    if (!pt) return;
+    const r = Math.max(3, brushWorldRadius() * W / state.size);
+    cctx.save();
+    cctx.beginPath(); cctx.arc(pt.px, pt.py, r, 0, Math.PI * 2);
+    cctx.fillStyle = 'rgba(226,195,116,0.10)';
+    cctx.fill();
+    cctx.strokeStyle = 'rgba(255,229,160,0.95)';
+    cctx.lineWidth = 1.5;
+    cctx.stroke();
+    cctx.beginPath(); cctx.arc(pt.px, pt.py, 2.2, 0, Math.PI * 2);
+    cctx.fillStyle = '#ffe5a0'; cctx.fill();
+    cctx.restore();
+  }
+
   function resetHeight(res){
     state.res = res;
     state.height = new Float32Array(res*res);
@@ -177,6 +214,7 @@
     if (draft && draft.points && draft.points.length >= 2) finishRoad();
     tool = t; styleToolButtons(); status('工具：' + (document.querySelector('.tool[data-tool="'+t+'"]')?.textContent.trim() || t));
     canvas.style.cursor = t === 'erase' ? 'not-allowed' : 'crosshair';
+    if (hoverPt) drawCursor(hoverPt);
   }
   document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click', ()=>setTool(b.dataset.tool)));
 
@@ -235,14 +273,30 @@
   }
   function drawContours(){
     if (!state.contour) return;
-    const res=state.res, levels=[0.25,0.45,0.65,0.85];
-    ctx.save(); ctx.strokeStyle='rgba(76,58,34,0.32)'; ctx.lineWidth=1;
+    const res=state.res, levels=[0.20,0.35,0.50,0.65,0.80];
+    const sx = W / res, sy = H / res;
+    ctx.save();
+    ctx.strokeStyle='rgba(74,54,30,0.62)';
+    ctx.lineWidth=1.15;
     for (const lv of levels){
       for(let y=0;y<res-1;y++) for(let x=0;x<res-1;x++){
-        const a=state.height[y*res+x], b=state.height[y*res+x+1], c=state.height[(y+1)*res+x], d=state.height[(y+1)*res+x+1];
-        if ((a-lv)*(b-lv)>=0 && (a-lv)*(c-lv)>=0) continue;
-        const sx=(x+0.5)/res*W, sy=(y+0.5)/res*H;
-        ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+W/res,sy);ctx.stroke();
+        const a=state.height[y*res+x], b=state.height[y*res+x+1], c=state.height[(y+1)*res+x+1], d=state.height[(y+1)*res+x];
+        const pts=[];
+        const edge=(x1,y1,v1,x2,y2,v2)=>{
+          if ((v1-lv)*(v2-lv) >= 0 || v1===v2) return;
+          const tt=(lv-v1)/(v2-v1);
+          pts.push({x:(x1+(x2-x1)*tt)*sx, y:(y1+(y2-y1)*tt)*sy});
+        };
+        edge(x,y,a,x+1,y,b);
+        edge(x+1,y,b,x+1,y+1,c);
+        edge(x+1,y+1,c,x,y+1,d);
+        edge(x,y+1,d,x,y,a);
+        if (pts.length===2){
+          ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.stroke();
+        } else if (pts.length===4){
+          ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(pts[2].x,pts[2].y);ctx.lineTo(pts[3].x,pts[3].y);ctx.stroke();
+        }
       }
     }
     ctx.restore();
@@ -349,33 +403,42 @@
   canvas.addEventListener('pointerdown', e=>{
     if(e.button!==0)return;
     const pt=point(e);
+    hoverPt=pt; drawCursor(pt);
     if(tool==='height-up'||tool==='height-down'){
       snapshot();painting=true;
       paintHeight(pt, (tool==='height-up'?1:-1)*Number($('strength').value||0.04));
+      buildHeightCanvas(); requestDraw();
       return;
     }
     if(tool==='water'||tool==='forest'){
       snapshot();
       const arr=tool==='water'?state.water:state.forests;
       arr.push({x:pt.x,y:pt.y,r:Number($('brush').value)||120});
+      requestDraw();
       return;
     }
     if(tool==='road-highway'||tool==='road-dirt'||tool==='ai-lane'){
       if(!draft) draft={type:tool,points:[]};
       const last=draft.points[draft.points.length-1];
       if(!last || dist(last,pt)>state.size*0.008) draft.points.push({x:pt.x,y:pt.y});
+      requestDraw();
       return;
     }
-    if(tool==='erase'){snapshot();eraseAt(pt);return;}
+    if(tool==='erase'){snapshot();eraseAt(pt);requestDraw();return;}
     snapshot();
     placeAt(pt);
+    requestDraw();
   });
   canvas.addEventListener('pointermove', e=>{
-    if(!painting)return;
     const pt=point(e);
+    hoverPt=pt; drawCursor(pt);
+    if(!painting)return;
     paintHeight(pt,(tool==='height-up'?1:-1)*Number($('strength').value||0.04));
+    buildHeightCanvas(); requestDraw();
   });
-  window.addEventListener('pointerup', ()=>{if(painting){painting=false;status('地形已修改');}});
+  canvas.addEventListener('pointerleave', ()=>{ hoverPt=null; drawCursor(null); });
+  canvas.addEventListener('pointerenter', e=>{ const pt=point(e); hoverPt=pt; drawCursor(pt); });
+  window.addEventListener('pointerup', ()=>{if(painting){painting=false;buildHeightCanvas();requestDraw();status('地形已修改');}});
   canvas.addEventListener('dblclick', ()=>{ if(draft) finishRoad(); });
 
   function finishRoad(){
@@ -390,6 +453,7 @@
       status('路线已完成（'+draft.points.length+' 点）');
     }
     draft=null;
+    requestDraw();
   }
   $('finishRoad').addEventListener('click',finishRoad);
 
@@ -440,8 +504,10 @@
   $('localLoad').addEventListener('click',()=>{try{const raw=localStorage.getItem('steel_map_planner_v1');if(!raw){status('本地没有地图');return;}snapshot();importData(JSON.parse(raw));}catch(e){status('读取失败：'+e.message);}});
   $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];buildHeightCanvas();draw();status('已清空');});
   $('undo').addEventListener('click',undo);
-  $('gridBtn').addEventListener('click',()=>{state.grid=!state.grid;draw();});
-  $('contourBtn').addEventListener('click',()=>{state.contour=!state.contour;draw();});
+  $('gridBtn').addEventListener('click',()=>{state.grid=!state.grid;$('gridBtn').textContent=state.grid?'网格：开':'网格：关';$('gridBtn').classList.toggle('on',state.grid);draw();});
+  $('contourBtn').addEventListener('click',()=>{state.contour=!state.contour;$('contourBtn').textContent=state.contour?'等高线：开':'等高线：关';$('contourBtn').classList.toggle('on',state.contour);draw();status(state.contour?'等高线已开启':'等高线已关闭');});
+  $('brush').addEventListener('input',()=>{if(hoverPt)drawCursor(hoverPt);});
+  $('objectRadius').addEventListener('input',()=>{if(hoverPt)drawCursor(hoverPt);});
   $('mapName').addEventListener('input',e=>{state.name=e.target.value;draw();});
   $('mapSize').addEventListener('change',e=>{state.size=Number(e.target.value);draw();});
   $('heightRes').addEventListener('change',e=>{state.res=Number(e.target.value);state.height=new Float32Array(state.res*state.res);buildHeightCanvas();draw();});
@@ -455,7 +521,10 @@
     if(e.key==='Enter'){finishRoad();e.preventDefault();}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){undo();e.preventDefault();}
   });
-  styleToolButtons(); draw();
+  styleToolButtons();
+  $('gridBtn').textContent='网格：开'; $('contourBtn').textContent='等高线：开';
+  window.__MAP_EDITOR__ = { get state(){ return state; }, exportData: exportData, draw: draw, setTool: setTool };
+  draw();
   status('从草图开始，或直接抬高/压低地形');
 })();
 </script>
