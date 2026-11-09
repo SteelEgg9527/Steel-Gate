@@ -1774,7 +1774,7 @@
         aiShipUsed: this.aiShipUsed,
         aiShipRespawn: this.aiShipRespawn,
         aiShipCost: this.aiShipCost,
-        aiShipTimer: this.aiShipAttackTimer,
+        aiShipAttackTimer: this.aiShipAttackTimer,
         radarScanNext: this.radarScanNext,
         radarScanUntil: this.radarScanUntil,
         ships: this.battleships.map(function (s) {
@@ -1887,7 +1887,7 @@
       this.aiShipUsed = nv.aiShipUsed || this.aiShipUsed;
       this.aiShipRespawn = nv.aiShipRespawn || this.aiShipRespawn;
       this.aiShipCost = nv.aiShipCost || this.aiShipCost;
-      this.aiShipAttackTimer = nv.aiShipTimer || this.aiShipAttackTimer;
+      this.aiShipAttackTimer = nv.aiShipAttackTimer || nv.aiShipTimer || this.aiShipAttackTimer;
       this.radarScanNext = nv.radarScanNext || this.radarScanNext;
       this.radarScanUntil = nv.radarScanUntil || this.radarScanUntil;
       this.shipRecords = nv.shipRecords || [];
@@ -7336,34 +7336,32 @@
     }
   };
 
-  Game.prototype.updateAIAir = function (dt) {
-    if ((this.mode === 'lastStand' || this.mode === 'navalLastStand')) {
-      var d = this.defense;
-      if (!d || !d.airQueue || !d.airQueue.length) return;
-      while (d.airQueue.length && this.time >= d.airQueue[0].at) {
-        var group = d.airQueue.shift();
-        if (this.aliveCount('red') === 0) continue;
-        var count = Math.max(1, group.count || 1);
-        if (group.heavy) {
-          for (var hb = 0; hb < count; hb++) {
-            this.spawnAIHeavyBomber('red', this.yellow.x, this.yellow.y);
-          }
-          continue;
+  Game.prototype.updateDefenseAir = function () {
+    var d = this.defense;
+    if (!d || !d.airQueue || !d.airQueue.length) return;
+    while (d.airQueue.length && this.time >= d.airQueue[0].at) {
+      var group = d.airQueue.shift();
+      if (this.aliveCount('red') === 0) continue;
+      var count = Math.max(1, group.count || 1);
+      if (group.heavy) {
+        for (var hb = 0; hb < count; hb++) {
+          this.spawnAIHeavyBomber('red', this.yellow.x, this.yellow.y);
         }
-        var cang = Math.random() * Math.PI * 2;
-        var crad = Math.sqrt(Math.random()) * this.yellow.r * 0.55;
-        var ctx0 = this.yellow.x + Math.cos(cang) * crad;
-        var cty0 = this.yellow.y + Math.sin(cang) * crad;
-        this.spawnAirGroup('red', ctx0, cty0, this.yellow.x, this.yellow.y,
-          this.yellow.r * 0.9, count);
+        continue;
       }
-      this.updateAIPatrols();
-      return;
+      var cang = Math.random() * Math.PI * 2;
+      var crad = Math.sqrt(Math.random()) * this.yellow.r * 0.55;
+      var ctx0 = this.yellow.x + Math.cos(cang) * crad;
+      var cty0 = this.yellow.y + Math.sin(cang) * crad;
+      this.spawnAirGroup('red', ctx0, cty0, this.yellow.x, this.yellow.y,
+        this.yellow.r * 0.9, count);
     }
+  };
+
+  Game.prototype.updateMeleeAir = function (dt) {
     var air = SL.AI_AIR;
     for (var si = 1; si < SL.SIDE_ORDER.length; si++) {
       var side = SL.SIDE_ORDER[si];
-      if ((this.mode === 'lastStand' || this.mode === 'navalLastStand') && side !== 'red') continue;
       var t = this.teams[side];
       if (t.airTimer === undefined) t.airTimer = 30 + Math.random() * 50;
       t.airTimer -= dt;
@@ -7409,6 +7407,15 @@
       }
       this.spawnAirGroup(side, gx, gy, tx, ty, radius, count, antiShip);
     }
+  };
+
+  Game.prototype.updateAIAir = function (dt) {
+    if (this.mode === 'lastStand' || this.mode === 'navalLastStand') {
+      this.updateDefenseAir();
+      this.updateAIPatrols();
+      return;
+    }
+    this.updateMeleeAir(dt);
     this.updateAIPatrols();
     this.tryAILargeRaid();
   };
