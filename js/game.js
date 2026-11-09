@@ -2089,13 +2089,22 @@
     return 'late';
   };
 
+  Game.prototype.aiEquipProfile = function () {
+    var p = (SL.AI_EQUIP && SL.AI_EQUIP[this.difficulty]) || { chance: 0.45, cap: 4 };
+    return p;
+  };
+
+  Game.prototype.aiEquipChance = function () {
+    return this.aiEquipProfile().chance;
+  };
+
   Game.prototype.aiEquipCap = function () {
-    var cap = SL.AI_EQUIP_MAX || { easy: 2, normal: 4, hard: 6 };
-    if (this.difficulty === 'easy') return cap.easy;
-    if (this.difficulty === 'normal') return cap.normal;
-    if (this.difficulty === 'hard') return cap.hard;
-    var stage = this.endlessStage();
-    return stage === 'early' ? cap.endlessEarly : (stage === 'mid' ? cap.endlessMid : cap.endlessLate);
+    var p = this.aiEquipProfile();
+    if (this.difficulty === 'endless') {
+      var stage = this.endlessStage();
+      return stage === 'early' ? p.early : (stage === 'mid' ? p.mid : p.late);
+    }
+    return p.cap || 4;
   };
 
   Game.prototype.aiFortWeaponCap = function () {
@@ -2407,7 +2416,7 @@
   };
 
   Game.prototype.rollAIEquipment = function (u) {
-    var chance = (SL.AI_EQUIP && SL.AI_EQUIP[this.difficulty]) || 0.45;
+    var chance = this.aiEquipChance();
     var cap = this.aiEquipCap();
     var innate = 0;
     for (var n = 0; n < u.items.length; n++) if (u.items[n].innate) innate++;
