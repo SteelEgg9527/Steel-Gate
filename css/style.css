@@ -1930,7 +1930,8 @@ html, body {
 .bomber-slot-plane small { display: block; font-size: 8px; color: #939d8b; margin-top: 2px; }
 .bomber-slot-plane small.drop-order { color: #b9a36f; margin-top: 1px; }
 .bomber-hardpoints {
-  display: flex; flex-wrap: wrap; gap: 3px; min-height: 18px; margin-top: 4px;
+  display: flex; flex-wrap: nowrap; gap: 3px; min-height: 18px; margin-top: 4px;
+  overflow-x: auto;
   padding: 3px; border: 1px solid rgba(177,159,113,0.22); background: rgba(12,15,12,0.35);
 }
 .bomber-hangar {
@@ -2980,8 +2981,9 @@ html, body {
 
 /* B-17 挂载卡片槽：左键购买，右键直接装备到1号机 */
 .bomber-hardpoints {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 3px;
   min-height: 26px;
   margin-top: 4px;
