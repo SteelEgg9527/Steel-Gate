@@ -33,9 +33,9 @@
     // 先让加载层画出来，再做地图测绘
     setTimeout(function () {
       var playable = SL.MAPS.filter(function (m) {
-        return !m.test && (isNavalMode(gameMode) ? m.naval : !m.naval);
+        return !m.test && !m.custom && (isNavalMode(gameMode) ? m.naval : !m.naval);
       });
-      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
+      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test && !m.custom; });
       var chosen = (paramMap && SL.MAP_BY_ID[paramMap])
         ? paramMap
         : playable[Math.floor(Math.random() * playable.length)].id;
@@ -65,6 +65,7 @@
       });
       newGame(params.get('autostart') === '1');
       bindMainMenu();
+      bindCustomMaps();
       if (!started) showMainMenu(); else hideMainMenu();
       UI.setMapButtons(SL.Terrain.map.id, gameMode);
       renderModeButtons();
@@ -252,7 +253,7 @@
       (!isNavalMode(id) && cur && cur.naval && !cur.test);
     if (needSwitch) {
       var pool = SL.MAPS.filter(function (m) {
-        return !m.test && (isNavalMode(id) ? m.naval : !m.naval);
+        return !m.test && !m.custom && (isNavalMode(id) ? m.naval : !m.naval);
       });
       if (pool.length) { chooseMap(pool[0].id); return; }
     }
@@ -274,15 +275,15 @@
   }
 
   // 在简报里换战场：重生成地形并开一局新的（仅开局前可见）
-  function chooseMap(id) {
+  function chooseMap(id, force) {
     if (id === 'random') {
       var playable = SL.MAPS.filter(function (m) {
-        return !m.test && (isNavalMode(gameMode) ? m.naval : !m.naval);
+        return !m.test && !m.custom && (isNavalMode(gameMode) ? m.naval : !m.naval);
       });
-      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test; });
+      if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test && !m.custom; });
       id = playable[Math.floor(Math.random() * playable.length)].id;
     }
-    if (!SL.MAP_BY_ID[id] || (SL.Terrain.map && id === SL.Terrain.map.id)) return;
+    if (!SL.MAP_BY_ID[id] || (!force && SL.Terrain.map && id === SL.Terrain.map.id)) return;
     if (SL.MAP_BY_ID[id].naval && !isNavalMode(gameMode)) gameMode = 'naval';
     else if (!SL.MAP_BY_ID[id].naval && isNavalMode(gameMode)) gameMode = 'melee';
     if (SL.MAP_BY_ID[id].test) gameMode = SL.MAP_BY_ID[id].naval ? 'naval' : 'melee';
@@ -380,6 +381,10 @@
   function showMainMenu() {
     var mm = document.getElementById('main-menu');
     if (!mm) return;
+    var cm = document.getElementById('custom-maps');
+    if (cm) cm.classList.add('hidden');
+    var me = document.getElementById('map-editor');
+    if (me) me.classList.add('hidden');
     UI.showBriefing(false);
     UI.hideResult();
     mm.classList.remove('hidden');
@@ -423,6 +428,198 @@
     } else {
       showMainMenu();
     }
+  }
+
+  var customEditingId = null;
+
+  function customEl(id) { return document.getElementById(id); }
+
+  function openCustomMaps() {
+    hideMainMenu();
+    renderCustomMapList();
+    var el = customEl('custom-maps');
+    if (el) el.classList.remove('hidden');
+  }
+
+  function closeCustomMaps() {
+    var el = customEl('custom-maps');
+    if (el) el.classList.add('hidden');
+    showMainMenu();
+  }
+
+  function customMapDate(ts) {
+    try { return new Date(ts || Date.now()).toLocaleDateString(); } catch (e) { return ''; }
+  }
+
+  function renderCustomMapList() {
+    var box = customEl('custom-map-list');
+    if (!box) return;
+    box.innerHTML = '';
+    var list = (SL.CustomMaps && SL.CustomMaps.list()) || [];
+    if (!list.length) {
+      var empty = document.createElement('div');
+      empty.className = 'custom-map-empty';
+      empty.textContent = '还没有自定义地图。点击“新建地图”开始设计。';
+      box.appendChild(empty);
+      return;
+    }
+    list.sort(function (a, b) { return (b.updated || 0) - (a.updated || 0); });
+    for (var i = 0; i < list.length; i++) {
+      (function (entry) {
+        var row = document.createElement('div');
+        row.className = 'custom-map-row';
+        var main = document.createElement('div');
+        main.className = 'custom-map-main';
+        var name = document.createElement('div');
+        name.className = 'custom-map-name';
+        name.textContent = entry.name || '自定义地图';
+        var meta = document.createElement('div');
+        meta.className = 'custom-map-meta';
+        meta.textContent = '2000m 陆战 · 更新 ' + customMapDate(entry.updated);
+        main.appendChild(name);
+        main.appendChild(meta);
+        var buttons = document.createElement('div');
+        buttons.className = 'custom-map-buttons';
+        function addBtn(label, fn, primary) {
+          var b = document.createElement('button');
+          b.type = 'button';
+          if (primary) b.className = 'primary';
+          b.textContent = label;
+          b.addEventListener('click', fn);
+          buttons.appendChild(b);
+        }
+        addBtn('混战', function () { playCustomMap(entry.id, 'melee'); }, true);
+        addBtn('防御', function () { playCustomMap(entry.id, 'lastStand'); });
+        addBtn('编辑', function () { openMapEditor(entry); });
+        addBtn('导出', function () { SL.CustomMaps.exportPlan(entry.id); });
+        addBtn('删除', function () {
+          if (!confirm('删除自定义地图“' + (entry.name || '未命名') + '”？')) return;
+          SL.CustomMaps.remove(entry.id);
+          renderCustomMapList();
+        });
+        row.appendChild(main);
+        row.appendChild(buttons);
+        box.appendChild(row);
+      })(list[i]);
+    }
+  }
+
+  function openMapEditor(entry) {
+    customEditingId = entry ? entry.id : null;
+    var list = customEl('custom-maps');
+    if (list) list.classList.add('hidden');
+    var editor = customEl('map-editor');
+    var frame = customEl('custom-editor-frame');
+    var status = customEl('editor-status');
+    if (!editor || !frame) return;
+    if (status) status.textContent = entry ? '正在载入地图…' : '参考图不会写入地图文件';
+    editor.classList.remove('hidden');
+    frame.onload = function () {
+      if (entry && frame.contentWindow && frame.contentWindow.__MAP_EDITOR__ &&
+          frame.contentWindow.__MAP_EDITOR__.importData) {
+        try {
+          frame.contentWindow.__MAP_EDITOR__.importData(SL.CustomMaps.plan(entry.id));
+          if (status) status.textContent = '已载入：' + (entry.name || '自定义地图');
+        } catch (e) { if (status) status.textContent = '载入失败：' + e.message; }
+      } else if (status) {
+        status.textContent = '参考图不会写入地图文件';
+      }
+    };
+    frame.src = 'tools/map-planner.html?editor=' + Date.now();
+  }
+
+  function closeMapEditor() {
+    var editor = customEl('map-editor');
+    if (editor) editor.classList.add('hidden');
+    customEditingId = null;
+    openCustomMaps();
+  }
+
+  function editorPlan() {
+    var frame = customEl('custom-editor-frame');
+    if (!frame || !frame.contentWindow || !frame.contentWindow.__MAP_EDITOR__) return null;
+    try { return frame.contentWindow.__MAP_EDITOR__.exportData(); } catch (e) { return null; }
+  }
+
+  function saveEditor(playMode) {
+    var status = customEl('editor-status');
+    var plan = editorPlan();
+    if (!plan) { if (status) status.textContent = '编辑器尚未准备好'; return; }
+    var res = SL.CustomMaps.save(plan, customEditingId);
+    if (!res.ok) { if (status) status.textContent = res.error; return; }
+    customEditingId = res.entry.id;
+    if (status) status.textContent = '已保存：' + res.entry.name;
+    if (playMode) {
+      var editor = customEl('map-editor');
+      if (editor) editor.classList.add('hidden');
+      playCustomMap(res.entry.id, playMode);
+    } else {
+      closeMapEditor();
+    }
+  }
+
+  function exportEditorPlan() {
+    var plan = editorPlan();
+    if (!plan) return;
+    var blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = String(plan.name || 'custom-map').replace(/[^\w\u4e00-\u9fa5-]+/g, '-') + '.steelmap.json';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+  function playCustomMap(id, mode) {
+    var entry = SL.CustomMaps && SL.CustomMaps.get(id);
+    if (!entry) { UI.pushToast('自定义地图不存在', 'loss'); return; }
+    gameMode = mode === 'lastStand' ? 'lastStand' : 'melee';
+    difficulty = difficulty || 'normal';
+    var cm = customEl('custom-maps');
+    if (cm) cm.classList.add('hidden');
+    hideMainMenu();
+    chooseMap(id, true);
+    started = false;
+    paused = false;
+    UI.setPaused(false);
+    UI.showBriefing(true);
+  }
+
+  function importCustomMapFile(file) {
+    if (!file) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var plan;
+      try { plan = JSON.parse(rd.result); } catch (e) { UI.pushToast('地图文件不是有效 JSON', 'loss'); return; }
+      var res = SL.CustomMaps.save(plan);
+      if (!res.ok) { UI.pushToast(res.error, 'loss'); return; }
+      renderCustomMapList();
+      UI.pushToast('已导入自定义地图：' + res.entry.name, 'win');
+    };
+    rd.readAsText(file);
+  }
+
+  function bindCustomMaps() {
+    var btn = customEl('mm-custom');
+    if (btn) btn.addEventListener('click', openCustomMaps);
+    var close = customEl('custom-close');
+    if (close) close.addEventListener('click', closeCustomMaps);
+    var newBtn = customEl('custom-new');
+    if (newBtn) newBtn.addEventListener('click', function () { openMapEditor(null); });
+    var importBtn = customEl('custom-import');
+    var file = customEl('custom-file');
+    if (importBtn && file) importBtn.addEventListener('click', function () { file.click(); });
+    if (file) file.addEventListener('change', function () {
+      importCustomMapFile(file.files && file.files[0]);
+      file.value = '';
+    });
+    var editorClose = customEl('editor-close');
+    if (editorClose) editorClose.addEventListener('click', closeMapEditor);
+    var save = customEl('editor-save');
+    if (save) save.addEventListener('click', function () { saveEditor(null); });
+    var play = customEl('editor-play');
+    if (play) play.addEventListener('click', function () { saveEditor('melee'); });
+    var exp = customEl('editor-export');
+    if (exp) exp.addEventListener('click', exportEditorPlan);
   }
 
   function bindMainMenu() {

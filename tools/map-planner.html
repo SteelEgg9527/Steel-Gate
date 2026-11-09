@@ -629,7 +629,11 @@
     if(data.height&&Array.isArray(data.height.values)) data.height.values.forEach((v,i)=>{if(i<state.height.length)state.height[i]=Number(v)||0;});
     state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
     state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
-    state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];state.backgroundName='';
+    state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];
+    var maxSeq=0;
+    (state.zones||[]).concat(state.sites||[]).forEach(function(o){var m=String(o&&o.id||'').match(/(\d+)$/);if(m)maxSeq=Math.max(maxSeq,parseInt(m[1],10)||0);});
+    state.seq=maxSeq;
+    state.backgroundName='';
     state.background=null;
     if($('sketchName')) $('sketchName').textContent='未上传';
     if($('file')) $('file').value='';
@@ -687,7 +691,7 @@
   });
   styleToolButtons();
   $('gridBtn').textContent='网格：开'; $('contourBtn').textContent='等高线：开';
-  window.__MAP_EDITOR__ = { get state(){ return state; }, exportData: exportData, draw: draw, setTool: setTool };
+  window.__MAP_EDITOR__ = { get state(){ return state; }, exportData: exportData, importData: importData, draw: draw, setTool: setTool };
   draw();
   status('从草图开始，或直接抬高/压低地形');
 })();

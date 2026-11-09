@@ -3021,3 +3021,29 @@ html, body {
   width: 0%;
 }
 .eng-lay span { display: block; margin-top: 2px; font: 9px var(--mono); color: #d8c58f; }
+
+
+/* ---------------- 自定义地图工坊 ---------------- */
+.custom-sheet { width: min(880px, 94vw); }
+.custom-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.custom-actions button { min-height: 30px; }
+.custom-map-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 14px; }
+.custom-map-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid rgba(214,196,150,0.18); background: rgba(255,255,255,0.025); }
+.custom-map-main { flex: 1; min-width: 0; }
+.custom-map-name { color: #e8ddbd; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.custom-map-meta { color: #8f927f; font: 10px var(--mono); margin-top: 3px; }
+.custom-map-row .custom-map-buttons { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.custom-map-row .custom-map-buttons button { padding: 4px 7px; font-size: 10px; }
+.custom-map-empty { padding: 24px 12px; text-align: center; color: #8f927f; border: 1px dashed rgba(214,196,150,0.22); }
+.custom-note { color: #7f8472; font-size: 10px; line-height: 1.6; margin: 8px 0 0; }
+.custom-editor-sheet { width: min(1500px, 96vw); height: min(92vh, 900px); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
+.custom-editor-sheet .sheet-head { flex: none; }
+#custom-editor-frame { flex: 1; width: 100%; min-height: 0; border: 0; background: #c7b991; }
+.custom-editor-foot { flex: none; gap: 8px; align-items: center; flex-wrap: wrap; }
+.custom-editor-status { flex: 1; min-width: 160px; color: #8f927f; font-size: 10px; }
+.custom-editor-foot button { min-height: 30px; }
+@media (max-width: 760px) {
+  .custom-map-row { align-items: flex-start; flex-direction: column; }
+  .custom-map-row .custom-map-buttons { justify-content: flex-start; }
+  .custom-editor-sheet { height: 94vh; }
+}

@@ -589,7 +589,7 @@
     box.innerHTML = '';
     var fleet = mode || (game ? game.mode : 'melee');
     var list = SL.MAPS.filter(function (m) {
-      return (fleet === 'naval' || fleet === 'navalLastStand') ? !!m.naval : !m.naval;
+      return !m.custom && ((fleet === 'naval' || fleet === 'navalLastStand') ? !!m.naval : !m.naval);
     }).map(function (m) { return { id: m.id, name: m.name }; });
     list.push({ id: 'random', name: '随机' });
     for (var i = 0; i < list.length; i++) {

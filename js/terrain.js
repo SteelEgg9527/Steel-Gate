@@ -54,6 +54,14 @@
   T.setMap = function (id) {
     var m = SL.MAP_BY_ID[id] || SL.MAPS[0];
     T.map = m;
+    // 从海战返回陆战/自定义地图时，必须恢复陆战尺寸，不能沿用 5km
+    if (!m.naval) {
+      T.size = m.size || SIZE;
+      T.origin = 0;
+      T.extent = T.size;
+      T.end = T.size;
+      SL.CONFIG.mapSize = T.size;
+    }
     T.customHeight = m.heightGrid || null;
     T.customHeightRes = m.heightRes || 128;
     T.waterAreas = m.waterAreas || [];

@@ -392,6 +392,7 @@
           <button id="mm-start" type="button" class="mm-btn primary">开始游戏 <span>›</span></button>
           <button id="mm-continue" type="button" class="mm-btn">继续游戏 <span>›</span></button>
           <button id="mm-settings" type="button" class="mm-btn">游戏设置 <span>›</span></button>
+          <button id="mm-custom" type="button" class="mm-btn">自定义地图 <small>玩家工坊</small></button>
           <button id="mm-leaderboard" type="button" class="mm-btn">排行榜 <small>公共排行</small></button>
         </div>
         <p class="main-menu-version">v0.12.31 · 钢铁之门</p>
@@ -460,6 +461,50 @@
       <a href="https://github.com/SteelEgg9527/Steel-Gate/issues" target="_blank" rel="noopener">意见反馈</a>
       <span>作者：钢蛋</span>
     </footer>
+  </div>
+
+  <!-- 自定义地图 -->
+  <div id="custom-maps" class="overlay hidden">
+    <div class="sheet custom-sheet">
+      <div class="sheet-head">
+        <div>
+          <div class="sheet-kicker">CUSTOM MAPS · LOCAL</div>
+          <h1>自定义地图</h1>
+          <p class="sheet-sub">只保存在本机，不进入正式地图池。可混战或防御游玩。</p>
+        </div>
+        <button id="custom-close" class="menu-return" type="button">关闭</button>
+      </div>
+      <div class="sheet-body">
+        <div class="custom-actions">
+          <button id="custom-new" class="primary" type="button">新建地图</button>
+          <button id="custom-import" type="button">导入地图文件</button>
+          <input id="custom-file" type="file" accept=".json,application/json" style="display:none">
+        </div>
+        <div id="custom-map-list" class="custom-map-list"></div>
+        <p class="custom-note">导出的 .steelmap.json 可以发给作者，由作者决定是否收录为正式地图。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内置地图编辑器 -->
+  <div id="map-editor" class="overlay hidden">
+    <div class="sheet custom-editor-sheet">
+      <div class="sheet-head">
+        <div>
+          <div class="sheet-kicker">MAP EDITOR · LOCAL</div>
+          <h1>地图编辑器</h1>
+          <p class="sheet-sub">画完后保存到自定义地图，不会修改正式地图。</p>
+        </div>
+        <button id="editor-close" class="menu-return" type="button">关闭</button>
+      </div>
+      <iframe id="custom-editor-frame" title="自定义地图编辑器"></iframe>
+      <div class="sheet-foot custom-editor-foot">
+        <span id="editor-status" class="custom-editor-status">参考图不会写入地图文件</span>
+        <button id="editor-export" type="button">导出地图文件</button>
+        <button id="editor-save" type="button">保存到自定义地图</button>
+        <button id="editor-play" class="primary" type="button">保存并混战</button>
+      </div>
+    </div>
   </div>
 
   <!-- 近期战绩 -->
@@ -741,9 +786,11 @@
 <script src="js/util.js?v=0.12.31"></script>
 <script src="js/config.js?v=0.12.31"></script>
 <script src="js/audio.js?v=0.12.31"></script>
-<script src="js/maps.js?v=0.12.31"></script>\n<script src="js/maps-plan.js?v=0.12.31"></script>
+<script src="js/maps.js?v=0.12.31"></script>
+<script src="js/maps-plan.js?v=0.12.31"></script>
 <script src="js/terrain.js?v=0.12.31"></script>
 <script src="js/naval.js?v=0.12.31"></script>
+<script src="js/custom-maps.js?v=0.12.31"></script>
 <script src="js/game.js?v=0.12.31"></script>
 <script src="js/bomber.js?v=0.12.31"></script>
 <script src="js/render.js?v=0.12.31"></script>
