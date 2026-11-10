@@ -9,6 +9,8 @@
   var master = null;
   var noiseBuf = null;
   var last = {};
+  var MASTER_HEADROOM = 0.72;
+  function clampVol(v) { return Math.max(0, Math.min(1, Number(v) || 0)); }
 
   A.muted = false;
   try { A.muted = localStorage.getItem('steel_muted') === '1'; } catch (e) {}
@@ -19,11 +21,11 @@
   };
   A.setVolumes = function (vals) {
     if (!vals) return;
-    A.volumes.master = vals.master == null ? A.volumes.master : vals.master;
-    A.volumes.artillery = vals.artillery == null ? A.volumes.artillery : vals.artillery;
-    A.volumes.explosion = vals.explosion == null ? A.volumes.explosion : vals.explosion;
-    A.volumes.ui = vals.ui == null ? A.volumes.ui : vals.ui;
-    if (master) { try { master.gain.setTargetAtTime(A.muted ? 0 : 1.15 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {} }
+    A.volumes.master = vals.master == null ? A.volumes.master : clampVol(vals.master);
+    A.volumes.artillery = vals.artillery == null ? A.volumes.artillery : clampVol(vals.artillery);
+    A.volumes.explosion = vals.explosion == null ? A.volumes.explosion : clampVol(vals.explosion);
+    A.volumes.ui = vals.ui == null ? A.volumes.ui : clampVol(vals.ui);
+    if (master) { try { master.gain.setTargetAtTime(A.muted ? 0 : MASTER_HEADROOM * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {} }
   };
 
   function ensure() {
@@ -34,17 +36,33 @@
     var C = window.AudioContext || window.webkitAudioContext;
     if (!C) return null;
     try {
-      ctx = new C();
+      ctx = new C({ latencyHint: 'interactive' });
       master = ctx.createGain();
-      master.gain.value = A.muted ? 0 : 1.15 * A.volume('master');
+      master.gain.value = A.muted ? 0 : MASTER_HEADROOM * A.volume('master');
+      // 给合成音效留足动态余量，避免多个爆炸/炮声叠加时数字削波
+      var hp = ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 28;
+      hp.Q.value = 0.7;
       var limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -10;
-      limiter.knee.value = 12;
-      limiter.ratio.value = 10;
-      limiter.attack.value = 0.003;
-      limiter.release.value = 0.25;
-      master.connect(limiter);
-      limiter.connect(ctx.destination);
+      limiter.threshold.value = -8;
+      limiter.knee.value = 8;
+      limiter.ratio.value = 16;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.18;
+      // 软削波兜底：只处理峰值，正常音量保持线性
+      var shaper = ctx.createWaveShaper();
+      var curve = new Float32Array(1024);
+      for (var ci = 0; ci < curve.length; ci++) {
+        var x = ci * 2 / (curve.length - 1) - 1;
+        curve[ci] = Math.tanh(x * 1.15) / Math.tanh(1.15);
+      }
+      shaper.curve = curve;
+      shaper.oversample = '4x';
+      master.connect(hp);
+      hp.connect(limiter);
+      limiter.connect(shaper);
+      shaper.connect(ctx.destination);
       var len = Math.floor(ctx.sampleRate * 0.7);
       noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
       var data = noiseBuf.getChannelData(0);
@@ -162,9 +180,9 @@
   A.explosion = function (radius, x, y) {
     var g = A.gainAt(x, y) * A.volume('explosion');
     if (g <= 0 || !ensure() || A.muted) return;
-    if (!gate('boom', 0.045)) return;
+    if (!gate('boom', 0.06)) return;
     var r = Math.max(15, radius || 30);
-    var v = Math.min(0.5, 0.2 + r / 320) * g;
+    var v = Math.min(0.38, 0.18 + r / 360) * g;
     noise(0.42, v, 340, 'lowpass', 0.6);
     tone(62, 0.4, 'sine', v * 0.7, 24);
   };
@@ -234,7 +252,7 @@
       A.click();
     }
     if (master) {
-      try { master.gain.setTargetAtTime(A.muted ? 0 : 1.15 * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {}
+      try { master.gain.setTargetAtTime(A.muted ? 0 : MASTER_HEADROOM * A.volume('master'), ctx.currentTime, 0.03); } catch (e) {}
     }
     return A.muted;
   };
