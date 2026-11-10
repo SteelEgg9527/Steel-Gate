@@ -532,7 +532,7 @@
         var tAt = 0.18 + ai * 0.16;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 16, headLen = 8, shaftW = 4.5, headW = 11;
+        var L = 25, headLen = 13, shaftW = 7.5, headW = 17.5;
         // 空心图块箭头：尾部矩形杆 + 前端三角箭头，内部透空
         function bx(px, py) { return cx + ux * px + hx * py; }
         function by(px, py) { return cy + uy * px + hy * py; }
@@ -545,10 +545,11 @@
         ctx.lineTo(bx(L - headLen, shaftW), by(L - headLen, shaftW));
         ctx.lineTo(bx(-L, shaftW), by(-L, shaftW));
         ctx.closePath();
-        ctx.fillStyle = 'rgba(96,176,255,0.12)';
+        ctx.fillStyle = 'rgba(96,176,255,0.03)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(151,216,255,0.96)';
-        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = 'rgba(151,216,255,0.98)';
+        ctx.lineWidth = 4.5;
+        ctx.lineJoin = 'miter';
         ctx.stroke();
       }
     }
