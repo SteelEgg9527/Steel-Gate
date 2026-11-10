@@ -49,6 +49,10 @@
         kind: kind, x: num(z.x, size / 2), y: num(z.y, size / 2), r: num(z.r, 72)
       };
     });
+    var firstVillage = null;
+    for (var vzi = 0; vzi < zones.length; vzi++) {
+      if (zones[vzi].kind === 'village' || zones[vzi].kind === 'town') { firstVillage = zones[vzi]; break; }
+    }
     var sites = (plan.sites || []).map(function (s, i) {
       return {
         id: s.id || ('custom_site_' + i), kind: s.kind || 'comm',
@@ -74,7 +78,7 @@
       roads: roads.map(function (r) { return r.points; }), roadMeta: roads,
       tracks: aiLanes.map(function (r) { return r.points; }),
       streams: [], hills: [], farms: [],
-      village: { x: size / 2, y: size / 2, name: '自定义村落' },
+      village: firstVillage ? { x: firstVillage.x, y: firstVillage.y, name: firstVillage.name } : { x: size / 2, y: size / 2, name: '', houses: false },
       streamName: '',
       forests: (plan.forests || []).map(function (f, i) {
         return { x: num(f.x, 0), y: num(f.y, 0), r: num(f.r, 80), w: 1, name: '林地 ' + (i + 1) };

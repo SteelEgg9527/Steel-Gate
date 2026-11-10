@@ -267,12 +267,9 @@
   }
 
   function resetHeight(res){
-    state.res = res;
+    heightCanvas.width=res;heightCanvas.height=res;
+    // 空白底图必须是平地；不要预置起伏，否则游戏端归一化后会变成山地
     state.height = new Float32Array(res*res);
-    // 轻微起伏，避免默认完全平地
-    for (let y=0;y<res;y++) for(let x=0;x<res;x++){
-      state.height[y*res+x] = 0.12 + Math.sin(x/res*Math.PI*3)*0.025 + Math.cos(y/res*Math.PI*4)*0.02;
-    }
   }
   resetHeight(128);
 

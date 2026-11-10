@@ -159,6 +159,7 @@ if (mode === 'naval') {
     kind: z.kind || 'fort',
     x: num(z.x, size / 2), y: num(z.y, size / 2), r: num(z.r, 72)
   }));
+  const firstVillage = zones.find(z => z.kind === 'village' || z.kind === 'town') || null;
   const sites = (plan.sites || []).map((s, i) => ({
     id: s.id || ('plan_site_' + i), kind: s.kind || 'comm',
     name: s.name || '站点', x: num(s.x, size / 2), y: num(s.y, size / 2),
@@ -183,7 +184,7 @@ if (mode === 'naval') {
     roads: roads.map(r => r.points), roadMeta: roads,
     tracks: (plan.aiLanes || []).map(r => pathPoints(r.points)).filter(p => p.length >= 2),
     streams: [], hills: [], farms: [],
-    village: { x: size / 2, y: size / 2, name: '规划村' }, streamName: '',
+    village: firstVillage ? { x: firstVillage.x, y: firstVillage.y, name: firstVillage.name } : { x: size / 2, y: size / 2, name: '', houses: false }, streamName: '',
     forests: (plan.forests || []).map((f, i) => ({
       x: num(f.x, 0), y: num(f.y, 0), r: num(f.r, 80), w: 1, name: '林地 ' + (i + 1)
     })),

@@ -411,6 +411,7 @@
 
   function buildVillage() {
     T.buildings = [];
+    if (!T.village || T.village.houses === false) return;
     var rnd = U.mulberry32(7071);
     var v = T.village;
     var specs = [
@@ -1202,7 +1203,7 @@
     }
 
     ctx.font = '600 13px ' + SL.FONT_UI;
-    if (seen(T.village.x + 4, T.village.y + 36)) {
+    if (T.village && T.village.name && seen(T.village.x + 4, T.village.y + 36)) {
       drawSheetText(ctx, (T.village && T.village.name) || '村庄', proj.x(T.village.x + 4), proj.y(T.village.y + 36), 'rgba(70,60,44,0.95)');
     }
     if (seen(468, 585)) {
