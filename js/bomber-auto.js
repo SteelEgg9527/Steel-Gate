@@ -532,18 +532,19 @@
         var tAt = 0.22 + ai * 0.28;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 28, W = 30, H = 24, I = 15;
-        // 参考图：外尖 + 左右肩 + 垂直边 + 底角 + 内部 V 形凹口
-        // 所有点都在方向坐标系中计算，旋转时不会被拉伸变形
+        var L = 32, W = 30;
+        // 严格按“平行四边形沿短边镜像”构造：
+        // 左半：T(L,0) S(0,W) B(-L,W) I(0,0)
+        // 沿短边 I-T 镜像得到右半，合并后恰好是外尖 + 肩 + 垂直边 + 内凹口
         function bx(px, py) { return cx + ux * px + hx * py; }
         function by(px, py) { return cy + uy * px + hy * py; }
         ctx.beginPath();
-        ctx.moveTo(bx(L, 0), by(L, 0));
-        ctx.lineTo(bx(0, W), by(0, W));
-        ctx.lineTo(bx(-H, W), by(-H, W));
-        ctx.lineTo(bx(-H + I, 0), by(-H + I, 0));
-        ctx.lineTo(bx(-H, -W), by(-H, -W));
-        ctx.lineTo(bx(0, -W), by(0, -W));
+        ctx.moveTo(bx(L, 0), by(L, 0));       // 外尖 T
+        ctx.lineTo(bx(0, W), by(0, W));       // 右肩 S
+        ctx.lineTo(bx(-L, W), by(-L, W));     // 右下底角 B
+        ctx.lineTo(bx(0, 0), by(0, 0));       // 内凹中心 I
+        ctx.lineTo(bx(-L, -W), by(-L, -W));   // 左下底角 B'
+        ctx.lineTo(bx(0, -W), by(0, -W));     // 左肩 S'
         ctx.closePath();
         ctx.fillStyle = 'rgba(96,176,255,0.03)';
         ctx.fill();
