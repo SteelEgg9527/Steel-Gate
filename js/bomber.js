@@ -1243,13 +1243,16 @@
       ctx.translate(sx, sy);
       // 显示该枚航弹实际落点的爆炸范围，不显示散布椭圆
       var blastR = Math.max(4, d.radius * z);
-      ctx.beginPath();
-      ctx.arc(0, 0, blastR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(218,145,74,0.10)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(244,205,133,0.86)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      var isAutoBomb = String(d.id).indexOf('auto_bd_') === 0;
+      if (!isAutoBomb) {
+        ctx.beginPath();
+        ctx.arc(0, 0, blastR, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(218,145,74,0.10)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(244,205,133,0.86)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
       if (String(d.id).indexOf('auto_bd_') !== 0) {
         ctx.fillStyle = 'rgba(40,26,14,0.82)';
         ctx.font = '700 10px ' + SL.FONT_UI;

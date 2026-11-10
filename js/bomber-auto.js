@@ -369,11 +369,17 @@
       // 炸弹从飞机当前实际位置投出，而不是直接在轰炸区生成爆炸
       var lat = formationLateral(bomb.planeIndex, planes.length);
       var nx = -a.dir.y, ny = a.dir.x;
+      var bd = B.bombs[bomb.type] || B.bombs.lb500;
       var tx = a.start.x + a.dir.x * a.length * bomb.frac + nx * lat;
       var ty = a.start.y + a.dir.y * a.length * bomb.frac + ny * lat;
+      // 落点随机散布：沿航向和横向各有一点偏差，避免所有炸弹落在同一条几何线上
+      var spread = Math.min(90, Math.max(24, bd.radius * 0.55));
+      var alongJitter = (Math.random() - 0.5) * spread * 1.5;
+      var crossJitter = (Math.random() - 0.5) * spread * 1.8;
+      tx += a.dir.x * alongJitter + nx * crossJitter;
+      ty += a.dir.y * alongJitter + ny * crossJitter;
       tx = clamp(tx, 4, (SL.CONFIG.mapSize || 2000) - 4);
       ty = clamp(ty, 4, (SL.CONFIG.mapSize || 2000) - 4);
-      var bd = B.bombs[bomb.type] || B.bombs.lb500;
       g.bomberDrops.push({
         id: 'auto_bd_' + (++g.bombers.dropSeq),
         planeId: dropPlane.id, side: 'blue', type: bomb.type,
