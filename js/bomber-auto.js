@@ -532,7 +532,7 @@
         var tAt = 0.22 + ai * 0.28;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 34, W = 28, H = 22, I = 14;
+        var L = 28, W = 30, H = 24, I = 15;
         // 参考图：外尖 + 左右肩 + 垂直边 + 底角 + 内部 V 形凹口
         // 所有点都在方向坐标系中计算，旋转时不会被拉伸变形
         function bx(px, py) { return cx + ux * px + hx * py; }
