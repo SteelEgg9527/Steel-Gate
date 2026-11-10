@@ -242,25 +242,16 @@
       <div id="air-roster" class="air-roster"><div class="air-none">编队为空 · 点击配备卡组建编队</div></div>
       <div class="air-cards">
         <div class="air-card" id="air-card-config" role="button" tabindex="0">
-          <b>配备</b><small id="air-card-config-sub">机库 / 编队</small>
+          <b>轰炸机配备</b><small id="air-card-config-sub">机库 / 编队 / 预设</small>
           <span class="air-card-mark">CFG</span>
         </div>
-        <div class="air-card" id="air-card-takeoff" role="button" tabindex="0">
-          <b>起飞</b><small id="air-card-takeoff-sub">点击起飞</small>
-          <span class="air-card-mark">T/O</span>
-        </div>
-        <div class="air-card" id="air-card-drop" role="button" tabindex="0">
-          <b>投弹</b><small id="air-card-drop-sub">点击开始投弹</small>
+        <div class="air-card" id="air-card-strike" role="button" tabindex="0" draggable="true">
+          <b>轰炸机出击</b><small id="air-card-strike-sub">点击后在地图设定轰炸线</small>
+          <em id="air-card-strike-budget">补给预算 0</em>
           <span class="air-card-mark">BMB</span>
-          <div class="air-drop-mode-row">
-            <span>单机</span>
-            <input id="air-drop-mode" type="range" min="0" max="1" step="1" value="0" aria-label="投弹模式">
-            <span>编队</span>
-          </div>
-          <em id="air-drop-mode-text">单机投弹</em>
         </div>
         <div class="air-card" id="air-card-return" role="button" tabindex="0">
-          <b>返航</b><small id="air-card-return-sub">开始返航</small>
+          <b>紧急返航</b><small id="air-card-return-sub">取消任务 / 立即脱离</small>
           <span class="air-card-mark">RTB</span>
         </div>
       </div>
@@ -289,6 +280,16 @@
         <button id="bomber-config-close" class="icon-btn" type="button">×</button>
       </div>
       <div class="bomber-config-body">
+        <div class="bomber-presets">
+          <span>预设配备</span>
+          <button type="button" data-bomber-preset="incendiary">5架 · 300lb燃烧</button>
+          <button type="button" data-bomber-preset="lb500">5架 · 500lb</button>
+          <button type="button" data-bomber-preset="lb1000">5架 · 1000lb</button>
+          <button type="button" data-bomber-preset="lb2000">5架 · 2000lb</button>
+          <button type="button" id="bomber-save-preset">保存当前方案</button>
+          <button type="button" data-bomber-preset="custom" id="bomber-preset-custom">上次保存方案</button>
+          <em id="bomber-preset-current">未选择预设</em>
+        </div>
         <section class="bomber-buy">
           <div class="bomber-pane-head"><span>购买栏</span><b id="bomber-config-score">可用分数 0</b></div>
           <div class="bomber-buy-list">
@@ -316,13 +317,6 @@
           <p class="tip">左键购买进入机库；右键购买并直接装备到 1 号机（1号满则依序找下一架）。卡片槽支持拖拽调整投弹顺序。</p>
         </section>
         <section class="bomber-right">
-          <label class="bomber-restock-row">
-            <span>返航后自动补充弹药</span>
-            <span class="bomber-switch">
-              <input id="bomber-auto-restock" type="checkbox">
-              <span class="bomber-switch-track"></span>
-            </span>
-          </label>
           <div class="bomber-pane-head"><span>编组栏</span><small>最多 5 架 · 从左到右投弹</small></div>
           <div id="bomber-slots" class="bomber-slots"></div>
           <div class="bomber-pane-head hangar"><span>机库</span><small>拖动飞机或航弹卡片</small></div>
@@ -803,6 +797,7 @@
 <script src="js/custom-maps.js?v=0.12.31"></script>
 <script src="js/game.js?v=0.12.31"></script>
 <script src="js/bomber.js?v=0.12.31"></script>
+<script src="js/bomber-auto.js?v=0.12.31"></script>
 <script src="js/render.js?v=0.12.31"></script>
 <script src="js/ui.js?v=0.12.31"></script>
 <script src="js/main.js?v=0.12.31"></script>

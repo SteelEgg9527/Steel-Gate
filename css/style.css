@@ -3115,3 +3115,11 @@ html, body {
   .deploy-heading h1 { font-size: 17px; }
   .deploy-main { padding: 9px 12px; }
 }
+
+
+/* ---------------- B-17 预设 / 自动出击 ---------------- */
+.bomber-presets { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; padding: 8px 0 4px; border-bottom: 1px solid rgba(214,196,150,0.14); margin-bottom: 8px; }
+.bomber-presets > span { color: #d9bb77; font: 700 9px var(--mono); letter-spacing: 0.1em; margin-right: 3px; }
+.bomber-presets button { padding: 5px 7px; font-size: 9px; }
+.bomber-presets em { color: #8f9a84; font-size: 9px; font-style: normal; margin-left: auto; }
+#air-card-strike-budget { color: #cbb680; }
