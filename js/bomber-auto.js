@@ -532,17 +532,18 @@
         var tAt = 0.22 + ai * 0.28;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 30, W = 23, inner = 9;
-        // 按草图：上翼长、下翼短的厚边空心折角箭头
+        var L = 27, headLen = 14, shaftW = 7, headW = 19;
+        // 规则对称的经典空心箭头：矩形杆 + 三角箭头，几何完全对称
         function bx(px, py) { return cx + ux * px + hx * py; }
         function by(px, py) { return cy + uy * px + hy * py; }
         ctx.beginPath();
-        ctx.moveTo(bx(-L * 1.75, -W), by(-L * 1.75, -W));
+        ctx.moveTo(bx(-L, -shaftW), by(-L, -shaftW));
+        ctx.lineTo(bx(L - headLen, -shaftW), by(L - headLen, -shaftW));
+        ctx.lineTo(bx(L - headLen, -headW), by(L - headLen, -headW));
         ctx.lineTo(bx(L, 0), by(L, 0));
-        ctx.lineTo(bx(-L * 0.28, W), by(-L * 0.28, W));
-        ctx.lineTo(bx(-L * 0.28 + inner, W - inner), by(-L * 0.28 + inner, W - inner));
-        ctx.lineTo(bx(L - inner * 1.6, 0), by(L - inner * 1.6, 0));
-        ctx.lineTo(bx(-L * 1.75 + inner, -W + inner), by(-L * 1.75 + inner, -W + inner));
+        ctx.lineTo(bx(L - headLen, headW), by(L - headLen, headW));
+        ctx.lineTo(bx(L - headLen, shaftW), by(L - headLen, shaftW));
+        ctx.lineTo(bx(-L, shaftW), by(-L, shaftW));
         ctx.closePath();
         ctx.fillStyle = 'rgba(96,176,255,0.03)';
         ctx.fill();
