@@ -566,12 +566,6 @@
       var fp = clamp((drop.t || 0) / Math.max(0.1, drop.fall || 3.2), 0, 1);
       var bx = p0x + (p1x - p0x) * fp;
       var by = p0y + (p1y - p0y) * fp;
-      var isInc = drop.type === 'incendiary';
-      ctx.strokeStyle = isInc ? 'rgba(205,166,50,0.75)' : 'rgba(34,38,42,0.5)';
-      ctx.lineWidth = 1.2;
-      ctx.setLineDash([3, 5]);
-      ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
-      ctx.setLineDash([]);
       drawFallingBomb(ctx, bx, by, Math.atan2(p1y - p0y, p1x - p0x), drop.type, cam.zoom);
     }
     ctx.restore();
