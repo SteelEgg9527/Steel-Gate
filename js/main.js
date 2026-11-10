@@ -475,7 +475,8 @@
         name.textContent = entry.name || '自定义地图';
         var meta = document.createElement('div');
         meta.className = 'custom-map-meta';
-        meta.textContent = '2000m 陆战 · 更新 ' + customMapDate(entry.updated);
+        var isNaval = !!(entry.plan && (entry.plan.mode === 'naval' || Number(entry.plan.size) === 5000));
+        meta.textContent = (isNaval ? '5km 海战' : '2km 陆战') + ' · 更新 ' + customMapDate(entry.updated);
         main.appendChild(name);
         main.appendChild(meta);
         var buttons = document.createElement('div');
@@ -488,8 +489,13 @@
           b.addEventListener('click', fn);
           buttons.appendChild(b);
         }
-        addBtn('混战', function () { playCustomMap(entry.id, 'melee'); }, true);
-        addBtn('防御', function () { playCustomMap(entry.id, 'lastStand'); });
+        if (isNaval) {
+          addBtn('舰炮轰鸣', function () { playCustomMap(entry.id, 'naval'); }, true);
+          addBtn('背水一战', function () { playCustomMap(entry.id, 'navalLastStand'); });
+        } else {
+          addBtn('混战', function () { playCustomMap(entry.id, 'melee'); }, true);
+          addBtn('防御', function () { playCustomMap(entry.id, 'lastStand'); });
+        }
         addBtn('编辑', function () { openMapEditor(entry); });
         addBtn('导出', function () { SL.CustomMaps.exportPlan(entry.id); });
         addBtn('删除', function () {
@@ -552,7 +558,7 @@
     if (playMode) {
       var editor = customEl('map-editor');
       if (editor) editor.classList.add('hidden');
-      playCustomMap(res.entry.id, playMode);
+      playCustomMap(res.entry.id, plan.mode === 'naval' ? 'naval' : 'melee');
     } else {
       closeMapEditor();
     }
@@ -572,7 +578,7 @@
   function playCustomMap(id, mode) {
     var entry = SL.CustomMaps && SL.CustomMaps.get(id);
     if (!entry) { UI.pushToast('自定义地图不存在', 'loss'); return; }
-    gameMode = mode === 'lastStand' ? 'lastStand' : 'melee';
+    gameMode = (mode === 'naval' || mode === 'navalLastStand' || mode === 'lastStand') ? mode : 'melee';
     difficulty = difficulty || 'normal';
     var cm = customEl('custom-maps');
     if (cm) cm.classList.add('hidden');
@@ -615,9 +621,9 @@
     var editorClose = customEl('editor-close');
     if (editorClose) editorClose.addEventListener('click', closeMapEditor);
     var save = customEl('editor-save');
-    if (save) save.addEventListener('click', function () { saveEditor(null); });
+    if (save) save.addEventListener('click', function () { saveEditor(false); });
     var play = customEl('editor-play');
-    if (play) play.addEventListener('click', function () { saveEditor('melee'); });
+    if (play) play.addEventListener('click', function () { saveEditor(true); });
     var exp = customEl('editor-export');
     if (exp) exp.addEventListener('click', exportEditorPlan);
   }

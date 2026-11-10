@@ -62,6 +62,7 @@
 
     <div class="field"><label>地图名</label><input id="mapName" value="新地图"></div>
     <div class="row">
+      <div class="field"><label>模式</label><select id="mapMode"><option value="land">陆战</option><option value="naval">海战</option></select></div>
       <div class="field"><label>尺寸</label><select id="mapSize"><option value="2000">2000m 陆战</option><option value="5000">5000m 海战</option></select></div>
       <div class="field"><label>高度网格</label><select id="heightRes"><option value="64">64×64</option><option value="128" selected>128×128</option><option value="256">256×256</option></select></div>
     </div>
@@ -155,7 +156,7 @@
   const $ = id => document.getElementById(id);
 
   const state = {
-    name: '新地图', size: 2000, res: 128,
+    name: '新地图', mode: 'land', size: 2000, res: 128,
     height: new Float32Array(128 * 128),
     water: [], forests: [], roads: [], bridges: [],
     zones: [], sites: [], spawns: { blue: null, red: null, green: null },
@@ -664,7 +665,7 @@
 
   function exportData(){
     return {
-      schema:'steel-map-plan/v1', name:state.name, size:state.size,
+      schema:'steel-map-plan/v1', name:state.name, mode:state.mode || 'land', size:state.size,
       height:{res:state.res, values:Array.from(state.height,(v)=>Math.round(v*1000)/1000)},
       water:state.water.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
       forests:state.forests.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
@@ -679,7 +680,8 @@
   }
   function importData(data, silent){
     if(!data || data.schema!=='steel-map-plan/v1') throw new Error('不是地图规划器 JSON');
-    state.name=data.name||'新地图'; state.size=Number(data.size)||2000;
+    state.name=data.name||'新地图'; state.mode=data.mode==='naval'?'naval':'land'; state.size=Number(data.size)||(state.mode==='naval'?5000:2000);
+    if(state.mode==='naval')state.size=5000;else state.size=2000;
     state.res=(data.height&&data.height.res)||128;
     state.height=new Float32Array(state.res*state.res);
     if(data.height&&Array.isArray(data.height.values)) data.height.values.forEach((v,i)=>{if(i<state.height.length)state.height[i]=Number(v)||0;});
@@ -694,7 +696,7 @@
     if($('sketchName')) $('sketchName').textContent='未上传';
     if($('file')) $('file').value='';
     selected=null;drag=null;
-    $('mapName').value=state.name;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
+    $('mapName').value=state.name;$('mapMode').value=state.mode;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
     buildHeightCanvas();
     if(!silent) status('JSON 已导入');
     draw();
@@ -724,7 +726,19 @@
   $('brush').addEventListener('input',()=>{if(hoverPt)drawCursor(hoverPt);});
   $('objectRadius').addEventListener('input',()=>{if(hoverPt)drawCursor(hoverPt);});
   $('mapName').addEventListener('input',e=>{state.name=e.target.value;draw();});
-  $('mapSize').addEventListener('change',e=>{state.size=Number(e.target.value);draw();});
+  $('mapMode').addEventListener('change',e=>{
+    state.mode=e.target.value==='naval'?'naval':'land';
+    state.size=state.mode==='naval'?5000:2000;
+    $('mapSize').value=String(state.size);
+    draw();
+    status(state.mode==='naval'?'海战模式：5000m；请把水域画在海岸线右侧':'陆战模式：2000m');
+  });
+  $('mapSize').addEventListener('change',e=>{
+    state.size=Number(e.target.value)===5000?5000:2000;
+    state.mode=state.size===5000?'naval':'land';
+    $('mapMode').value=state.mode;
+    draw();
+  });
   $('heightRes').addEventListener('change',e=>{state.res=Number(e.target.value);state.height=new Float32Array(state.res*state.res);buildHeightCanvas();draw();});
   function clearBackground(skipDraw){
     state.background = null;
