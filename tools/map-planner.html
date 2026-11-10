@@ -78,7 +78,7 @@
       <button class="tool" data-tool="select">选择 / 编辑</button>
       <button class="tool" data-tool="height-up">▲ 抬高地形</button>
       <button class="tool" data-tool="height-down">▼ 压低地形</button>
-      <button class="tool" data-tool="water">水域</button>
+      <button class="tool" data-tool="water">水域 / 海面</button>
       <button class="tool" data-tool="forest">森林</button>
       <button class="tool" data-tool="road-highway">公路</button>
       <button class="tool" data-tool="road-dirt">土路</button>
@@ -129,7 +129,7 @@
       <div><span class="swatch" style="background:#c36b5d"></span>红方出生</div>
     </div>
     <div id="stats"></div>
-    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮缩放，中键/右键拖动画布。</p>
+    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮缩放，中键/右键拖动画布。海战模式下水域笔刷直接涂蓝成为海面。</p>
   </aside>
   <main id="main">
     <div id="canvasWrap">
@@ -159,6 +159,7 @@
     name: '新地图', mode: 'land', size: 2000, res: 128,
     height: new Float32Array(128 * 128),
     water: [], forests: [], roads: [], bridges: [],
+    seaRes: 256, seaMask: new Uint8Array(256 * 256),
     zones: [], sites: [], spawns: { blue: null, red: null, green: null },
     yellow: null, aiLanes: [], background: null, backgroundName: '', seq: 0,
     grid: true, contour: true
@@ -172,6 +173,9 @@
   let undoStack = [];
   const heightCanvas = document.createElement('canvas');
   const hctx = heightCanvas.getContext('2d');
+  const seaCanvas = document.createElement('canvas');
+  const sctx = seaCanvas.getContext('2d');
+  let seaPainting = false, lastSeaPt = null;
   const mainEl = $('main');
   const wrapEl = $('canvasWrap');
   const view = { zoom: 1, x: 0, y: 0 };
@@ -316,6 +320,46 @@
     hctx.putImageData(img,0,0);
   }
   buildHeightCanvas();
+  buildSeaCanvas();
+
+  function buildSeaCanvas(){
+    var r = state.seaRes || 256;
+    seaCanvas.width = r; seaCanvas.height = r;
+    var img = sctx.createImageData(r, r);
+    var d = img.data;
+    for (var i = 0; i < state.seaMask.length; i++) {
+      if (!state.seaMask[i]) continue;
+      var o = i * 4;
+      d[o] = 52; d[o + 1] = 117; d[o + 2] = 160; d[o + 3] = 210;
+    }
+    sctx.putImageData(img, 0, 0);
+  }
+  function paintSeaAt(pt, erase){
+    var r = state.seaRes || 256, size = state.size || 2000;
+    var s = r / size;
+    var cx = pt.x * s, cy = pt.y * s;
+    var br = (Number($('brush').value) || 120) * s;
+    var rr = Math.ceil(br);
+    var x0 = Math.max(0, Math.floor(cx - rr)), x1 = Math.min(r - 1, Math.ceil(cx + rr));
+    var y0 = Math.max(0, Math.floor(cy - rr)), y1 = Math.min(r - 1, Math.ceil(cy + rr));
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        var dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+        if (dx * dx + dy * dy <= br * br) state.seaMask[y * r + x] = erase ? 0 : 1;
+      }
+    }
+  }
+  function paintSeaLine(a, b, erase){
+    if (!a) { paintSeaAt(b, erase); return; }
+    var d = dist(a, b);
+    var steps = Math.max(1, Math.ceil(d / Math.max(8, (Number($('brush').value) || 120) * 0.35)));
+    for (var i = 0; i <= steps; i++) {
+      paintSeaAt({ x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps }, erase);
+    }
+  }
+  function eraseSeaAt(pt){
+    paintSeaAt(pt, true);
+  }
 
   function drawBackground(){
     if (state.background && state.background.complete && state.background.naturalWidth){
@@ -389,6 +433,12 @@
     ctx.globalAlpha=1;
     drawContours();
     drawGrid();
+    if (state.mode === 'naval' && state.seaMask) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(seaCanvas, 0, 0, W, H);
+      ctx.restore();
+    }
 
     state.water.forEach(f=>drawCircleFeature(f,'rgba(65,126,164,0.42)','rgba(48,100,132,0.8)'));
     state.forests.forEach(f=>drawCircleFeature(f,'rgba(83,112,64,0.28)','rgba(62,91,51,0.7)','林'));
@@ -452,6 +502,7 @@
   }
   function eraseAt(pt){
     const radius=Number($('brush').value)||120;
+    if(state.mode==='naval' && state.seaMask){ eraseSeaAt(pt); buildSeaCanvas(); }
     const near=arr=>arr.findIndex(f=>dist(f,pt)<=Math.max(radius,f.r||0));
     let i;
     if((i=near(state.water))>=0){state.water.splice(i,1);return;}
@@ -610,6 +661,12 @@
       buildHeightCanvas(); requestDraw();
       return;
     }
+    if(tool==='water' && state.mode==='naval'){
+      snapshot();
+      seaPainting=true; lastSeaPt=pt;
+      paintSeaAt(pt,false); buildSeaCanvas(); requestDraw();
+      return;
+    }
     if(tool==='water'||tool==='forest'){
       snapshot();
       const arr=tool==='water'?state.water:state.forests;
@@ -634,6 +691,7 @@
     hoverPt=pt; drawCursor(pt);
     if(drag){ moveSelected(pt); requestDraw(); return; }
     if(erasing){ eraseAt(pt); requestDraw(); return; }
+    if(seaPainting){ paintSeaLine(lastSeaPt,pt,false); lastSeaPt=pt; buildSeaCanvas(); requestDraw(); return; }
     if(!painting)return;
     paintHeight(pt,(tool==='height-up'?1:-1)*Number($('strength').value||0.04));
     buildHeightCanvas(); requestDraw();
@@ -641,6 +699,7 @@
   canvas.addEventListener('pointerleave', ()=>{ hoverPt=null; drawCursor(null); });
   canvas.addEventListener('pointerenter', e=>{ const pt=point(e); hoverPt=pt; drawCursor(pt); });
   window.addEventListener('pointerup', ()=>{
+    if(seaPainting){seaPainting=false;lastSeaPt=null;buildSeaCanvas();requestDraw();status('海面已修改');}
     if(painting){painting=false;buildHeightCanvas();requestDraw();status('地形已修改');}
     if(erasing){erasing=false;status('橡皮擦已结束');}
     if(drag){drag=null;requestDraw();}
@@ -664,7 +723,7 @@
   $('finishRoad').addEventListener('click',finishRoad);
 
   function exportData(){
-    return {
+    var out = {
       schema:'steel-map-plan/v1', name:state.name, mode:state.mode || 'land', size:state.size,
       height:{res:state.res, values:Array.from(state.height,(v)=>Math.round(v*1000)/1000)},
       water:state.water.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
@@ -677,6 +736,11 @@
       aiLanes:state.aiLanes.map(r=>({type:r.type,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
       backgroundName:state.backgroundName || ''
     };
+    if (state.mode === 'naval') {
+      out.seaRes = state.seaRes;
+      out.seaMask = Array.from(state.seaMask);
+    }
+    return out;
   }
   function importData(data, silent){
     if(!data || data.schema!=='steel-map-plan/v1') throw new Error('不是地图规划器 JSON');
@@ -688,6 +752,13 @@
     state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
     state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
     state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];
+    state.seaRes = data.seaRes || 256;
+    state.seaMask = new Uint8Array(state.seaRes * state.seaRes);
+    if (Array.isArray(data.seaMask)) {
+      for (var smi = 0; smi < Math.min(data.seaMask.length, state.seaMask.length); smi++) {
+        state.seaMask[smi] = data.seaMask[smi] ? 1 : 0;
+      }
+    }
     var maxSeq=0;
     (state.zones||[]).concat(state.sites||[]).forEach(function(o){var m=String(o&&o.id||'').match(/(\d+)$/);if(m)maxSeq=Math.max(maxSeq,parseInt(m[1],10)||0);});
     state.seq=maxSeq;
@@ -698,6 +769,7 @@
     selected=null;drag=null;
     $('mapName').value=state.name;$('mapMode').value=state.mode;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
     buildHeightCanvas();
+    buildSeaCanvas();
     if(!silent) status('JSON 已导入');
     draw();
   }
@@ -717,7 +789,7 @@
   $('png').addEventListener('click',()=>{canvas.toBlob(b=>{if(b)download((state.name||'map')+'-preview.png',b);},'image/png');});
   $('localSave').addEventListener('click',()=>{try{localStorage.setItem('steel_map_planner_v1',JSON.stringify(exportData()));status('已保存到浏览器本地');}catch(e){status('保存失败：'+e.message);}});
   $('localLoad').addEventListener('click',()=>{try{const raw=localStorage.getItem('steel_map_planner_v1');if(!raw){status('本地没有地图');return;}snapshot();importData(JSON.parse(raw));}catch(e){status('读取失败：'+e.message);}});
-  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];selected=null;drag=null;clearBackground(true);buildHeightCanvas();draw();status('已清空');});
+  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];state.seaMask=new Uint8Array(state.seaRes*state.seaRes);selected=null;drag=null;clearBackground(true);buildHeightCanvas();buildSeaCanvas();draw();status('已清空');});
   $('undo').addEventListener('click',undo);
   $('deleteSelected').addEventListener('click',removeSelected);
   $('deselect').addEventListener('click',()=>{selected=null;drag=null;requestDraw();status('已取消选择');});
@@ -731,7 +803,7 @@
     state.size=state.mode==='naval'?5000:2000;
     $('mapSize').value=String(state.size);
     draw();
-    status(state.mode==='naval'?'海战模式：5000m；请把水域画在海岸线右侧':'陆战模式：2000m');
+    status(state.mode==='naval'?'海战模式：5000m；用水域笔刷直接涂蓝成为海面':'陆战模式：2000m');
   });
   $('mapSize').addEventListener('change',e=>{
     state.size=Number(e.target.value)===5000?5000:2000;

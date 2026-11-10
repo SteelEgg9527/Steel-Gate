@@ -99,14 +99,30 @@
     var size = 5000;
     var shore = [];
     var step = 50;
+    var seaRes = num(plan.seaRes, 0);
+    var seaMask = Array.isArray(plan.seaMask) ? plan.seaMask : null;
+    var hasSeaMask = false;
+    if (seaMask && seaRes > 0) {
+      for (var smi = 0; smi < Math.min(seaMask.length, seaRes * seaRes); smi++) {
+        if (seaMask[smi]) { hasSeaMask = true; break; }
+      }
+    }
     for (var sy = 0; sy <= size; sy += step) {
       var coast = Infinity;
-      for (var wi = 0; wi < (plan.water || []).length; wi++) {
-        var w = plan.water[wi];
-        var dy = sy - num(w.y, 0);
-        if (Math.abs(dy) > num(w.r, 0)) continue;
-        var dx = Math.sqrt(Math.max(0, num(w.r, 0) * num(w.r, 0) - dy * dy));
-        coast = Math.min(coast, num(w.x, 0) - dx);
+      if (hasSeaMask) {
+        var row = Math.min(seaRes - 1, Math.floor(sy / size * seaRes));
+        for (var mx = 0; mx < seaRes; mx++) {
+          if (seaMask[row * seaRes + mx]) { coast = mx / seaRes * size; break; }
+        }
+      }
+      if (!isFinite(coast)) {
+        for (var wi = 0; wi < (plan.water || []).length; wi++) {
+          var w = plan.water[wi];
+          var dy = sy - num(w.y, 0);
+          if (Math.abs(dy) > num(w.r, 0)) continue;
+          var dx = Math.sqrt(Math.max(0, num(w.r, 0) * num(w.r, 0) - dy * dy));
+          coast = Math.min(coast, num(w.x, 0) - dx);
+        }
       }
       if (!isFinite(coast)) coast = size * 0.62;
       coast = Math.max(120, Math.min(size - 120, coast));

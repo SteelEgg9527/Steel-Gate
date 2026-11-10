@@ -67,13 +67,29 @@ if (mode === 'naval' && size !== 5000) {
 let map;
 if (mode === 'naval') {
   const shore = [];
+  const seaRes = num(plan.seaRes, 0);
+  const seaMask = Array.isArray(plan.seaMask) ? plan.seaMask : null;
+  let hasSeaMask = false;
+  if (seaMask && seaRes > 0) {
+    for (let smi = 0; smi < Math.min(seaMask.length, seaRes * seaRes); smi++) {
+      if (seaMask[smi]) { hasSeaMask = true; break; }
+    }
+  }
   for (let sy = 0; sy <= size; sy += 50) {
     let coast = Infinity;
-    for (const w of (plan.water || [])) {
-      const dy = sy - num(w.y, 0);
-      if (Math.abs(dy) > num(w.r, 0)) continue;
-      const dx = Math.sqrt(Math.max(0, num(w.r, 0) ** 2 - dy * dy));
-      coast = Math.min(coast, num(w.x, 0) - dx);
+    if (hasSeaMask) {
+      const row = Math.min(seaRes - 1, Math.floor(sy / size * seaRes));
+      for (let mx = 0; mx < seaRes; mx++) {
+        if (seaMask[row * seaRes + mx]) { coast = mx / seaRes * size; break; }
+      }
+    }
+    if (!Number.isFinite(coast)) {
+      for (const w of (plan.water || [])) {
+        const dy = sy - num(w.y, 0);
+        if (Math.abs(dy) > num(w.r, 0)) continue;
+        const dx = Math.sqrt(Math.max(0, num(w.r, 0) ** 2 - dy * dy));
+        coast = Math.min(coast, num(w.x, 0) - dx);
+      }
     }
     if (!Number.isFinite(coast)) coast = size * 0.62;
     coast = Math.max(120, Math.min(size - 120, coast));
@@ -124,7 +140,7 @@ if (mode === 'naval') {
   const roads = (plan.roads || []).map(r => pathPoints(r.points)).filter(p => p.length >= 2);
   map = {
     id, name: plan.name || '规划器海战地图', subtitle: '地图规划器导入 · 5km 海战',
-    seed: 19440901, naval: true, size, sceneSize: size,
+    seed: 19440901, mode: 'naval', naval: true, size, sceneSize: size,
     shore, spawns, objective: { x: radar.x, y: radar.y }, yellow,
     layout: {
       island: false, hills: [], towers, radar, coastBases, ports,
