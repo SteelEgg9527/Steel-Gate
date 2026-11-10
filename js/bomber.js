@@ -801,14 +801,17 @@
     return null;
   }
 
+  function markBomberUnpaid(g) {
+    if (SL.Bomber && SL.Bomber.auto && SL.Bomber.auto.markUnpaid) SL.Bomber.auto.markUnpaid(g);
+  }
+
   function buyPlane(g) {
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('分数不足，需要 ' + B.planeCost, 'loss'); return; }
-    g.teams.blue.score -= B.planeCost;
+    markBomberUnpaid(g);
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     b.hangarPlanes.push(p);
-    toast('已购买 B-17，拖入编组栏即可编队', 'win');
+    toast('已预购 B-17，拖入编组栏；出击时结算', 'win');
     renderConfig(g);
     refresh(g);
   }
@@ -818,10 +821,9 @@
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return; }
     var d = B.bombs[type];
     if (!d) return;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('分数不足，需要 ' + B.bombGroupCost, 'loss'); return; }
-    g.teams.blue.score -= B.bombGroupCost;
+    markBomberUnpaid(g);
     b.hangarBombs.push({ id: 'bomb_' + (++b.bombSeq || (b.bombSeq = 1)), type: type, count: d.group, paid: B.bombGroupCost });
-    toast('已购买 ' + d.name + '（' + d.group + '枚）', 'win');
+    toast('已预购 ' + d.name + '（' + d.group + '枚），出击时结算', 'win');
     renderConfig(g);
     refresh(g);
   }
@@ -830,13 +832,12 @@
     var b = ensure(g);
     var d = B.bombs[type];
     if (!d || !plane || b.state !== 'base') return false;
-    if ((g.teams.blue.score || 0) < B.bombGroupCost) { toast('分数不足，需要 ' + B.bombGroupCost, 'loss'); return false; }
     if (loadWeight(plane) + d.group * bombWeight(type) > B.maxLoadLb) { toast('挂载超重：该机最多 ' + B.maxLoadLb + 'lb 航弹', 'loss'); return false; }
-    g.teams.blue.score -= B.bombGroupCost;
+    markBomberUnpaid(g);
     plane.bombGroups.push({ type: type, count: d.group, paid: B.bombGroupCost });
     rebuildBombs(plane);
     snapshotLoadout(plane);
-    toast('已购买并挂载 ' + d.name + ' ×' + d.group, 'win');
+    toast('已预购并挂载 ' + d.name + ' ×' + d.group + '，出击时结算', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -874,12 +875,11 @@
     var b = ensure(g);
     if (b.state !== 'base') { toast('轰炸机不在基地，无法购买', 'loss'); return false; }
     if (slot < 0 || slot >= b.formation.length || b.formation[slot]) { toast('该编组位置不可用', 'loss'); return false; }
-    if ((g.teams.blue.score || 0) < B.planeCost) { toast('分数不足，需要 ' + B.planeCost, 'loss'); return false; }
-    g.teams.blue.score -= B.planeCost;
+    markBomberUnpaid(g);
     var p = newPlane(g, 'B-17 ' + (allPlanes(g).length + 1) + '号机');
     p.slot = slot;
     b.formation[slot] = p;
-    toast('已购买 B-17 并编入 ' + (slot + 1) + ' 号位', 'win');
+    toast('已预购 B-17 并编入 ' + (slot + 1) + ' 号位，出击时结算', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -890,9 +890,8 @@
     for (var i = 0; i < b.hangarBombs.length; i++) {
       if (b.hangarBombs[i].id === id) {
         var bg = b.hangarBombs.splice(i, 1)[0];
-        var paid = bg.paid || B.bombGroupCost;
-        g.teams.blue.score = (g.teams.blue.score || 0) + paid;
-        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，返还 ' + paid + ' 分数', 'win');
+        markBomberUnpaid(g);
+        toast('已退回 ' + (B.bombs[bg.type] ? B.bombs[bg.type].name : '航弹') + '，出击时按当前编队结算', 'win');
         renderConfig(g); refresh(g);
         return true;
       }
@@ -916,8 +915,8 @@
     p.bombGroups.splice(index, 1);
     rebuildBombs(p);
     snapshotLoadout(p);
-    g.teams.blue.score = (g.teams.blue.score || 0) + value;
-    toast('已出售 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，返还 ' + value + ' 分数', 'win');
+    markBomberUnpaid(g);
+    toast('已移除 ' + (B.bombs[grp.type] ? B.bombs[grp.type].short : '航弹') + ' ×' + grp.count + '，出击时按当前编队结算', 'win');
     renderConfig(g); refresh(g);
     return true;
   }
@@ -998,7 +997,7 @@
           '<div class="bomber-slot-no">' + (i + 1) + '</div>';
         if (p) {
           html += '<div class="bomber-slot-plane">' + ICON_PLANE +
-            '<div><b>' + p.name + '</b><small>耐久 ' + Math.ceil(p.hp) + ' / ' + p.maxHp + ' · 挂载 ' + loadWeight(p) + '/6000lb</small>' +
+            '<div><b>' + p.name + '</b><span class="bomber-plan-badge">预设</span><small>耐久 ' + Math.ceil(p.hp) + ' / ' + p.maxHp + ' · 挂载 ' + loadWeight(p) + '/6000lb</small>' +
             '<div class="bomber-hardpoints">' + (p.bombGroups.length ? p.bombGroups.map(function (g, bi) { return bombIconHTML(g.type, p.id, bi, g.count); }).join('') : '<i class="air-none">拖动航弹到此处</i>') + '</div>' +
             '<small class="drop-order">挂载卡片槽 · 投弹从左到右</small></div></div>';
         } else {

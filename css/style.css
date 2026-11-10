@@ -3124,3 +3124,5 @@ html, body {
 .bomber-presets em { color: #8f9a84; font-size: 9px; font-style: normal; margin-left: auto; }
 .bomber-presets button.on { border-color: #c9a85e; color: #f0d89a; background: rgba(201,168,94,0.12); }
 #air-card-strike-budget { color: #cbb680; }
+
+.bomber-plan-badge { display:inline-block; margin-left:6px; padding:1px 5px; border:1px solid rgba(222,187,105,0.65); color:#e6c778; font:700 8px var(--mono); letter-spacing:0.08em; vertical-align:1px; }

@@ -34,6 +34,7 @@
       jitter: Math.random() * Math.PI * 2,
       speedJitter: 0.97 + Math.random() * 0.06,
       playerBomber: true, kind: 'b17', side: 'blue',
+      _planBadge: true,
       deployed: false, slot: index
     };
   }
@@ -73,6 +74,7 @@
         b.formation[i] = p;
       }
       p.hp = p.maxHp;
+      p._planBadge = true;
       p.bombGroups = groups.map(function (grp) { return { type: grp.type, count: grp.count, paid: grp.paid || B.bombGroupCost }; });
       p.bombs = [];
       for (var j = 0; j < p.bombGroups.length; j++) {
@@ -85,6 +87,7 @@
     }
     b.state = 'base';
     b.auto = b.auto || {};
+    b.auto.needsReplenish = false;
     b.auto.preset = label || 'lb500';
     b.auto.lastApply = Date.now();
     SL.Bomber.refresh(g);
@@ -120,6 +123,7 @@
 
   function supplyCost(g) {
     var b = ensure(g);
+    if (b.auto && b.auto.unpaid) return formationValue(g);
     var data = currentPreset(g);
     if (!data) return 0;
     var groups = data.groups;
@@ -145,6 +149,26 @@
 
   function formationLateral(i, n) { return (i - (n - 1) / 2) * 150; }
   function formationForward(i, n) { return -Math.abs(i - (n - 1) / 2) * 150; }
+
+  function markUnpaid(g) {
+    var b = ensure(g);
+    b.auto = b.auto || { preset: 'lb500' };
+    b.auto.unpaid = true;
+    SL.Bomber.refresh(g);
+    refreshNewCards(g);
+  }
+
+  function formationValue(g) {
+    var b = ensure(g);
+    var total = 0;
+    for (var i = 0; i < b.formation.length; i++) {
+      var p = b.formation[i];
+      if (!p) continue;
+      total += B.planeCost;
+      for (var j = 0; j < (p.bombGroups || []).length; j++) total += (p.bombGroups[j].paid || B.bombGroupCost);
+    }
+    return total;
+  }
 
   function targetWidth(g) {
     var b = ensure(g);
@@ -227,7 +251,9 @@
       return;
     }
     if (cost) g.teams.blue.score -= cost;
-    applyGroups(g, data.groups, b.auto.preset);
+    b.auto.unpaid = false;
+    var hasPlanes = b.formation.some(Boolean);
+    if (!hasPlanes || b.auto.needsReplenish) applyGroups(g, data.groups, b.auto.preset);
     b.state = 'autoMission';
     b.auto.phase = 'attack';
     b.auto.supplyPaid = cost;
@@ -422,9 +448,44 @@
       syncBombGroups(p);
     }
     b.state = 'base';
-    if (b.auto) { b.auto.phase = null; b.auto.bombs = []; b.auto.stage = null; }
+    if (b.auto) { b.auto.phase = null; b.auto.bombs = []; b.auto.stage = null; b.auto.needsReplenish = true; }
     toast('B-17 编队已返回基地；下次出击时结算补给', 'info');
     SL.Bomber.refresh(g);
+  }
+
+  function drawFallingBomb(ctx, x, y, angle, type, zoom) {
+    var d = B.bombs[type] || B.bombs.lb500;
+    var lb = d.lb || 500;
+    var size = (3 + Math.sqrt(lb) * 0.22) * clamp(zoom || 1, 0.75, 1.5);
+    var len = size * 2.2;
+    var rad = size * 0.55;
+    var incendiary = type === 'incendiary';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    // 弹体：接近现实航弹的钝头 + 收尾
+    ctx.beginPath();
+    ctx.ellipse(0, 0, len * 0.5, rad, 0, 0, Math.PI * 2);
+    ctx.fillStyle = incendiary ? '#e3c34d' : '#15171a';
+    ctx.fill();
+    ctx.strokeStyle = incendiary ? '#8f701b' : '#555a60';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // 弹头高光
+    ctx.beginPath();
+    ctx.ellipse(len * 0.22, -rad * 0.2, len * 0.18, rad * 0.28, 0, 0, Math.PI * 2);
+    ctx.fillStyle = incendiary ? 'rgba(255,245,174,0.72)' : 'rgba(150,156,162,0.55)';
+    ctx.fill();
+    // 尾翼
+    var tail = -len * 0.32;
+    ctx.strokeStyle = incendiary ? '#a98622' : '#34383d';
+    ctx.fillStyle = incendiary ? '#b9962b' : '#2a2d31';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(tail, 0); ctx.lineTo(-len * 0.58, -rad * 1.45); ctx.lineTo(-len * 0.42, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tail, 0); ctx.lineTo(-len * 0.58, rad * 1.45); ctx.lineTo(-len * 0.42, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
   }
 
   function drawAuto(ctx, g, proj, cam) {
@@ -486,15 +547,13 @@
       var fp = clamp((drop.t || 0) / Math.max(0.1, drop.fall || 3.2), 0, 1);
       var bx = p0x + (p1x - p0x) * fp;
       var by = p0y + (p1y - p0y) * fp;
-      ctx.strokeStyle = 'rgba(255,190,104,0.66)';
-      ctx.lineWidth = 1.1;
+      var isInc = drop.type === 'incendiary';
+      ctx.strokeStyle = isInc ? 'rgba(205,166,50,0.75)' : 'rgba(34,38,42,0.5)';
+      ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 5]);
       ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#e8b66c';
-      ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,235,190,0.9)';
-      ctx.beginPath(); ctx.arc(bx - 0.7, by - 0.7, 0.8, 0, Math.PI * 2); ctx.fill();
+      drawFallingBomb(ctx, bx, by, Math.atan2(p1y - p0y, p1x - p0x), drop.type, cam.zoom);
     }
     ctx.restore();
   }
@@ -596,7 +655,10 @@
         var b = ensure(g);
         b.auto = b.auto || {};
         b.auto.preset = key;
-        // 只选择方案，不立即改装、不立即扣分；出击时统一结算补给
+        // 直接展示预购买的编队，但不扣分；出击时统一结算
+        applyGroups(g, data.groups, key);
+        b.auto.unpaid = true;
+        try { SL.Bomber.closeConfig(); SL.Bomber.openConfig(g); } catch (e) {}
         var label = key === 'custom' ? '上次保存' : ((PRESETS[key] || {}).name || key);
         var presetLabel = $id('bomber-preset-current');
         if (presetLabel) presetLabel.textContent = '已选择：' + label + ' · 出击时结算';
@@ -669,7 +731,7 @@
     if (originalRefresh) originalRefresh(g);
     if (g) refreshNewCards(g);
   };
-  SL.Bomber.auto = { startAim: startAim, cancelAim: cancelAim, supplyCost: supplyCost, isAiming: function (g) { var b = ensure(g); return !!(b && b.state === 'autoAim'); } };
+  SL.Bomber.auto = { startAim: startAim, cancelAim: cancelAim, supplyCost: supplyCost, formationValue: formationValue, markUnpaid: markUnpaid, isAiming: function (g) { var b = ensure(g); return !!(b && b.state === 'autoAim'); } };
 
   bindInput();
   bindUI();
