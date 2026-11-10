@@ -3122,4 +3122,5 @@ html, body {
 .bomber-presets > span { color: #d9bb77; font: 700 9px var(--mono); letter-spacing: 0.1em; margin-right: 3px; }
 .bomber-presets button { padding: 5px 7px; font-size: 9px; }
 .bomber-presets em { color: #8f9a84; font-size: 9px; font-style: normal; margin-left: auto; }
+.bomber-presets button.on { border-color: #c9a85e; color: #f0d89a; background: rgba(201,168,94,0.12); }
 #air-card-strike-budget { color: #cbb680; }

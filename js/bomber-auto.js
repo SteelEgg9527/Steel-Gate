@@ -148,7 +148,8 @@
 
   function targetWidth(g) {
     var b = ensure(g);
-    var n = b.formation.filter(Boolean).length || 0;
+    var n = b.formation.filter(Boolean).length;
+    if (!n && currentPreset(g)) n = 5;
     return clamp(300 + Math.max(0, n - 1) * 150, 420, 1000);
   }
 
@@ -176,11 +177,7 @@
       return;
     }
     if (b.state !== 'base') { toast('轰炸机尚未返回基地', 'loss'); return; }
-    if (!b.formation.some(Boolean)) {
-      var data = currentPreset(g);
-      if (data) applyGroups(g, data.groups, b.auto && b.auto.preset);
-    }
-    if (!b.formation.some(Boolean)) { toast('请先在轰炸机配备中组建编队', 'loss'); return; }
+    if (!currentPreset(g)) { toast('请先在轰炸机配备中选择预设方案', 'loss'); return; }
     var t = defaultTarget(g);
     b.auto = b.auto || {};
     b.auto.phase = 'aim';
@@ -590,9 +587,19 @@
         var key = ev.target.closest('[data-bomber-preset]').getAttribute('data-bomber-preset');
         var data = key === 'custom' ? customData() : { groups: presetGroups(key) };
         if (!data || !data.groups) { toast(key === 'custom' ? '还没有保存过方案' : '未知预设', 'loss'); return; }
-        applyGroups(g, data.groups, key);
-        toast('已套用配备方案：' + (key === 'custom' ? '上次保存' : (PRESETS[key] || {}).name), 'win');
-        try { SL.Bomber.closeConfig(); SL.Bomber.openConfig(g); } catch (e) {}
+        var b = ensure(g);
+        b.auto = b.auto || {};
+        b.auto.preset = key;
+        // 只选择方案，不立即改装、不立即扣分；出击时统一结算补给
+        var label = key === 'custom' ? '上次保存' : ((PRESETS[key] || {}).name || key);
+        var presetLabel = $id('bomber-preset-current');
+        if (presetLabel) presetLabel.textContent = '已选择：' + label + ' · 出击时结算';
+        var presetButtons = document.querySelectorAll('[data-bomber-preset]');
+        for (var bi = 0; bi < presetButtons.length; bi++) {
+          presetButtons[bi].classList.toggle('on', presetButtons[bi].getAttribute('data-bomber-preset') === key);
+        }
+        toast('已选择配备方案：' + label + '；出击时结算', 'info');
+        refreshNewCards(g);
         return;
       }
       if (ev.target && ev.target.id === 'bomber-save-preset') {
