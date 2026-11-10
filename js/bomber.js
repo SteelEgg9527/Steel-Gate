@@ -1250,10 +1250,12 @@
       ctx.strokeStyle = 'rgba(244,205,133,0.86)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
-      ctx.fillStyle = 'rgba(40,26,14,0.82)';
-      ctx.font = '700 10px ' + SL.FONT_UI;
-      ctx.textAlign = 'center';
-      ctx.fillText((B.bombs[d.type] ? B.bombs[d.type].short : '航弹') + ' · ' + left.toFixed(1) + 's', 0, -blastR - 8);
+      if (String(d.id).indexOf('auto_bd_') !== 0) {
+        ctx.fillStyle = 'rgba(40,26,14,0.82)';
+        ctx.font = '700 10px ' + SL.FONT_UI;
+        ctx.textAlign = 'center';
+        ctx.fillText((B.bombs[d.type] ? B.bombs[d.type].short : '航弹') + ' · ' + left.toFixed(1) + 's', 0, -blastR - 8);
+      }
       ctx.restore();
     }
     for (var f = 0; f < g.bomberFires.length; f++) {

@@ -265,23 +265,24 @@
     var b = ensure(g);
     var queue = [];
     var planes = b.formation.filter(Boolean);
+    if (!planes.length) return;
+    var lead = Math.floor((planes.length - 1) / 2);
     var maxBombs = 0;
     for (var i = 0; i < planes.length; i++) maxBombs = Math.max(maxBombs, planes[i].bombs.length);
     if (!maxBombs) return;
     var runTime = Math.max(4, b.auto.length / Math.max(50, B.b17.speed));
-    // 集群轰炸：同一俯冲时刻所有飞机一起投弹，形成横队弹幕，
-    // 而不是单机沿整条轰炸线依次投完。
-    for (var k = 0; k < maxBombs; k++) {
-      var frac = maxBombs <= 1 ? 0.5 : k / (maxBombs - 1);
-      var at = g.time + 0.8 + frac * runTime;
-      for (var p = 0; p < planes.length; p++) {
-        var plane = planes[p];
+    // 每架飞机独立投弹：长机先投，僚机有轻微的随机延迟。
+    for (var p = 0; p < planes.length; p++) {
+      var plane = planes[p];
+      var rank = Math.abs(p - lead);
+      var delay = p === lead ? 0 : 0.10 + rank * 0.05 + Math.random() * 0.16;
+      for (var k = 0; k < plane.bombs.length; k++) {
         if (!plane.bombs[k]) continue;
+        var frac = maxBombs <= 1 ? 0.5 : k / (maxBombs - 1);
         queue.push({
           type: plane.bombs[k],
-          at: at,
+          at: g.time + 0.8 + frac * runTime + delay,
           frac: frac,
-          side: formationLateral(p, planes.length),
           planeIndex: p,
           bombIndex: k
         });
@@ -289,33 +290,6 @@
     }
     queue.sort(function (a, b) { return a.at - b.at; });
     b.auto.bombs = queue;
-  }
-
-  function explodeBomb(g, type, x, y) {
-    var d = B.bombs[type] || B.bombs.lb500;
-    if (SL.Audio) SL.Audio.explosion(d.radius, x, y);
-    g.effects.push({ kind: 'blast', x: x, y: y, t: 0, dur: 1.0, r: d.radius, side: 'blue' });
-    g.effects.push({ kind: 'explosion', x: x, y: y, t: 0, dur: 0.9, size: d.radius, world: true, side: 'blue' });
-    var credit = { side: 'blue', name: 'B-17 航弹', kills: 0, score: 0 };
-    for (var i = 0; i < g.units.length; i++) {
-      var u = g.units[i];
-      if (!u.alive) continue;
-      var dd = Math.hypot(u.x - x, u.y - y);
-      if (dd > d.radius) continue;
-      var fall = 1 - 0.68 * (dd / d.radius);
-      g.damage(u, d.damage * fall * (u.side === 'blue' ? 0.25 : 1) * (u.def.armor ? 0.72 : 1), credit, 2);
-    }
-    for (var s = 0; s < g.battleships.length; s++) {
-      var sh = g.battleships[s];
-      if (!sh.alive) continue;
-      var sd = Math.hypot(sh.x - x, sh.y - y);
-      if (sd > d.radius + (sh.hitRadius || 60)) continue;
-      g.damageShip(sh, d.damage * 1.15 * (1 - 0.65 * Math.min(1, sd / (d.radius + 60))), credit, 3.2);
-    }
-    if (d.fortDamage) g.damageFortifications(x, y, d.fortDamage, d.radius);
-    if (d.burn && g.bomberFires) {
-      g.bomberFires.push({ x: x, y: y, r: d.radius, until: g.time + d.burn, next: 0, dps: d.burnDps, side: 'blue' });
-    }
   }
 
   function updateAuto(g, dt) {
@@ -375,8 +349,16 @@
       var p = planes[i];
       var lat = formationLateral(i, planes.length);
       var fwd = formationForward(i, planes.length);
-      p.x = a.group.x + sx * lat + a.dir.x * fwd;
-      p.y = a.group.y + sy * lat + a.dir.y * fwd;
+      var wobbleX = 0, wobbleY = 0;
+      var leadIndex = Math.floor((planes.length - 1) / 2);
+      if (i !== leadIndex) {
+        // 僚机轻微随机浮动，长机保持稳定
+        var ph = (p.jitter || 0) + g.time * 1.35;
+        wobbleX = sx * Math.sin(ph) * 8 + a.dir.x * Math.cos(ph * 0.8) * 4;
+        wobbleY = sy * Math.sin(ph) * 8 + a.dir.y * Math.cos(ph * 0.8) * 4;
+      }
+      p.x = a.group.x + sx * lat + a.dir.x * fwd + wobbleX;
+      p.y = a.group.y + sy * lat + a.dir.y * fwd + wobbleY;
       p.heading = a.group.heading;
       p.deployed = true;
     }
@@ -385,15 +367,25 @@
       var bomb = a.bombs[q];
       if (bomb.done || g.time < bomb.at) continue;
       bomb.done = true;
-      var px = a.start.x + a.dir.x * a.length * bomb.frac;
-      var py = a.start.y + a.dir.y * a.length * bomb.frac;
-      var nx = -a.dir.y, ny = a.dir.x;
-      px += nx * bomb.side;
-      py += ny * bomb.side;
-      explodeBomb(g, bomb.type, px, py);
-      // 精确扣除该机该挂点的航弹；空位在返航时统一整理
       var dropPlane = planes[bomb.planeIndex];
-      if (dropPlane && dropPlane.bombs[bomb.bombIndex] != null) dropPlane.bombs[bomb.bombIndex] = null;
+      if (!dropPlane) continue;
+      // 炸弹从飞机当前实际位置投出，而不是直接在轰炸区生成爆炸
+      var lat = formationLateral(bomb.planeIndex, planes.length);
+      var nx = -a.dir.y, ny = a.dir.x;
+      var tx = a.start.x + a.dir.x * a.length * bomb.frac + nx * lat;
+      var ty = a.start.y + a.dir.y * a.length * bomb.frac + ny * lat;
+      tx = clamp(tx, 4, (SL.CONFIG.mapSize || 2000) - 4);
+      ty = clamp(ty, 4, (SL.CONFIG.mapSize || 2000) - 4);
+      var bd = B.bombs[bomb.type] || B.bombs.lb500;
+      g.bomberDrops.push({
+        id: 'auto_bd_' + (++g.bombers.dropSeq),
+        planeId: dropPlane.id, side: 'blue', type: bomb.type,
+        x0: dropPlane.x, y0: dropPlane.y, x1: tx, y1: ty,
+        heading: dropPlane.heading, t: 0, fall: 3.2,
+        radius: bd.radius, color: bd.color,
+        impactAt: g.time + 3.2
+      });
+      if (dropPlane.bombs[bomb.bombIndex] != null) dropPlane.bombs[bomb.bombIndex] = null;
     }
     a.allDropped = a.bombs.every(function (x) { return x.done; });
   }
@@ -482,6 +474,25 @@
     ctx.fillStyle = '#b5e2ff';
     ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(b.state === 'autoAim' ? '锁定 ' + Math.ceil(a.timer) + 's' : '投弹中', (sx + ex) / 2, (sy + ey) / 2 - 5);
+    // 航弹飞行轨迹：从投弹瞬间的飞机位置连到预测落点
+    for (var di = 0; di < g.bomberDrops.length; di++) {
+      var drop = g.bomberDrops[di];
+      if (!drop || String(drop.id).indexOf('auto_bd_') !== 0) continue;
+      var p0x = proj.x(drop.x0), p0y = proj.y(drop.y0);
+      var p1x = proj.x(drop.x1), p1y = proj.y(drop.y1);
+      var fp = clamp((drop.t || 0) / Math.max(0.1, drop.fall || 3.2), 0, 1);
+      var bx = p0x + (p1x - p0x) * fp;
+      var by = p0y + (p1y - p0y) * fp;
+      ctx.strokeStyle = 'rgba(255,190,104,0.66)';
+      ctx.lineWidth = 1.1;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.moveTo(p0x, p0y); ctx.lineTo(p1x, p1y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#e8b66c';
+      ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,235,190,0.9)';
+      ctx.beginPath(); ctx.arc(bx - 0.7, by - 0.7, 0.8, 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
 
