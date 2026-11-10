@@ -553,11 +553,11 @@
           </section>
         </aside>
         <section class="deploy-right">
-          <div class="deploy-preview-card">
-            <canvas id="deploy-preview" width="960" height="540"></canvas>
-            <div class="deploy-preview-tag">SECTOR MAP · 战术预览</div>
-          </div>
           <div class="deploy-brief-card">
+            <div class="deploy-minimap-wrap">
+              <canvas id="deploy-minimap" width="220" height="220"></canvas>
+              <span id="deploy-minimap-label">战术图</span>
+            </div>
             <div class="deploy-brief-head">
               <h2>作战简报</h2>
               <span id="mode-desc"></span>
@@ -570,7 +570,6 @@
         </section>
       </div>
       <footer class="deploy-foot">
-        <span class="deploy-foot-note">地图决定是否存在海域与舰船 · 模式决定作战规则</span>
         <button id="btn-start" class="primary deploy-start" type="button">开始作战</button>
       </footer>
     </div>

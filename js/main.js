@@ -636,120 +636,17 @@
   }
 
   function drawDeploymentPreview() {
-    var canvas = document.getElementById('deploy-preview');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var W = canvas.width, H = canvas.height;
-    var map = SL.Terrain.map || (SL.MAP_BY_ID && SL.MAP_BY_ID[SL.MAPS[0].id]);
-    if (!map) return;
-    var size = map.size || 2000;
-    var pad = 28;
-    var s = Math.min((W - pad * 2) / size, (H - pad * 2) / size);
-    var ox = (W - size * s) / 2, oy = (H - size * s) / 2;
-    function X(x) { return ox + x * s; }
-    function Y(y) { return oy + y * s; }
-    function circle(x, y, r, fill, stroke, label) {
-      ctx.beginPath();
-      ctx.arc(X(x), Y(y), Math.max(2, r * s), 0, Math.PI * 2);
-      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke(); }
-      if (label) {
-        ctx.fillStyle = 'rgba(238,226,194,0.8)';
-        ctx.font = '10px "Microsoft YaHei",sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, X(x), Y(y) - r * s - 4);
-      }
-    }
-    var grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0c120d');
-    grad.addColorStop(1, '#070a08');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    if (map.naval) {
-      ctx.fillStyle = '#324f5d';
-      ctx.fillRect(X(0), Y(0), size * s, size * s);
-      if (map.shore && map.shore.length > 1) {
-        ctx.beginPath();
-        ctx.moveTo(X(0), Y(0));
-        for (var si = 0; si < map.shore.length; si++) ctx.lineTo(X(map.shore[si].x), Y(map.shore[si].y));
-        ctx.lineTo(X(0), Y(size));
-        ctx.closePath();
-        ctx.fillStyle = '#b9a77a';
-        ctx.fill();
-        ctx.beginPath();
-        for (var sj = 0; sj < map.shore.length; sj++) {
-          if (sj === 0) ctx.moveTo(X(map.shore[sj].x), Y(map.shore[sj].y));
-          else ctx.lineTo(X(map.shore[sj].x), Y(map.shore[sj].y));
-        }
-        ctx.strokeStyle = 'rgba(230,214,166,0.9)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
-      var L = map.layout || {};
-      (L.forests || []).forEach(function (f) { circle(f.x, f.y, f.r || 70, 'rgba(72,101,61,0.5)', 'rgba(80,110,66,0.7)'); });
-      (L.villages || []).forEach(function (v) { circle(v.x, v.y, v.r || 70, 'rgba(189,163,104,0.35)', 'rgba(219,187,119,0.7)', v.name); });
-      (L.forts || []).forEach(function (f) { circle(f.x, f.y, f.r || 50, 'rgba(120,103,67,0.35)', 'rgba(180,160,110,0.7)'); });
-      (L.towers || []).forEach(function (t) { circle(t.x, t.y, 52, 'rgba(217,187,119,0.2)', '#d9bb77', '塔'); });
-      if (L.radar) circle(L.radar.x, L.radar.y, 55, 'rgba(109,155,196,0.2)', '#6d9bc4', '雷达');
-      (L.coastBases || []).forEach(function (b) { circle(b.x, b.y, 48, 'rgba(197,139,104,0.2)', '#c58b68'); });
-      (L.ports || []).forEach(function (p) { circle(p.x, p.y, 55, 'rgba(106,160,160,0.2)', '#6aa0a0', '港'); });
-    } else {
-      ctx.fillStyle = '#b9a77a';
-      ctx.fillRect(X(0), Y(0), size * s, size * s);
-      if (map.waterMask && map.waterRes) {
-        var wr = map.waterRes;
-        var cell = size * s / wr;
-        ctx.fillStyle = '#3d728b';
-        for (var wy = 0; wy < wr; wy++) {
-          for (var wx = 0; wx < wr; wx++) {
-            if (map.waterMask[wy * wr + wx]) ctx.fillRect(ox + wx * cell, oy + wy * cell, cell + 0.5, cell + 0.5);
-          }
-        }
-      }
-      (map.waterAreas || []).forEach(function (w) { circle(w.x, w.y, w.r || 50, 'rgba(61,114,139,0.75)', 'rgba(40,78,96,0.9)'); });
-      (map.forests || []).forEach(function (f) { circle(f.x, f.y, f.r || 70, 'rgba(72,101,61,0.45)', 'rgba(80,110,66,0.65)'); });
-      (map.zones || []).forEach(function (z) {
-        circle(z.x, z.y, z.r || 60, z.kind === 'forest' ? 'rgba(72,101,61,0.2)' : 'rgba(217,187,119,0.15)', 'rgba(180,160,110,0.7)', z.name);
-      });
-      (map.roads || []).forEach(function (pts) {
-        if (!pts || pts.length < 2) return;
-        ctx.beginPath();
-        for (var ri = 0; ri < pts.length; ri++) {
-          if (ri === 0) ctx.moveTo(X(pts[ri].x), Y(pts[ri].y));
-          else ctx.lineTo(X(pts[ri].x), Y(pts[ri].y));
-        }
-        ctx.strokeStyle = 'rgba(210,190,145,0.8)';
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
-      });
-    }
-
-    if (map.yellow) {
-      ctx.beginPath();
-      ctx.arc(X(map.yellow.x), Y(map.yellow.y), Math.max(4, (map.yellow.r || 300) * s), 0, Math.PI * 2);
-      ctx.strokeStyle = '#e0c06f';
-      ctx.setLineDash([5, 4]);
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    var spawnColors = { blue: '#6da8d4', red: '#c76b58', green: '#7ca66b' };
-    if (map.spawns) Object.keys(map.spawns).forEach(function (side) {
-      var p = map.spawns[side];
-      if (!p || !spawnColors[side]) return;
-      ctx.beginPath();
-      ctx.arc(X(p.x), Y(p.y), 5, 0, Math.PI * 2);
-      ctx.fillStyle = spawnColors[side];
-      ctx.fill();
-    });
-    ctx.strokeStyle = 'rgba(214,196,150,0.35)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(X(0), Y(0), size * s, size * s);
-    ctx.fillStyle = 'rgba(238,226,194,0.75)';
-    ctx.font = '10px "Microsoft YaHei",sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(map.name + ' · ' + size + 'm · ' + (map.naval ? '海战' : '陆战'), X(0) + 8, Y(0) + 16);
+    var canvas = document.getElementById('deploy-minimap');
+    if (!canvas || !R || !R.drawMinimap) return;
+    var g = (window.__STEEL && window.__STEEL.game) ? window.__STEEL.game() : game;
+    if (!g || !g.fog) return;
+    var size = Math.min(canvas.width, canvas.height) || 220;
+    // 直接复用游戏内的战术小地图缓存与绘制
+    R.minimapCache = null;
+    try { R.buildMinimapCache(); } catch (e) {}
+    R.drawMinimap(canvas.getContext('2d'), g, size);
+    var label = document.getElementById('deploy-minimap-label');
+    if (label && SL.Terrain.map) label.textContent = SL.Terrain.map.name + ' · ' + (SL.Terrain.map.naval ? '海战战术图' : '陆战战术图');
   }
 
   function bindMainMenu() {
