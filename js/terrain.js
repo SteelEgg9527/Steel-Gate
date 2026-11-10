@@ -51,6 +51,25 @@
     return out;
   }
 
+  var waterMaskCanvas = null;
+  function buildWaterMaskCanvas() {
+    waterMaskCanvas = null;
+    if (!T.waterMask || !T.waterRes) return;
+    var r = T.waterRes;
+    var cv = document.createElement('canvas');
+    cv.width = r; cv.height = r;
+    var cx = cv.getContext('2d');
+    var img = cx.createImageData(r, r);
+    var d = img.data;
+    for (var i = 0; i < Math.min(T.waterMask.length, r * r); i++) {
+      if (!T.waterMask[i]) continue;
+      var o = i * 4;
+      d[o] = 63; d[o + 1] = 128; d[o + 2] = 163; d[o + 3] = 255;
+    }
+    cx.putImageData(img, 0, 0);
+    waterMaskCanvas = cv;
+  }
+
   T.setMap = function (id) {
     var m = SL.MAP_BY_ID[id] || SL.MAPS[0];
     T.map = m;
@@ -65,6 +84,9 @@
     T.customHeight = m.heightGrid || null;
     T.customHeightRes = m.heightRes || 128;
     T.waterAreas = m.waterAreas || [];
+    T.waterMask = m.waterMask || m.seaMask || null;
+    T.waterRes = m.waterRes || m.seaRes || 0;
+    buildWaterMaskCanvas();
     T.bridges = m.bridges || [];
     T.aiLanes = m.aiLanes || [];
     T.aiLanePaths = (m.aiLanes || []).map(function (l) {
@@ -200,6 +222,12 @@
 
   // 规划器导入的水域/桥梁：水域阻挡地面单位，桥梁点允许通过
   T.isWaterAt = function (x, y) {
+    if (T.waterMask && T.waterRes) {
+      var r = T.waterRes;
+      var ix = Math.floor(x / (T.size || 2000) * r);
+      var iy = Math.floor(y / (T.size || 2000) * r);
+      if (ix >= 0 && iy >= 0 && ix < r && iy < r && T.waterMask[iy * r + ix]) return true;
+    }
     for (var i = 0; i < (T.waterAreas || []).length; i++) {
       var w = T.waterAreas[i];
       var dx = x - w.x, dy = y - w.y;
@@ -207,6 +235,7 @@
     }
     return false;
   };
+  T.hasWater = function () { return !!((T.waterAreas && T.waterAreas.length) || (T.waterMask && T.waterMask.length)); };
   T.isBridgeAt = function (x, y) {
     for (var i = 0; i < (T.bridges || []).length; i++) {
       var b = T.bridges[i];
@@ -1002,7 +1031,8 @@
       ctx.stroke(paths.streams[si]);
     }
 
-    // 规划器水域
+    // 规划器涂色水域
+    if (waterMaskCanvas) ctx.drawImage(waterMaskCanvas, 0, 0, T.size || 2000, T.size || 2000);
     for (var wi = 0; wi < (T.waterAreas || []).length; wi++) {
       var wa = T.waterAreas[wi];
       ctx.beginPath();

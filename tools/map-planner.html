@@ -433,7 +433,7 @@
     ctx.globalAlpha=1;
     drawContours();
     drawGrid();
-    if (state.mode === 'naval' && state.seaMask) {
+    if (state.seaMask) {
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(seaCanvas, 0, 0, W, H);
@@ -502,7 +502,7 @@
   }
   function eraseAt(pt){
     const radius=Number($('brush').value)||120;
-    if(state.mode==='naval' && state.seaMask){ eraseSeaAt(pt); buildSeaCanvas(); }
+    if(state.seaMask){ eraseSeaAt(pt); buildSeaCanvas(); }
     const near=arr=>arr.findIndex(f=>dist(f,pt)<=Math.max(radius,f.r||0));
     let i;
     if((i=near(state.water))>=0){state.water.splice(i,1);return;}
@@ -661,16 +661,15 @@
       buildHeightCanvas(); requestDraw();
       return;
     }
-    if(tool==='water' && state.mode==='naval'){
+    if(tool==='water'){
       snapshot();
       seaPainting=true; lastSeaPt=pt;
       paintSeaAt(pt,false); buildSeaCanvas(); requestDraw();
       return;
     }
-    if(tool==='water'||tool==='forest'){
+    if(tool==='forest'){
       snapshot();
-      const arr=tool==='water'?state.water:state.forests;
-      arr.push({x:pt.x,y:pt.y,r:Number($('brush').value)||120});
+      state.forests.push({x:pt.x,y:pt.y,r:Number($('brush').value)||120});
       requestDraw();
       return;
     }
@@ -736,9 +735,13 @@
       aiLanes:state.aiLanes.map(r=>({type:r.type,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
       backgroundName:state.backgroundName || ''
     };
-    if (state.mode === 'naval') {
-      out.seaRes = state.seaRes;
-      out.seaMask = Array.from(state.seaMask);
+    var hasWaterMask = false;
+    for (var wmi = 0; wmi < state.seaMask.length; wmi++) {
+      if (state.seaMask[wmi]) { hasWaterMask = true; break; }
+    }
+    if (hasWaterMask || state.mode === 'naval') {
+      out.waterRes = state.seaRes;
+      out.waterMask = Array.from(state.seaMask);
     }
     return out;
   }
@@ -752,11 +755,12 @@
     state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
     state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
     state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];
-    state.seaRes = data.seaRes || 256;
+    state.seaRes = data.waterRes || data.seaRes || 256;
     state.seaMask = new Uint8Array(state.seaRes * state.seaRes);
-    if (Array.isArray(data.seaMask)) {
-      for (var smi = 0; smi < Math.min(data.seaMask.length, state.seaMask.length); smi++) {
-        state.seaMask[smi] = data.seaMask[smi] ? 1 : 0;
+    var importedMask = Array.isArray(data.waterMask) ? data.waterMask : (Array.isArray(data.seaMask) ? data.seaMask : null);
+    if (importedMask) {
+      for (var smi = 0; smi < Math.min(importedMask.length, state.seaMask.length); smi++) {
+        state.seaMask[smi] = importedMask[smi] ? 1 : 0;
       }
     }
     var maxSeq=0;

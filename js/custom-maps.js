@@ -68,7 +68,8 @@
       custom: true, mode: 'land', naval: false, test: false, size: size,
       seed: 19440901, heightRes: num(plan.height && plan.height.res, 128),
       heightGrid: plan.height && plan.height.values ? plan.height.values.slice() : [],
-      waterAreas: plan.water || [], bridges: plan.bridges || [],
+      waterAreas: plan.water || [], waterMask: plan.waterMask || plan.seaMask || null,
+      waterRes: plan.waterRes || plan.seaRes || 0, bridges: plan.bridges || [],
       aiLanes: aiLanes.length ? aiLanes : (plan.aiLanes || []),
       roads: roads.map(function (r) { return r.points; }), roadMeta: roads,
       tracks: aiLanes.map(function (r) { return r.points; }),
@@ -100,7 +101,7 @@
     var shore = [];
     var step = 50;
     var seaRes = num(plan.seaRes, 0);
-    var seaMask = Array.isArray(plan.seaMask) ? plan.seaMask : null;
+    var seaMask = Array.isArray(plan.waterMask) ? plan.waterMask : (Array.isArray(plan.seaMask) ? plan.seaMask : null);
     var hasSeaMask = false;
     if (seaMask && seaRes > 0) {
       for (var smi = 0; smi < Math.min(seaMask.length, seaRes * seaRes); smi++) {

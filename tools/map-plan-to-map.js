@@ -68,7 +68,7 @@ let map;
 if (mode === 'naval') {
   const shore = [];
   const seaRes = num(plan.seaRes, 0);
-  const seaMask = Array.isArray(plan.seaMask) ? plan.seaMask : null;
+  const seaMask = Array.isArray(plan.waterMask) ? plan.waterMask : (Array.isArray(plan.seaMask) ? plan.seaMask : null);
   let hasSeaMask = false;
   if (seaMask && seaRes > 0) {
     for (let smi = 0; smi < Math.min(seaMask.length, seaRes * seaRes); smi++) {
@@ -177,7 +177,8 @@ if (mode === 'naval') {
     seed: 19440901, mode: 'land', naval: false, size,
     heightRes: num(plan.height && plan.height.res, 128),
     heightGrid: (plan.height && plan.height.values) || [],
-    waterAreas: plan.water || [], bridges: plan.bridges || [],
+    waterAreas: plan.water || [], waterMask: plan.waterMask || plan.seaMask || null,
+    waterRes: plan.waterRes || plan.seaRes || 0, bridges: plan.bridges || [],
     aiLanes: plan.aiLanes || [],
     roads: roads.map(r => r.points), roadMeta: roads,
     tracks: (plan.aiLanes || []).map(r => pathPoints(r.points)).filter(p => p.length >= 2),

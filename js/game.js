@@ -4225,7 +4225,7 @@
       if (Math.hypot(b.x - px, b.y - py) <= (b.type === 'wire' ? 10 : 13)) return true;
     }
     // 规划器水域阻挡地面单位；只要路线经过桥梁，就允许沿桥跨过该段水域
-    if (u.type !== 'battleship' && T.waterAreas && T.waterAreas.length) {
+    if (u.type !== 'battleship' && T.hasWater && T.hasWater()) {
       var steps = Math.max(2, Math.ceil(Math.hypot(dx, dy) / 20));
       var hitWater = false, hitBridge = false;
       for (var wi = 1; wi <= steps; wi++) {
@@ -4492,7 +4492,7 @@
           var idx = cy * n + cx;
           if (blocked[idx]) continue;
           var px = (cx + 0.5) * cell, py = (cy + 0.5) * cell;
-          if (T.waterAreas && T.waterAreas.length && T.isWaterAt(px, py) && !T.isBridgeAt(px, py)) {
+          if (T.hasWater && T.hasWater() && T.isWaterAt(px, py) && !T.isBridgeAt(px, py)) {
             blocked[idx] = 1;
             continue;
           }
@@ -4520,7 +4520,7 @@
   };
 
   Game.prototype.findPath = function (u, tx, ty) {
-    var hasWater = !!(T.waterAreas && T.waterAreas.length) && u.type !== 'battleship';
+    var hasWater = !!(T.hasWater && T.hasWater()) && u.type !== 'battleship';
     if (!this.barriers.length && !hasWater) return null;
     if (!this.segmentBlocked(u, u.x, u.y, tx, ty)) return [];
     var grid = this.barrierGridFor(u);
