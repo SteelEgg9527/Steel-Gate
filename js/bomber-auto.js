@@ -514,25 +514,44 @@
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
     ctx.setLineDash([]);
-    // 方向箭头：明确从①指向②
+    // 轰炸区内的方向指示：连续箭头明确从①指向②
     var ul = Math.hypot(ex - sx, ey - sy) || 1;
     var ux = (ex - sx) / ul, uy = (ey - sy) / ul;
-    var ax = ex - ux * 24, ay = ey - uy * 24;
-    ctx.beginPath();
-    ctx.moveTo(ax + ux * 14, ay + uy * 14);
-    ctx.lineTo(ax - uy * 8, ay + ux * 8);
-    ctx.lineTo(ax + uy * 8, ay - ux * 8);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(120,200,255,0.98)'; ctx.fill();
+    var hx = -uy, hy = ux;
+    var arrowN = 5;
+    for (var ai = 0; ai < arrowN; ai++) {
+      var tAt = 0.18 + ai * 0.16;
+      var cx = sx + ux * ul * tAt, cy = sy + uy * ul * tAt;
+      var aw = 19, al = 15;
+      ctx.beginPath();
+      ctx.moveTo(cx - ux * al + hx * aw, cy - uy * al + hy * aw);
+      ctx.lineTo(cx + ux * 5, cy + uy * 5);
+      ctx.lineTo(cx - ux * al - hx * aw, cy - uy * al - hy * aw);
+      ctx.strokeStyle = 'rgba(151,216,255,0.95)';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+    // ①/② 是伸出轰炸区外的手柄，用短杆连接
+    var off = 48;
+    var h1x = sx - ux * off, h1y = sy - uy * off;
+    var h2x = ex + ux * off, h2y = ey + uy * off;
+    ctx.strokeStyle = 'rgba(120,200,255,0.95)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(h1x, h1y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(h2x, h2y); ctx.stroke();
     function handle(x, y, label, color) {
-      ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2);
       ctx.fillStyle = '#0b1e31'; ctx.fill();
-      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = color; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.strokeStyle = color; ctx.lineWidth = 2.4; ctx.stroke();
+      ctx.fillStyle = color; ctx.font = '700 13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(label, x, y);
     }
-    handle(sx, sy, '1', '#72c7ff');
-    handle(ex, ey, '2', '#72c7ff');
+    handle(h1x, h1y, '1', '#72c7ff');
+    handle(h2x, h2y, '2', '#72c7ff');
+    a._handle1 = { x: h1x, y: h1y };
+    a._handle2 = { x: h2x, y: h2y };
     ctx.fillStyle = 'rgba(8,28,48,0.9)';
     ctx.fillRect((sx + ex) / 2 - 28, (sy + ey) / 2 - 18, 56, 18);
     ctx.fillStyle = '#b5e2ff';
@@ -611,11 +630,18 @@
       var w = pointerWorld(ev);
       if (!w) return;
       var a = b.auto;
-      var hitR = 22 / Math.max(0.2, SL.Render.cam.zoom);
-      var which = dist(w, a.start) <= hitR ? 'start' : (dist(w, a.end) <= hitR ? 'end' : null);
+      // 命中检测按屏幕上的外置手柄，而不是轰炸线端点
+      var el = $id('world');
+      var rect = el.getBoundingClientRect();
+      var sx = ev.clientX - rect.left, sy = ev.clientY - rect.top;
+      var h1 = a._handle1, h2 = a._handle2;
+      var which = h1 && Math.hypot(sx - h1.x, sy - h1.y) <= 24 ? 'start'
+        : (h2 && Math.hypot(sx - h2.x, sy - h2.y) <= 24 ? 'end' : null);
       if (!which) return;
       ev.preventDefault(); ev.stopPropagation();
       a.drag = which;
+      var knobWorld = SL.Render.screenToWorld(which === 'start' ? h1.x : h2.x, which === 'start' ? h1.y : h2.y);
+      a.dragOffset = { x: (which === 'start' ? a.start.x : a.end.x) - knobWorld.x, y: (which === 'start' ? a.start.y : a.end.y) - knobWorld.y };
     }, true);
     window.addEventListener('pointermove', function (ev) {
       if (!SL.UI || !SL.UI.currentGame) return;
@@ -626,8 +652,9 @@
       var w = pointerWorld(ev);
       if (!w) return;
       ev.preventDefault(); ev.stopPropagation();
-      if (b.auto.drag === 'start') b.auto.start = { x: w.x, y: w.y };
-      else b.auto.end = { x: w.x, y: w.y };
+      var off = b.auto.dragOffset || { x: 0, y: 0 };
+      if (b.auto.drag === 'start') b.auto.start = { x: w.x + off.x, y: w.y + off.y };
+      else b.auto.end = { x: w.x + off.x, y: w.y + off.y };
       // 长度限制：最短 260，最长 1400
       var dx = b.auto.end.x - b.auto.start.x, dy = b.auto.end.y - b.auto.start.y;
       var len = Math.hypot(dx, dy) || 1;
@@ -639,7 +666,7 @@
       var g = SL.UI.currentGame();
       if (!g) return;
       var b = ensure(g);
-      if (b.auto) b.auto.drag = null;
+      if (b.auto) { b.auto.drag = null; b.auto.dragOffset = null; }
     }, true);
   }
 
