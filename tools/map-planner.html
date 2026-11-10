@@ -14,7 +14,11 @@
   html,body{height:100%;margin:0}
   body{background:var(--bg);color:var(--ink);font:12px "Microsoft YaHei","Noto Sans SC",sans-serif;overflow:hidden}
   #app{display:flex;height:100%}
-  #sidebar{width:310px;flex:0 0 310px;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px}
+  #sidebar{width:310px;flex:0 0 310px;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px;scrollbar-width:thin;scrollbar-color:#4a503d #11140f}
+  #sidebar::-webkit-scrollbar{width:7px;height:7px}
+  #sidebar::-webkit-scrollbar-track{background:#11140f}
+  #sidebar::-webkit-scrollbar-thumb{background:#4a503d;border:1px solid #20261c;border-radius:4px}
+  #sidebar::-webkit-scrollbar-thumb:hover{background:#6d7659}
   h1{font-size:18px;letter-spacing:.12em;margin:0 0 4px;color:#f0e4c2}
   .sub{color:var(--dim);font-size:10px;margin-bottom:12px}
   .field{margin:9px 0}
@@ -31,12 +35,15 @@
   button:hover{border-color:var(--gold);color:#fff0bf}
   button.primary{background:#4a4329;border-color:#b79958;color:#f5dfa6}
   .divider{height:1px;background:var(--line);margin:12px 0}
-  #main{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:18px;position:relative}
-  #canvasWrap{position:relative;width:min(86vh,900px);height:min(86vh,900px);max-width:100%;max-height:100%}
+  #main{flex:1;min-width:0;position:relative;overflow:hidden;background:#0d100c}
+  #canvasWrap{position:absolute;left:0;top:0;width:600px;height:600px;max-width:none;max-height:none;transform-origin:0 0;will-change:transform}
   #map,#cursorLayer{position:absolute;inset:0;width:100%;height:100%;display:block}
   #map{background:#c7b991;border:1px solid #5e5b45;box-shadow:0 0 0 4px rgba(0,0,0,.18);touch-action:none}
   #cursorLayer{pointer-events:none;z-index:2}
-  #hint{position:absolute;left:0;right:0;bottom:-32px;text-align:center;color:#8e997f;font-size:10px;z-index:3}
+  #hint{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);text-align:center;color:#8e997f;font-size:10px;z-index:4;pointer-events:none;white-space:nowrap}
+  #viewbar{position:absolute;right:12px;bottom:10px;display:flex;align-items:center;gap:4px;z-index:5;background:rgba(15,18,13,0.86);border:1px solid rgba(180,164,119,0.32);padding:4px}
+  #viewbar button{padding:3px 7px;min-height:24px;font-size:10px}
+  #zoomLabel{display:inline-block;min-width:38px;text-align:center;color:#d9bb77;font:10px var(--mono,monospace)}
   #stats{color:#8e997f;font-size:10px;line-height:1.7;margin-top:6px}
   #legend{font-size:10px;color:#aab49a;line-height:1.8}
   .swatch{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
@@ -121,13 +128,19 @@
       <div><span class="swatch" style="background:#c36b5d"></span>红方出生</div>
     </div>
     <div id="stats"></div>
-    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮不缩放，地图按画布缩放。</p>
+    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮缩放，中键/右键拖动画布。</p>
   </aside>
   <main id="main">
     <div id="canvasWrap">
       <canvas id="map" width="900" height="900"></canvas>
       <canvas id="cursorLayer" width="900" height="900"></canvas>
-      <div id="hint">左键绘制 · 道路连续点击 · Enter 完成路线</div>
+    </div>
+    <div id="hint">滚轮缩放 · 中键/右键拖动画布 · 左键绘制 · Enter 完成路线</div>
+    <div id="viewbar">
+      <button id="zoomOut" type="button" title="缩小">−</button>
+      <span id="zoomLabel">100%</span>
+      <button id="zoomIn" type="button" title="放大">+</button>
+      <button id="zoomFit" type="button">适应</button>
     </div>
   </main>
 </div>
@@ -158,6 +171,49 @@
   let undoStack = [];
   const heightCanvas = document.createElement('canvas');
   const hctx = heightCanvas.getContext('2d');
+  const mainEl = $('main');
+  const wrapEl = $('canvasWrap');
+  const view = { zoom: 1, x: 0, y: 0 };
+  let panDrag = null;
+  let fitPending = false;
+
+  function applyView(){
+    wrapEl.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.zoom + ')';
+    var label = $('zoomLabel');
+    if (label) label.textContent = Math.round(view.zoom * 100) + '%';
+  }
+
+  function fitCanvas(){
+    if (!mainEl || !wrapEl) return;
+    var r = mainEl.getBoundingClientRect();
+    var size = Math.max(180, Math.min(r.width - 24, r.height - 54));
+    wrapEl.style.width = size + 'px';
+    wrapEl.style.height = size + 'px';
+    view.zoom = 1;
+    view.x = (r.width - size) / 2;
+    view.y = (r.height - size - 32) / 2;
+    applyView();
+  }
+  function scheduleFit(){
+    if (fitPending) return;
+    fitPending = true;
+    requestAnimationFrame(function(){ fitPending = false; fitCanvas(); });
+  }
+  function setZoom(next, cx, cy){
+    var r = mainEl.getBoundingClientRect();
+    var old = view.zoom;
+    next = U_clamp(next, 0.5, 4);
+    if (Math.abs(next - old) < 0.001) return;
+    if (cx == null) cx = r.width / 2;
+    if (cy == null) cy = r.height / 2;
+    var lx = (cx - view.x) / old;
+    var ly = (cy - view.y) / old;
+    view.zoom = next;
+    view.x = cx - lx * next;
+    view.y = cy - ly * next;
+    applyView();
+  }
+  function U_clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
   function status(msg){ $('status').textContent = msg || ''; }
   function worldScale(){ return W / state.size; }
@@ -684,6 +740,32 @@
     rd.onload=()=>{const im=new Image();im.onload=()=>{state.background=im;state.backgroundName=f.name;$('sketchName').textContent=f.name;draw();};im.src=rd.result;};
     rd.readAsDataURL(f);
   });
+  // 画布缩放与平移
+  canvas.addEventListener('wheel', function(e){
+    e.preventDefault();
+    var r = mainEl.getBoundingClientRect();
+    var factor = Math.exp(-e.deltaY * 0.0012);
+    setZoom(view.zoom * factor, e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  canvas.addEventListener('pointerdown', function(e){
+    if (e.button !== 1 && e.button !== 2) return;
+    e.preventDefault();
+    panDrag = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  window.addEventListener('pointermove', function(e){
+    if (!panDrag) return;
+    view.x = panDrag.ox + (e.clientX - panDrag.sx);
+    view.y = panDrag.oy + (e.clientY - panDrag.sy);
+    applyView();
+  });
+  window.addEventListener('pointerup', function(){ panDrag = null; });
+  canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  $('zoomIn').addEventListener('click', function(){ setZoom(view.zoom * 1.25); });
+  $('zoomOut').addEventListener('click', function(){ setZoom(view.zoom / 1.25); });
+  $('zoomFit').addEventListener('click', fitCanvas);
+  window.addEventListener('resize', scheduleFit);
+
   window.addEventListener('keydown',e=>{
     if(e.key==='Enter'){finishRoad();e.preventDefault();}
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){undo();e.preventDefault();}
@@ -691,6 +773,7 @@
   });
   styleToolButtons();
   $('gridBtn').textContent='网格：开'; $('contourBtn').textContent='等高线：开';
+  requestAnimationFrame(fitCanvas);
   window.__MAP_EDITOR__ = { get state(){ return state; }, exportData: exportData, importData: importData, draw: draw, setTool: setTool };
   draw();
   status('从草图开始，或直接抬高/压低地形');
