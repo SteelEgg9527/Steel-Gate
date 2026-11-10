@@ -521,23 +521,27 @@
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
     ctx.setLineDash([]);
-    // 轰炸区内的方向指示：连续箭头明确从①指向②
+    // 方向标为双排，分别位于中心轴两侧空区的中线上，不在整个指示器中轴
     var ul = Math.hypot(ex - sx, ey - sy) || 1;
     var ux = (ex - sx) / ul, uy = (ey - sy) / ul;
     var hx = -uy, hy = ux;
     var arrowN = 5;
-    for (var ai = 0; ai < arrowN; ai++) {
-      var tAt = 0.18 + ai * 0.16;
-      var cx = sx + ux * ul * tAt, cy = sy + uy * ul * tAt;
-      var aw = 19, al = 15;
-      ctx.beginPath();
-      ctx.moveTo(cx - ux * al + hx * aw, cy - uy * al + hy * aw);
-      ctx.lineTo(cx + ux * 5, cy + uy * 5);
-      ctx.lineTo(cx - ux * al - hx * aw, cy - uy * al - hy * aw);
-      ctx.strokeStyle = 'rgba(151,216,255,0.95)';
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.stroke();
+    var rowOffset = half * 0.5; // 两侧空区中线：各距中心轴 1/4 全宽
+    for (var row = -1; row <= 1; row += 2) {
+      for (var ai = 0; ai < arrowN; ai++) {
+        var tAt = 0.18 + ai * 0.16;
+        var cx = sx + ux * ul * tAt + hx * rowOffset * row;
+        var cy = sy + uy * ul * tAt + hy * rowOffset * row;
+        var aw = 15, al = 12;
+        ctx.beginPath();
+        ctx.moveTo(cx - ux * al + hx * aw, cy - uy * al + hy * aw);
+        ctx.lineTo(cx + ux * 4, cy + uy * 4);
+        ctx.lineTo(cx - ux * al - hx * aw, cy - uy * al - hy * aw);
+        ctx.strokeStyle = 'rgba(151,216,255,0.95)';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      }
     }
     ctx.lineCap = 'butt';
     // ①/② 是伸出轰炸区外的手柄，用短杆连接
