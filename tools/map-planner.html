@@ -63,7 +63,7 @@
     <div class="field"><label>地图名</label><input id="mapName" value="新地图"></div>
     <div class="row">
       <div class="field"><label>模式</label><select id="mapMode"><option value="land">陆战</option><option value="naval">海战</option></select></div>
-      <div class="field"><label>尺寸</label><select id="mapSize"><option value="2000">2000m 陆战</option><option value="5000">5000m 海战</option></select></div>
+      <div class="field"><label>尺寸</label><select id="mapSize"><option value="1000">1000m</option><option value="1500">1500m</option><option value="2000" selected>2000m</option><option value="2500">2500m</option><option value="3000">3000m</option><option value="4000">4000m</option><option value="5000">5000m</option></select></div>
       <div class="field"><label>高度网格</label><select id="heightRes"><option value="64">64×64</option><option value="128" selected>128×128</option><option value="256">256×256</option></select></div>
     </div>
     <div class="field"><label>草图 / 参考图</label><div class="row"><button id="sketchBtn">上传草图图片</button><button id="sketchClear" class="danger">移除参考图</button></div><input id="file" type="file" accept="image/*"><div id="sketchName" class="tip">未上传</div></div>
@@ -767,7 +767,6 @@
   function importData(data, silent){
     if(!data || data.schema!=='steel-map-plan/v1') throw new Error('不是地图规划器 JSON');
     state.name=data.name||'新地图'; state.mode=data.mode==='naval'?'naval':'land'; state.size=Number(data.size)||(state.mode==='naval'?5000:2000);
-    if(state.mode==='naval')state.size=5000;else state.size=2000;
     state.res=(data.height&&data.height.res)||128;
     state.height=new Float32Array(state.res*state.res);
     if(data.height&&Array.isArray(data.height.values)) data.height.values.forEach((v,i)=>{if(i<state.height.length)state.height[i]=Number(v)||0;});
@@ -823,16 +822,13 @@
   $('mapName').addEventListener('input',e=>{state.name=e.target.value;draw();});
   $('mapMode').addEventListener('change',e=>{
     state.mode=e.target.value==='naval'?'naval':'land';
-    state.size=state.mode==='naval'?5000:2000;
-    $('mapSize').value=String(state.size);
     draw();
-    status(state.mode==='naval'?'海战模式：5000m；用水域笔刷直接涂蓝成为海面':'陆战模式：2000m');
+    status(state.mode==='naval'?'海战模式：用水域笔刷直接涂蓝成为海面':'陆战模式');
   });
   $('mapSize').addEventListener('change',e=>{
-    state.size=Number(e.target.value)===5000?5000:2000;
-    state.mode=state.size===5000?'naval':'land';
-    $('mapMode').value=state.mode;
+    state.size=Number(e.target.value)||2000;
     draw();
+    status('地图尺寸：' + state.size + 'm');
   });
   $('heightRes').addEventListener('change',e=>{state.res=Number(e.target.value);state.height=new Float32Array(state.res*state.res);buildHeightCanvas();draw();});
   function clearBackground(skipDraw){

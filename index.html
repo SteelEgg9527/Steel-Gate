@@ -470,7 +470,7 @@
         <div>
           <div class="sheet-kicker">CUSTOM MAPS · LOCAL</div>
           <h1>自定义地图</h1>
-          <p class="sheet-sub">只保存在本机，不进入正式地图池。可混战或防御游玩。</p>
+          <p class="sheet-sub">只保存在本机，不进入正式地图池。可混战或背水一战游玩。</p>
         </div>
         <button id="custom-close" class="menu-return" type="button">关闭</button>
       </div>
@@ -522,49 +522,58 @@
     </div>
   </div>
 
-  <!-- 作战简报 -->
-  <div id="briefing" class="overlay">
-    <div class="sheet">
-      <div class="sheet-head">
-        <span class="stamp" id="brief-stamp">车轮战</span>
-        <div>
-          <h1 id="brief-title">作战简报 · 圣洛村</h1>
-          <p class="sub" id="brief-sub">1944 年 6 月 10 日 · 三军混战 · 无限重生</p>
+  <!-- 作战部署 / 全屏模式选择 -->
+  <div id="briefing" class="overlay deploy-screen">
+    <div class="deploy-shell">
+      <header class="deploy-top">
+        <button id="deploy-back" class="deploy-back" type="button">‹ 返回主界面</button>
+        <div class="deploy-heading">
+          <span>OPERATION DEPLOYMENT · 1944</span>
+          <h1 id="brief-title">作战部署</h1>
+          <p id="brief-sub">选择模式、战场与难度</p>
         </div>
+        <div class="deploy-stamp"><span id="brief-stamp">车轮战</span></div>
+      </header>
+      <div class="deploy-main">
+        <aside class="deploy-left">
+          <section class="deploy-section">
+            <div class="deploy-label"><span>01</span>模式</div>
+            <div id="mode-buttons" class="deploy-options"></div>
+            <span id="mode-current" class="deploy-current"></span>
+          </section>
+          <section class="deploy-section">
+            <div class="deploy-label"><span>02</span>战场</div>
+            <div id="map-buttons" class="deploy-map-grid"></div>
+            <span id="map-current" class="deploy-current"></span>
+          </section>
+          <section class="deploy-section" id="difficulty-pick">
+            <div class="deploy-label"><span>03</span>难度</div>
+            <div id="difficulty-buttons" class="deploy-options"></div>
+            <span id="difficulty-current" class="deploy-current"></span>
+          </section>
+        </aside>
+        <section class="deploy-right">
+          <div class="deploy-preview-card">
+            <canvas id="deploy-preview" width="960" height="540"></canvas>
+            <div class="deploy-preview-tag">SECTOR MAP · 战术预览</div>
+          </div>
+          <div class="deploy-brief-card">
+            <div class="deploy-brief-head">
+              <h2>作战简报</h2>
+              <span id="mode-desc"></span>
+            </div>
+            <h3 id="enemy-heading"></h3>
+            <ul id="enemy-force"></ul>
+            <ul id="battle-rules"></ul>
+            <div id="brief-copy" class="brief deploy-brief-copy"></div>
+          </div>
+        </section>
       </div>
-      <div class="sheet-body">
-        <div class="map-pick mode-pick">
-          <span class="mp-label">模式</span>
-          <div id="mode-buttons"></div>
-          <span id="mode-current" class="mp-current"></span>
-        </div>
-        <div class="map-pick" id="difficulty-pick">
-          <span class="mp-label">难度</span>
-          <div id="difficulty-buttons"></div>
-          <span id="difficulty-current" class="mp-current"></span>
-        </div>
-        <div class="map-pick">
-          <span class="mp-label">战场</span>
-          <div id="map-buttons"></div>
-          <span id="map-current" class="mp-current"></span>
-        </div>
-        <p class="mode-desc" id="mode-desc"></p>
-        <div class="brief" id="brief-copy"></div>
-
-      </div>
-      <div class="sheet-foot">
-        <span class="hintkey">Enter 开始</span>
-        <button id="btn-start" class="primary">开始作战</button>
-      </div>
+      <footer class="deploy-foot">
+        <span class="deploy-foot-note">地图决定是否存在海域与舰船 · 模式决定作战规则</span>
+        <button id="btn-start" class="primary deploy-start" type="button">开始作战</button>
+      </footer>
     </div>
-    <footer class="credit-footer credit-standalone">
-      <div class="credit-links">
-        <a href="https://github.com/SteelEgg9527/Steel-Gate" target="_blank" rel="noopener">GitHub 项目</a>
-        <span>·</span>
-        <a href="https://github.com/SteelEgg9527/Steel-Gate/issues" target="_blank" rel="noopener">提交意见</a>
-      </div>
-      <div class="credit-author">作者：钢蛋</div>
-    </footer>
   </div>
 
   <!-- 替换已满阵地的工事 -->
@@ -591,8 +600,8 @@
     <div class="sheet narrow">
       <div class="sheet-head">
         <div>
-          <h1>操作 · 单位 · 舰炮轰鸣</h1>
-          <p class="sub">2km 混战 / 防御模式 · 5km 海陆舰炮轰鸣 / 背水一战 · F 停止 · H 帮助 · Esc 菜单</p>
+          <h1>操作 · 单位 · 海战</h1>
+          <p class="sub">混战 / 背水一战 · 地图决定陆战或海战 · F 停止 · H 帮助 · Esc 菜单</p>
         </div>
         <button id="btn-help-close" class="icon-btn">×</button>
       </div>
@@ -630,7 +639,7 @@
             </ul>
           </div>
           <div>
-            <h3>舰炮轰鸣</h3>
+            <h3>海战系统</h3>
             <ul class="keys">
               <li><b>地图</b><span>5km 海陆地图；3 座通讯塔、1 座雷达站、8 个海岸基地</span></li>
               <li><b>通讯塔</b><span>可占领、摧毁、修复；提供舰炮校射与装填加成；没有通讯塔时舰炮压制不能对陆地使用</span></li>

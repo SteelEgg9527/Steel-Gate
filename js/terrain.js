@@ -96,10 +96,15 @@
     T.map = m;
     // 从海战返回陆战/自定义地图时，必须恢复陆战尺寸，不能沿用 5km
     if (!m.naval) {
-      T.size = m.size || SIZE;
+      T.size = m.size || 2000;
+      // 自定义地图允许改变战场尺寸：同步地形网格步长
+      SIZE = T.size;
+      EXTENT = SIZE + PAD * 2;
+      STEP = EXTENT / N;
+      T.step = STEP;
       T.origin = 0;
-      T.extent = T.size;
-      T.end = T.size;
+      T.extent = EXTENT;
+      T.end = EXTENT;
       SL.CONFIG.mapSize = T.size;
     }
     T.customHeight = m.heightGrid || null;

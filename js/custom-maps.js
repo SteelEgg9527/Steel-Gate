@@ -23,14 +23,14 @@
   function validate(plan) {
     if (!plan || plan.schema !== 'steel-map-plan/v1') return '不是地图编辑器格式（steel-map-plan/v1）';
     var mode = planMode(plan);
-    if (mode === 'naval' && num(plan.size, 5000) !== 5000) return '海战地图必须是 5000m';
-    if (mode === 'land' && num(plan.size, 2000) !== MAX_SIZE) return '陆战地图目前只支持 2000m';
+    var size = num(plan.size, 2000);
+    if (size < 1000 || size > 5000) return '地图尺寸必须在 1000m 到 5000m 之间';
     if (mode === 'land' && (!plan.height || !Array.isArray(plan.height.values))) return '陆战地图缺少高度数据';
     return '';
   }
   function toMap(plan, id) {
     if (planMode(plan) === 'naval') return toNavalMap(plan, id);
-    var size = MAX_SIZE;
+    var size = num(plan.size, 2000);
     var roads = (plan.roads || []).map(function (r) {
       return {
         type: r.type === 'highway' ? 'highway' : 'dirt',
@@ -101,7 +101,7 @@
   }
 
   function toNavalMap(plan, id) {
-    var size = 5000;
+    var size = num(plan.size, 5000);
     var shore = [];
     var step = 50;
     var seaRes = num(plan.seaRes, 0);
@@ -142,7 +142,7 @@
       };
     }
     var towers = siteKind('comm').map(function (s, i) { return siteObj(s, '通讯塔 ' + (i + 1), 'comm'); });
-    var towerYs = [1100, 2500, 3900];
+    var towerYs = [size * 0.22, size * 0.5, size * 0.78];
     for (var ti = 0; towers.length < 3; ti++) {
       var ty = towerYs[ti % towerYs.length];
       towers.push({ x: Math.max(140, shoreAtY(shore, ty) - 180), y: ty, name: '通讯塔 ' + (towers.length + 1), kind: 'comm' });
@@ -154,7 +154,7 @@
     var coastBases = siteKind('coastbase').map(function (s, i) { return siteObj(s, '海岸炮台 ' + (i + 1), 'coastbase'); });
     if (!coastBases.length) {
       for (var ci = 0; ci < 4; ci++) {
-        var cy = 1000 + ci * 1000;
+        var cy = size * (0.2 + ci * 0.2);
         coastBases.push({ x: Math.max(140, shoreAtY(shore, cy) - 120), y: cy, name: '海岸炮台 ' + (ci + 1), kind: 'coastbase' });
       }
     }

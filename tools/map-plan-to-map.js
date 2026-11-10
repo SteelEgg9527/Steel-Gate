@@ -58,9 +58,9 @@ function shoreAtY(shore, y) {
 
 const id = 'plan_' + slug(plan.name);
 const mode = plan.mode === 'naval' ? 'naval' : 'land';
-const size = mode === 'naval' ? 5000 : num(plan.size, 2000);
-if (mode === 'naval' && size !== 5000) {
-  console.error('海战规划文件必须是 5000m');
+const size = num(plan.size, 2000);
+if (size < 1000 || size > 5000) {
+  console.error('地图尺寸必须在 1000m 到 5000m 之间');
   process.exit(1);
 }
 
@@ -100,7 +100,7 @@ if (mode === 'naval') {
   const towers = byKind('comm').map((s, i) => ({
     x: num(s.x, size / 2), y: num(s.y, size / 2), name: s.name || ('通讯塔 ' + (i + 1))
   }));
-  const towerYs = [1100, 2500, 3900];
+  const towerYs = [size * 0.22, size * 0.5, size * 0.78];
   for (let ti = 0; towers.length < 3; ti++) {
     const ty = towerYs[ti % towerYs.length];
     towers.push({ x: Math.max(140, shoreAtY(shore, ty) - 180), y: ty, name: '通讯塔 ' + (towers.length + 1) });
@@ -115,7 +115,7 @@ if (mode === 'naval') {
   }));
   if (!coastBases.length) {
     for (let ci = 0; ci < 4; ci++) {
-      const cy = 1000 + ci * 1000;
+      const cy = size * (0.2 + ci * 0.2);
       coastBases.push({ x: Math.max(140, shoreAtY(shore, cy) - 120), y: cy, name: '海岸炮台 ' + (ci + 1) });
     }
   }
