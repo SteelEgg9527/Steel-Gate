@@ -143,10 +143,13 @@
     return total;
   }
 
+  function formationLateral(i, n) { return (i - (n - 1) / 2) * 150; }
+  function formationForward(i, n) { return -Math.abs(i - (n - 1) / 2) * 150; }
+
   function targetWidth(g) {
     var b = ensure(g);
     var n = b.formation.filter(Boolean).length || 0;
-    return clamp(120 + n * 55, 160, 520);
+    return clamp(300 + Math.max(0, n - 1) * 150, 420, 1000);
   }
 
   function defaultTarget(g) {
@@ -206,13 +209,13 @@
     SL.Bomber.refresh(g);
   }
 
-  function nearestEdge(x, y) {
+  function edgeAlong(x, y, dx, dy) {
     var ms = SL.CONFIG.mapSize || 2000;
-    var m = Math.min(x, ms - x, y, ms - y);
-    if (m === x) return { x: -120, y: y, heading: 0 };
-    if (m === ms - x) return { x: ms + 120, y: y, heading: Math.PI };
-    if (m === y) return { x: x, y: -120, heading: Math.PI / 2 };
-    return { x: x, y: ms + 120, heading: -Math.PI / 2 };
+    var margin = 160;
+    var tx = dx > 0 ? (ms + margin - x) / dx : (dx < 0 ? (-margin - x) / dx : 1e9);
+    var ty = dy > 0 ? (ms + margin - y) / dy : (dy < 0 ? (-margin - y) / dy : 1e9);
+    var t = Math.min(tx, ty);
+    return { x: x + dx * t, y: y + dy * t };
   }
 
   function launch(g) {
@@ -238,9 +241,12 @@
     var len = Math.hypot(dir.x, dir.y) || 1;
     b.auto.dir = { x: dir.x / len, y: dir.y / len };
     b.auto.length = clamp(len, 260, 1400);
-    var edge = nearestEdge(b.auto.start.x, b.auto.start.y);
+    // 进场点必须位于轰炸线反向延长线与地图边缘的交点，
+    // 保证整条进场航线与最终轰炸方向完全重合
+    var edge = edgeAlong(b.auto.start.x, b.auto.start.y, -b.auto.dir.x, -b.auto.dir.y);
     b.auto.group = { x: edge.x, y: edge.y, heading: Math.atan2(b.auto.dir.y, b.auto.dir.x) };
-    b.auto.entryTarget = { x: b.auto.start.x - b.auto.dir.x * 240, y: b.auto.start.y - b.auto.dir.y * 240 };
+    b.auto.entryRemain = Math.hypot(b.auto.start.x - edge.x, b.auto.start.y - edge.y);
+    b.auto.exitEdge = edgeAlong(b.auto.end.x, b.auto.end.y, b.auto.dir.x, b.auto.dir.y);
     b.auto.bombs = [];
     for (var i = 0; i < b.formation.length; i++) {
       var p = b.formation[i];
@@ -259,25 +265,29 @@
     var b = ensure(g);
     var queue = [];
     var planes = b.formation.filter(Boolean);
-    var total = 0;
-    for (var i = 0; i < planes.length; i++) total += planes[i].bombs.length;
-    if (!total) return;
-    var idx = 0;
+    var maxBombs = 0;
+    for (var i = 0; i < planes.length; i++) maxBombs = Math.max(maxBombs, planes[i].bombs.length);
+    if (!maxBombs) return;
     var runTime = Math.max(4, b.auto.length / Math.max(50, B.b17.speed));
-    for (var p = 0; p < planes.length; p++) {
-      var plane = planes[p];
-      var side = (p - (planes.length - 1) / 2) * 65;
-      for (var k = 0; k < plane.bombs.length; k++) {
-        var frac = total <= 1 ? 0.5 : idx / (total - 1);
+    // 集群轰炸：同一俯冲时刻所有飞机一起投弹，形成横队弹幕，
+    // 而不是单机沿整条轰炸线依次投完。
+    for (var k = 0; k < maxBombs; k++) {
+      var frac = maxBombs <= 1 ? 0.5 : k / (maxBombs - 1);
+      var at = g.time + 0.8 + frac * runTime;
+      for (var p = 0; p < planes.length; p++) {
+        var plane = planes[p];
+        if (!plane.bombs[k]) continue;
         queue.push({
           type: plane.bombs[k],
-          at: g.time + 1.2 + frac * runTime,
+          at: at,
           frac: frac,
-          side: side
+          side: formationLateral(p, planes.length),
+          planeIndex: p,
+          bombIndex: k
         });
-        idx++;
       }
     }
+    queue.sort(function (a, b) { return a.at - b.at; });
     b.auto.bombs = queue;
   }
 
@@ -325,14 +335,21 @@
       if (g.time >= (a.abortUntil || 0)) finishMission(g);
       return;
     }
-    // 进场：从最近地图边缘飞到轰炸线起点
+    // 进场 / 投弹 / 退场全部沿最终轰炸方向直线飞行
     if (a.stage === 'entry') {
-      var eg = a.entryTarget;
-      var dx = eg.x - a.group.x, dy = eg.y - a.group.y;
-      var ed = Math.hypot(dx, dy);
       var sp = B.b17.speed * 1.35;
-      if (ed <= sp * dt) { a.group.x = eg.x; a.group.y = eg.y; a.stage = 'run'; buildBombQueue(g); }
-      else { a.group.x += dx / ed * sp * dt; a.group.y += dy / ed * sp * dt; }
+      var step = sp * dt;
+      if (a.entryRemain <= step) {
+        a.group.x = a.start.x;
+        a.group.y = a.start.y;
+        a.entryRemain = 0;
+        a.stage = 'run';
+        buildBombQueue(g);
+      } else {
+        a.group.x += a.dir.x * step;
+        a.group.y += a.dir.y * step;
+        a.entryRemain -= step;
+      }
       a.group.heading = Math.atan2(a.dir.y, a.dir.x);
     } else if (a.stage === 'run') {
       a.progress += B.b17.speed * dt;
@@ -340,24 +357,26 @@
       a.group.x = a.start.x + a.dir.x * a.length * f;
       a.group.y = a.start.y + a.dir.y * a.length * f;
       a.group.heading = Math.atan2(a.dir.y, a.dir.x);
-      if (a.progress >= a.length) { a.stage = 'exit'; a.exitAt = g.time + 10; }
+      if (a.progress >= a.length) {
+        a.stage = 'exit';
+        a.exitAt = g.time + 10;
+      }
     } else if (a.stage === 'exit') {
-      var edge = nearestEdge(a.group.x, a.group.y);
-      var dx2 = edge.x - a.group.x, dy2 = edge.y - a.group.y;
-      var ed2 = Math.hypot(dx2, dy2) || 1;
-      a.group.x += dx2 / ed2 * B.b17.speed * 1.2 * dt;
-      a.group.y += dy2 / ed2 * B.b17.speed * 1.2 * dt;
+      // 继续沿轰炸方向飞出地图，不做横向修正
+      a.group.x += a.dir.x * B.b17.speed * 1.2 * dt;
+      a.group.y += a.dir.y * B.b17.speed * 1.2 * dt;
+      a.group.heading = Math.atan2(a.dir.y, a.dir.x);
       if (g.time >= (a.exitAt || 0)) { finishMission(g); return; }
     }
-    // 编队位置
+    // V 字编队：横向轨道间距 150m，僚机依次后掠
     var planes = b.formation.filter(Boolean);
+    var sx = -a.dir.y, sy = a.dir.x;
     for (var i = 0; i < planes.length; i++) {
       var p = planes[i];
-      var side = (i - (planes.length - 1) / 2) * 65;
-      var fx = a.dir.x, fy = a.dir.y;
-      var sx = -fy, sy = fx;
-      p.x = a.group.x + sx * side;
-      p.y = a.group.y + sy * side;
+      var lat = formationLateral(i, planes.length);
+      var fwd = formationForward(i, planes.length);
+      p.x = a.group.x + sx * lat + a.dir.x * fwd;
+      p.y = a.group.y + sy * lat + a.dir.y * fwd;
       p.heading = a.group.heading;
       p.deployed = true;
     }
@@ -372,10 +391,9 @@
       px += nx * bomb.side;
       py += ny * bomb.side;
       explodeBomb(g, bomb.type, px, py);
-      // 从飞机数据中扣除对应航弹
-      for (var pi = 0; pi < planes.length; pi++) {
-        if (planes[pi].bombs[0] === bomb.type) { planes[pi].bombs.shift(); break; }
-      }
+      // 精确扣除该机该挂点的航弹；空位在返航时统一整理
+      var dropPlane = planes[bomb.planeIndex];
+      if (dropPlane && dropPlane.bombs[bomb.bombIndex] != null) dropPlane.bombs[bomb.bombIndex] = null;
     }
     a.allDropped = a.bombs.every(function (x) { return x.done; });
   }
@@ -385,6 +403,7 @@
     var counts = {};
     for (var i = 0; i < (p.bombs || []).length; i++) {
       var t = p.bombs[i];
+      if (!t) continue;
       counts[t] = (counts[t] || 0) + 1;
     }
     p.bombGroups = [];
@@ -404,6 +423,7 @@
       if (idx >= 0) g.planes.splice(idx, 1);
       // 返航后不立即补给，等下一次出击时统一结算
       p.hp = p.maxHp;
+      p.bombs = (p.bombs || []).filter(Boolean);
       syncBombGroups(p);
     }
     b.state = 'base';
@@ -423,9 +443,9 @@
     var half = a.width * 0.5 * cam.zoom;
     nx /= nl; ny /= nl;
     ctx.save();
-    ctx.fillStyle = 'rgba(205,162,74,0.12)';
-    ctx.strokeStyle = 'rgba(235,196,105,0.9)';
-    ctx.lineWidth = 1.4;
+    ctx.fillStyle = 'rgba(66,145,238,0.14)';
+    ctx.strokeStyle = 'rgba(96,181,255,0.96)';
+    ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(sx + nx * half, sy + ny * half);
     ctx.lineTo(ex + nx * half, ey + ny * half);
@@ -433,21 +453,33 @@
     ctx.lineTo(sx - nx * half, sy - ny * half);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    ctx.setLineDash([8, 6]);
+    ctx.setLineDash([9, 7]);
+    ctx.strokeStyle = 'rgba(139,211,255,0.98)';
+    ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
     ctx.setLineDash([]);
+    // 方向箭头：明确从①指向②
+    var ul = Math.hypot(ex - sx, ey - sy) || 1;
+    var ux = (ex - sx) / ul, uy = (ey - sy) / ul;
+    var ax = ex - ux * 24, ay = ey - uy * 24;
+    ctx.beginPath();
+    ctx.moveTo(ax + ux * 14, ay + uy * 14);
+    ctx.lineTo(ax - uy * 8, ay + ux * 8);
+    ctx.lineTo(ax + uy * 8, ay - ux * 8);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(120,200,255,0.98)'; ctx.fill();
     function handle(x, y, label, color) {
       ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#11160f'; ctx.fill();
+      ctx.fillStyle = '#0b1e31'; ctx.fill();
       ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = color; ctx.font = '700 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(label, x, y);
     }
-    handle(sx, sy, '1', '#e8c47a');
-    handle(ex, ey, '2', '#e8c47a');
-    ctx.fillStyle = 'rgba(20,25,16,0.86)';
+    handle(sx, sy, '1', '#72c7ff');
+    handle(ex, ey, '2', '#72c7ff');
+    ctx.fillStyle = 'rgba(8,28,48,0.9)';
     ctx.fillRect((sx + ex) / 2 - 28, (sy + ey) / 2 - 18, 56, 18);
-    ctx.fillStyle = '#f0d58e';
+    ctx.fillStyle = '#b5e2ff';
     ctx.font = '700 10px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(b.state === 'autoAim' ? '锁定 ' + Math.ceil(a.timer) + 's' : '投弹中', (sx + ex) / 2, (sy + ey) / 2 - 5);
     ctx.restore();
