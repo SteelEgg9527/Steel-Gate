@@ -532,18 +532,17 @@
         var tAt = 0.22 + ai * 0.28;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 27, headLen = 14, shaftW = 7, headW = 19;
-        // 规则对称的经典空心箭头：矩形杆 + 三角箭头，几何完全对称
+        var L = 29, W = 26, thick = 12;
+        // 警示带式空心 V 形箭头：只有两条斜臂，没有尾杆
         function bx(px, py) { return cx + ux * px + hx * py; }
         function by(px, py) { return cy + uy * px + hy * py; }
         ctx.beginPath();
-        ctx.moveTo(bx(-L, -shaftW), by(-L, -shaftW));
-        ctx.lineTo(bx(L - headLen, -shaftW), by(L - headLen, -shaftW));
-        ctx.lineTo(bx(L - headLen, -headW), by(L - headLen, -headW));
+        ctx.moveTo(bx(-L, -W), by(-L, -W));
         ctx.lineTo(bx(L, 0), by(L, 0));
-        ctx.lineTo(bx(L - headLen, headW), by(L - headLen, headW));
-        ctx.lineTo(bx(L - headLen, shaftW), by(L - headLen, shaftW));
-        ctx.lineTo(bx(-L, shaftW), by(-L, shaftW));
+        ctx.lineTo(bx(-L, W), by(-L, W));
+        ctx.lineTo(bx(-L + thick, W - thick), by(-L + thick, W - thick));
+        ctx.lineTo(bx(L - thick * 1.45, 0), by(L - thick * 1.45, 0));
+        ctx.lineTo(bx(-L + thick, -W + thick), by(-L + thick, -W + thick));
         ctx.closePath();
         ctx.fillStyle = 'rgba(96,176,255,0.03)';
         ctx.fill();
