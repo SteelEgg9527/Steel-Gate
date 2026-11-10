@@ -532,17 +532,17 @@
         var tAt = 0.22 + ai * 0.28;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var L = 29, W = 26, thick = 12;
-        // 警示带式空心 V 形箭头：只有两条斜臂，没有尾杆
+        var L = 30, W = 25, thick = 10;
+        // 警示带式完整空心 V 形箭头：外尖、左右两个底角、内部 V 形缺口
         function bx(px, py) { return cx + ux * px + hx * py; }
         function by(px, py) { return cy + uy * px + hy * py; }
         ctx.beginPath();
-        ctx.moveTo(bx(-L, -W), by(-L, -W));
-        ctx.lineTo(bx(L, 0), by(L, 0));
+        ctx.moveTo(bx(L, 0), by(L, 0));
         ctx.lineTo(bx(-L, W), by(-L, W));
         ctx.lineTo(bx(-L + thick, W - thick), by(-L + thick, W - thick));
-        ctx.lineTo(bx(L - thick * 1.45, 0), by(L - thick * 1.45, 0));
+        ctx.lineTo(bx(L - thick * 1.7, 0), by(L - thick * 1.7, 0));
         ctx.lineTo(bx(-L + thick, -W + thick), by(-L + thick, -W + thick));
+        ctx.lineTo(bx(-L, -W), by(-L, -W));
         ctx.closePath();
         ctx.fillStyle = 'rgba(96,176,255,0.03)';
         ctx.fill();
