@@ -1382,6 +1382,11 @@
       el.rangeTools.classList.toggle('hidden', !rangeOn);
       if (rangeOn && el.rangeFogBtn) {
         el.rangeFogBtn.textContent = '迷雾：' + (g.fogEnabled === false ? '关' : '开');
+      var aiBtn = $('range-ai-bomb-btn');
+      if (aiBtn) {
+        aiBtn.textContent = 'AI轰炸：' + (g.trainingAIBombing ? '开' : '关');
+        aiBtn.classList.toggle('on', !!g.trainingAIBombing);
+      }
         el.rangeFogBtn.classList.toggle('on', g.fogEnabled !== false);
       }
     }

@@ -13,7 +13,6 @@
   var gameMode = 'melee';
   var battleFamily = 'melee';
   var difficulty = 'normal';
-  var trainingAIBombing = false;
   function isNavalMode(id) { return id === 'naval' || id === 'navalLastStand'; }
   function isStandMode(id) { return id === 'lastStand' || id === 'navalLastStand'; }
   function deployFamily(id) { return isStandMode(id) ? 'lastStand' : 'melee'; }
@@ -82,6 +81,7 @@
       updateObjective();
       drawDeploymentPreview();
       bindInput();
+      bindTrainingAIBombing();
       if (params.get('help') === '1') UI.toggleHelp(true);
       R.draw(game, 0);
       requestAnimationFrame(frame);
@@ -221,12 +221,7 @@
       });
     }
     if (diffPick) diffPick.classList.toggle('hidden', isTest);
-    var trainSettings = document.getElementById('training-settings');
-    if (trainSettings) {
-      trainSettings.classList.toggle('hidden', selectedFamily !== 'training');
-      var aiToggle = document.getElementById('training-ai-bombing');
-      if (aiToggle) aiToggle.checked = !!trainingAIBombing;
-    }
+
   }
 
   function selectMode(family) {
@@ -234,7 +229,6 @@
     var map = SL.Terrain.map;
     var mapIsTest = !!(map && map.test);
     var wantsTest = family === 'training';
-    if (wantsTest && !mapIsTest) trainingAIBombing = false;
     if (wantsTest !== mapIsTest) {
       var pool = SL.MAPS.filter(function (m) {
         if (wantsTest) return !!m.test;
@@ -269,7 +263,7 @@
   }
 
   function gameOptions() {
-    return { demo: demo, mode: gameMode, difficulty: difficulty, trainingAIBombing: trainingAIBombing };
+    return { demo: demo, mode: gameMode, difficulty: difficulty };
   }
 
   // 在简报里换战场：重生成地形并开一局新的（仅开局前可见）
@@ -606,6 +600,23 @@
     rd.readAsText(file);
   }
 
+  function bindTrainingAIBombing() {
+    var btn = document.getElementById('range-ai-bomb-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      if (!game || !game.testMode) return;
+      game.trainingAIBombing = !game.trainingAIBombing;
+      if (game.trainingAIBombing) {
+        if (game.teams && game.teams.red) game.teams.red.airTimer = 3;
+        UI.pushToast('训练模式：AI 轰炸流程已启动', 'info');
+      } else {
+        UI.pushToast('训练模式：AI 轰炸流程已关闭', 'info');
+      }
+      btn.textContent = 'AI轰炸：' + (game.trainingAIBombing ? '开' : '关');
+      btn.classList.toggle('on', !!game.trainingAIBombing);
+    });
+  }
+
   function bindCustomMaps() {
     var btn = customEl('mm-custom');
     if (btn) btn.addEventListener('click', openCustomMaps);
@@ -660,17 +671,6 @@
     if (settings) settings.addEventListener('click', function () { UI.openSettings(); });
     var deployBack = document.getElementById('deploy-back');
     if (deployBack) deployBack.addEventListener('click', function () { showMainMenu(); });
-    var aiToggle = document.getElementById('training-ai-bombing');
-    if (aiToggle) aiToggle.addEventListener('change', function () {
-      trainingAIBombing = !!aiToggle.checked;
-      if (game && game.testMode) {
-        game.trainingAIBombing = trainingAIBombing;
-        if (trainingAIBombing && game.teams && game.teams.red) {
-          game.teams.red.airTimer = 3;
-          if (UI.pushToast) UI.pushToast('训练模式：AI 轰炸流程已启动', 'info');
-        }
-      }
-    });
   }
 
   function begin() {
