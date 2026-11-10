@@ -13,6 +13,7 @@
   var gameMode = 'melee';
   var battleFamily = 'melee';
   var difficulty = 'normal';
+  var trainingAIBombing = false;
   function isNavalMode(id) { return id === 'naval' || id === 'navalLastStand'; }
   function isStandMode(id) { return id === 'lastStand' || id === 'navalLastStand'; }
   function deployFamily(id) { return isStandMode(id) ? 'lastStand' : 'melee'; }
@@ -257,6 +258,12 @@
       });
     }
     if (diffPick) diffPick.classList.toggle('hidden', isTest);
+    var trainSettings = document.getElementById('training-settings');
+    if (trainSettings) {
+      trainSettings.classList.toggle('hidden', selectedFamily !== 'training');
+      var aiToggle = document.getElementById('training-ai-bombing');
+      if (aiToggle) aiToggle.checked = !!trainingAIBombing;
+    }
   }
 
   function selectMode(family) {
@@ -264,6 +271,7 @@
     var map = SL.Terrain.map;
     var mapIsTest = !!(map && map.test);
     var wantsTest = family === 'training';
+    if (wantsTest && !mapIsTest) trainingAIBombing = false;
     if (wantsTest !== mapIsTest) {
       var pool = SL.MAPS.filter(function (m) {
         if (wantsTest) return !!m.test;
@@ -298,7 +306,7 @@
   }
 
   function gameOptions() {
-    return { demo: demo, mode: gameMode, difficulty: difficulty };
+    return { demo: demo, mode: gameMode, difficulty: difficulty, trainingAIBombing: trainingAIBombing };
   }
 
   // 在简报里换战场：重生成地形并开一局新的（仅开局前可见）
@@ -689,6 +697,17 @@
     if (settings) settings.addEventListener('click', function () { UI.openSettings(); });
     var deployBack = document.getElementById('deploy-back');
     if (deployBack) deployBack.addEventListener('click', function () { showMainMenu(); });
+    var aiToggle = document.getElementById('training-ai-bombing');
+    if (aiToggle) aiToggle.addEventListener('change', function () {
+      trainingAIBombing = !!aiToggle.checked;
+      if (game && game.testMode) {
+        game.trainingAIBombing = trainingAIBombing;
+        if (trainingAIBombing && game.teams && game.teams.red) {
+          game.teams.red.airTimer = 3;
+          if (UI.pushToast) UI.pushToast('训练模式：AI 轰炸流程已启动', 'info');
+        }
+      }
+    });
   }
 
   function begin() {

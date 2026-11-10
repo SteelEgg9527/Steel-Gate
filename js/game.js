@@ -59,6 +59,7 @@
     this.state = 'playing';
     this.demo = !!opts.demo;
     this.testMode = !!(T.map && T.map.test);
+    this.trainingAIBombing = !!(opts.trainingAIBombing && this.testMode);
     this.naval = !!(T.naval && T.map && T.map.naval);
     this.mode = this.testMode ? (this.naval ? 'naval' : 'melee')
       : (opts.mode === 'navalLastStand' ? 'navalLastStand' : (opts.mode === 'lastStand' ? 'lastStand' : (opts.mode === 'naval' || this.naval ? 'naval' : 'melee')));
@@ -1053,6 +1054,7 @@
     if (this.testMode) {
       this.yellow.active = false;
       this.teams.blue.score = SL.TEST_SCORE || 100000;
+      if (this.trainingAIBombing && this.teams.red) this.teams.red.airTimer = 3;
       if (this.naval) {
         for (var ti = 0; ti < this.towers.length; ti++) this.towers[ti].owner = 'blue';
         if (this.radar) this.radar.owner = 'blue';
@@ -7375,7 +7377,7 @@
       t.airTimer = air.minGap + Math.random() * (air.maxGap - air.minGap);
       if (Math.random() > air.chance) continue;
       var count = this.meleeAirGroupSize();
-      if (this.aliveCount(side) === 0 || this.planes.length + count > 30) continue;
+      if ((this.aliveCount(side) === 0 && !(this.testMode && this.trainingAIBombing && side === 'red')) || this.planes.length + count > 30) continue;
       var gx, gy, tx, ty, radius;
       var airShip = null;
       if (this.naval) {
