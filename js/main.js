@@ -183,43 +183,6 @@
     if (dc) dc.textContent = isStandMode(actualMode)
       ? diff.name + ' · ' + (diff.holdTime === Infinity ? '无限' : U.clock(diff.holdTime))
       : diff.name + ' · ' + (diff.endless ? '无胜利条件' : '100,000 经验胜利');
-    var heading = document.getElementById('enemy-heading');
-    var force = document.getElementById('enemy-force');
-    var rules = document.getElementById('battle-rules');
-    if (rules) {
-      rules.innerHTML = m.test
-        ? '<li><span class="chip blue"></span>单阵营训练，无敌人、无波次</li><li><span class="chip blue"></span>可自由使用测试卡包、标靶与BOSS卡</li><li><span class="chip blue"></span>可开关战争迷雾</li>'
-        : isStandMode(actualMode)
-          ? '<li><span class="chip blue"></span>黄圈本局固定；蓝队守住目标时间即获胜</li><li><span class="chip red"></span>红队分波进攻；黄圈被红队占领即失败</li><li><span class="chip red"></span>每10波BOSS：10波1个、20波2个、30波及以后3个</li><li><span class="chip red"></span>空袭2架起，每5波+1，第50波10架；三角编队随机投弹</li><li><span class="chip red"></span>AI 工兵占领工事区才形成强化工事；简单1座 / 普通2~3座 / 困难4座</li>'
-          : diff.endless
-            ? '<li><span class="chip"></span>本难度无胜利条件；50,000黄圈经验触发一次BOSS，之后AI重生按时间概率召唤</li><li><span class="chip red"></span>每方AI兵力=玩家单位×1.2；AI装备上限：15分钟前2件、15~30分钟4件、30分钟后6件</li><li><span class="chip red"></span>AI 工兵占领工事区才形成强化工事；武器上限按时间2 / 4 / 4</li><li><span class="chip"></span>黄圈提供黄圈经验/连队经验与花费分数；占领区提供连队经验与花费分数，并提供掩护</li><li><span class="chip"></span>隐蔽1秒、幽灵1秒；反坦克炮/指挥车原地5秒进入隐蔽；G键含手雷/火箭筒</li><li><span class="chip"></span>工程车可布设地雷、铁丝网、拒马；满值约1500m铁丝网 / 1000m拒马，铁丝网挡步兵，拒马挡载具</li>'
-            : '<li><span class="chip"></span>黄圈累计100,000经验者获胜；圈内净优势单位持续获得黄圈经验与花费分数</li><li><span class="chip red"></span>' +
-              (diff.id === 'easy' ? '简单难度无BOSS' : diff.id === 'hard' ? '50,000一位BOSS；90,000红绿双方各一位' : '50,000与90,000各召唤一位BOSS') +
-              '</li><li><span class="chip red"></span>每方AI兵力：简单0.8× / 普通1.0× / 困难1.2×玩家；AI装备上限：简单2 / 普通4 / 困难6</li><li><span class="chip"></span>隐蔽1秒、幽灵1秒；反坦克炮/指挥车原地5秒进入隐蔽；G键含手雷/火箭筒</li><li><span class="chip"></span>工程车可布设地雷、铁丝网、拒马；满值约1500m铁丝网 / 1000m拒马，铁丝网挡步兵，拒马挡载具</li>';
-    }
-    if (heading && force) {
-      if (m.test) {
-        heading.textContent = '训练场';
-        force.innerHTML = '<li><span class="chip blue"></span>无敌人、无波次</li>' +
-          '<li><span class="chip blue"></span>测试卡包提供全部单位、装备、工事与标靶</li>' +
-          '<li><span class="chip blue"></span>可召唤三种BOSS与刷新黄圈</li>';
-      } else if (isStandMode(actualMode)) {
-        heading.textContent = '进攻方（红队）';
-        force.innerHTML = '<li><span class="chip red"></span>开局1分钟准备，随后每波间隔1分钟进攻</li>' +
-          '<li><span class="chip red"></span>首波约为玩家初始兵力的1.5倍，单波上限48</li>' +
-          '<li><span class="chip red"></span>每10波加入BOSS；10波1个、20波2个、30波及以后3个</li>' +
-          '<li><span class="chip red"></span>空袭第1波2架，每5波+1，50波10架</li>';
-      } else {
-        heading.textContent = '敌方 AI · ' + diff.name;
-        force.innerHTML = '<li><span class="chip red"></span>红队 / 绿队 · 初始6单位基础连队</li>' +
-          '<li><span class="chip green"></span>AI单位上限：简单14 / 普通20 / 困难26 / 无限32</li>' +
-          '<li><span class="chip"></span>升级+1随机增援；全灭后按等级重建，最高不超过难度上限</li>' +
-          '<li><span class="chip"></span>AI步兵装备上限：简单2 / 普通4 / 困难6；无限按15/30分钟分档</li>' +
-          '<li><span class="chip"></span>AI 只有装备工兵装备的步兵占领工事区，才形成强化工事与武器</li>' +
-          '<li><span class="chip"></span>AI不能拾取掉落</li>' +
-          '<li><span class="chip"></span>难度越高：敌方经验、火力与进攻欲望越强</li>';
-      }
-    }
   }
 
   function renderModeButtons() {

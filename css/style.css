@@ -3071,7 +3071,8 @@ html, body {
 .deploy-left::-webkit-scrollbar { width: 7px; }
 .deploy-left::-webkit-scrollbar-track { background: #11140f; }
 .deploy-left::-webkit-scrollbar-thumb { background: #4a503d; border-radius: 4px; }
-.deploy-section { padding: 10px 0 12px; border-bottom: 1px solid rgba(214,196,150,0.12); }\n.deploy-section.hidden { display: none; }
+.deploy-section { padding: 10px 0 12px; border-bottom: 1px solid rgba(214,196,150,0.12); }
+.deploy-section.hidden { display: none; }
 .deploy-switch { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid rgba(214,196,150,0.18); background: rgba(255,255,255,0.02); color: #d8cba9; font-size: 10px; cursor: pointer; }
 .deploy-switch input { width: auto; accent-color: #c5a966; }
 .deploy-switch:hover { border-color: rgba(217,187,119,0.6); }
