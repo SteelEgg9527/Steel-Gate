@@ -175,6 +175,8 @@
   const hctx = heightCanvas.getContext('2d');
   const seaCanvas = document.createElement('canvas');
   const sctx = seaCanvas.getContext('2d');
+  const seaEdgeCanvas = document.createElement('canvas');
+  const ectx = seaEdgeCanvas.getContext('2d');
   let seaPainting = false, lastSeaPt = null;
   const mainEl = $('main');
   const wrapEl = $('canvasWrap');
@@ -330,9 +332,28 @@
     for (var i = 0; i < state.seaMask.length; i++) {
       if (!state.seaMask[i]) continue;
       var o = i * 4;
-      d[o] = 52; d[o + 1] = 117; d[o + 2] = 160; d[o + 3] = 210;
+      d[o] = 58; d[o + 1] = 124; d[o + 2] = 158; d[o + 3] = 255;
     }
     sctx.putImageData(img, 0, 0);
+    // 海岸线包边：沿蓝色格子的水/陆边界画描边
+    seaEdgeCanvas.width = W; seaEdgeCanvas.height = H;
+    ectx.clearRect(0, 0, W, H);
+    ectx.beginPath();
+    for (var y2 = 0; y2 < r; y2++) {
+      for (var x2 = 0; x2 < r; x2++) {
+        if (!state.seaMask[y2 * r + x2]) continue;
+        var ax = x2 / r * W, ay = y2 / r * H;
+        var bx = (x2 + 1) / r * W, by = (y2 + 1) / r * H;
+        if (y2 === 0 || !state.seaMask[(y2 - 1) * r + x2]) { ectx.moveTo(ax, ay); ectx.lineTo(bx, ay); }
+        if (y2 === r - 1 || !state.seaMask[(y2 + 1) * r + x2]) { ectx.moveTo(ax, by); ectx.lineTo(bx, by); }
+        if (x2 === 0 || !state.seaMask[y2 * r + x2 - 1]) { ectx.moveTo(ax, ay); ectx.lineTo(ax, by); }
+        if (x2 === r - 1 || !state.seaMask[y2 * r + x2 + 1]) { ectx.moveTo(bx, ay); ectx.lineTo(bx, by); }
+      }
+    }
+    ectx.strokeStyle = 'rgba(35,78,96,0.95)';
+    ectx.lineWidth = 2.4;
+    ectx.lineJoin = 'round';
+    ectx.stroke();
   }
   function paintSeaAt(pt, erase){
     var r = state.seaRes || 256, size = state.size || 2000;
@@ -437,6 +458,7 @@
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(seaCanvas, 0, 0, W, H);
+      ctx.drawImage(seaEdgeCanvas, 0, 0, W, H);
       ctx.restore();
     }
 

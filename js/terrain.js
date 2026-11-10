@@ -52,8 +52,10 @@
   }
 
   var waterMaskCanvas = null;
+  var waterMaskEdgeCanvas = null;
   function buildWaterMaskCanvas() {
     waterMaskCanvas = null;
+    waterMaskEdgeCanvas = null;
     if (!T.waterMask || !T.waterRes) return;
     var r = T.waterRes;
     var cv = document.createElement('canvas');
@@ -68,6 +70,25 @@
     }
     cx.putImageData(img, 0, 0);
     waterMaskCanvas = cv;
+    // 海岸线包边
+    var ev = document.createElement('canvas');
+    ev.width = r; ev.height = r;
+    var ec = ev.getContext('2d');
+    ec.beginPath();
+    for (var y = 0; y < r; y++) {
+      for (var x = 0; x < r; x++) {
+        if (!T.waterMask[y * r + x]) continue;
+        if (y === 0 || !T.waterMask[(y - 1) * r + x]) { ec.moveTo(x, y); ec.lineTo(x + 1, y); }
+        if (y === r - 1 || !T.waterMask[(y + 1) * r + x]) { ec.moveTo(x, y + 1); ec.lineTo(x + 1, y + 1); }
+        if (x === 0 || !T.waterMask[y * r + x - 1]) { ec.moveTo(x, y); ec.lineTo(x, y + 1); }
+        if (x === r - 1 || !T.waterMask[y * r + x + 1]) { ec.moveTo(x + 1, y); ec.lineTo(x + 1, y + 1); }
+      }
+    }
+    ec.strokeStyle = 'rgba(29,67,83,0.95)';
+    ec.lineWidth = 1.15;
+    ec.lineJoin = 'round';
+    ec.stroke();
+    waterMaskEdgeCanvas = ev;
   }
 
   T.setMap = function (id) {
@@ -1033,6 +1054,7 @@
 
     // 规划器涂色水域
     if (waterMaskCanvas) ctx.drawImage(waterMaskCanvas, 0, 0, T.size || 2000, T.size || 2000);
+    if (waterMaskEdgeCanvas) ctx.drawImage(waterMaskEdgeCanvas, 0, 0, T.size || 2000, T.size || 2000);
     for (var wi = 0; wi < (T.waterAreas || []).length; wi++) {
       var wa = T.waterAreas[wi];
       ctx.beginPath();
