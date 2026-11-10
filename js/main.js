@@ -11,19 +11,22 @@
   var demo = params.get('demo') === '1';
   var follow = params.get('follow') === '1';
   var gameMode = 'melee';
+  var battleFamily = 'melee';
   var difficulty = 'normal';
   function isNavalMode(id) { return id === 'naval' || id === 'navalLastStand'; }
   function isStandMode(id) { return id === 'lastStand' || id === 'navalLastStand'; }
   function deployFamily(id) { return isStandMode(id) ? 'lastStand' : 'melee'; }
-  function familyName(family) { return family === 'lastStand' ? '背水一战' : '混战'; }
+  function currentFamily() { return (SL.Terrain.map && SL.Terrain.map.test) ? 'training' : battleFamily; }
+  function familyName(family) { return family === 'training' ? '训练' : (family === 'lastStand' ? '背水一战' : '混战'); }
   function modeForFamily(family, map) {
     if (map && map.test) return map.naval ? 'naval' : 'melee';
+    if (family === 'training') return map && map.naval ? 'naval' : 'melee';
     if (family === 'lastStand') return map && map.naval ? 'navalLastStand' : 'lastStand';
     return map && map.naval ? 'naval' : 'melee';
   }
-  if (params.get('mode') === 'lastStand') gameMode = 'lastStand';
+  if (params.get('mode') === 'lastStand') { gameMode = 'lastStand'; battleFamily = 'lastStand'; }
   if (params.get('mode') === 'naval') gameMode = 'naval';
-  if (params.get('mode') === 'navalLastStand') gameMode = 'navalLastStand';
+  if (params.get('mode') === 'navalLastStand') { gameMode = 'navalLastStand'; battleFamily = 'lastStand'; }
   if (params.get('difficulty') && (SL.LAST_STAND.difficulties[params.get('difficulty')] || SL.MELEE_DIFFICULTIES[params.get('difficulty')])) {
     difficulty = params.get('difficulty');
   }
@@ -46,8 +49,8 @@
       var chosen = (paramMap && SL.MAP_BY_ID[paramMap])
         ? paramMap
         : playable[Math.floor(Math.random() * playable.length)].id;
-      var bootFamily = deployFamily(gameMode);
-      gameMode = modeForFamily(bootFamily, SL.MAP_BY_ID[chosen]);
+      if (SL.MAP_BY_ID[chosen].test) battleFamily = 'training';
+      gameMode = modeForFamily(battleFamily, SL.MAP_BY_ID[chosen]);
       SL.Terrain.setMap(chosen);
       SL.Terrain.build(seed);
       world = document.getElementById('world');
@@ -73,7 +76,7 @@
       bindMainMenu();
       bindCustomMaps();
       if (!started) showMainMenu(); else hideMainMenu();
-      UI.setMapButtons(SL.Terrain.map.id, gameMode);
+      UI.setMapButtons(SL.Terrain.map.id, gameMode, battleFamily);
       renderModeButtons();
       updateObjective();
       drawDeploymentPreview();
@@ -109,21 +112,21 @@
     var diff = diffTable[difficulty] || diffTable.normal;
     if (el && m) {
       el.textContent = m.test ? '训练场 · 无敌人'
-        : familyName(deployFamily(actualMode)) + ' · ' + diff.name + ' · ' + m.name;
+        : familyName(currentFamily()) + ' · ' + diff.name + ' · ' + m.name;
     }
     var cur = document.getElementById('map-current');
     if (cur && m) cur.textContent = m.name + ' · ' + m.subtitle;
     var title = document.getElementById('brief-title');
     if (title && m) title.textContent = '作战部署 · ' + m.name;
     var stamp = document.getElementById('brief-stamp');
-    if (stamp) stamp.textContent = m.test ? '训练' : familyName(deployFamily(actualMode));
+    if (stamp) stamp.textContent = m.test ? '训练' : familyName(currentFamily());
     var missionTag = document.getElementById('mission-tag');
-    if (missionTag) missionTag.textContent = m.test ? '训练' : familyName(deployFamily(actualMode));
+    if (missionTag) missionTag.textContent = m.test ? '训练' : familyName(currentFamily());
     var sub = document.getElementById('brief-sub');
     if (sub) {
       sub.textContent = '1944 年 6 月 10 日 · ' +
         (m.test ? '训练场 · 无敌人'
-          : (m.naval ? '海战' : '陆战') + ' · ' + familyName(deployFamily(actualMode)) + ' · ' + diff.name +
+          : (m.naval ? '海战' : '陆战') + ' · ' + familyName(currentFamily()) + ' · ' + diff.name +
             (diff.endless ? ' · 无胜利条件' : '难度'));
     }
     var copy = document.getElementById('brief-copy');
@@ -172,9 +175,9 @@
         '<h3>购买与补充</h3><ul>' + purchases.join('') + '</ul>';
     }
     var md = document.getElementById('mode-desc');
-    if (md) md.textContent = m.test ? '训练场固定为单阵营测试模式。' : (deployFamily(actualMode) === 'lastStand' ? '防守规则 · 守住黄圈，抵挡分波进攻。' : '混战规则 · 黄圈与据点争夺，击败其他阵营。');
+    if (md) md.textContent = m.test ? '训练场固定为单阵营测试模式。' : (currentFamily() === 'lastStand' ? '防守规则 · 守住黄圈，抵挡分波进攻。' : '混战规则 · 黄圈与据点争夺，击败其他阵营。');
     var mc = document.getElementById('mode-current');
-    if (mc) mc.textContent = m.test ? '训练场' : familyName(deployFamily(actualMode));
+    if (mc) mc.textContent = m.test ? '训练场' : familyName(currentFamily());
     var dc = document.getElementById('difficulty-current');
     if (dc) dc.textContent = isStandMode(actualMode)
       ? diff.name + ' · ' + (diff.holdTime === Infinity ? '无限' : U.clock(diff.holdTime))
@@ -223,10 +226,11 @@
     var diffBox = document.getElementById('difficulty-buttons');
     var diffPick = document.getElementById('difficulty-pick');
     var isTest = !!(SL.Terrain.map && SL.Terrain.map.test);
-    var selectedFamily = deployFamily(gameMode);
+    var selectedFamily = currentFamily();
     var families = [
       { id: 'melee', name: '混战' },
-      { id: 'lastStand', name: '背水一战' }
+      { id: 'lastStand', name: '背水一战' },
+      { id: 'training', name: '训练' }
     ];
     if (modeBox) {
       modeBox.innerHTML = '';
@@ -256,14 +260,31 @@
   }
 
   function selectMode(family) {
-    if (family !== 'melee' && family !== 'lastStand') return;
-    if (SL.Terrain.map && SL.Terrain.map.test && family === 'lastStand') return;
-    var next = modeForFamily(family, SL.Terrain.map);
-    if (next === gameMode) return;
+    if (family !== 'melee' && family !== 'lastStand' && family !== 'training') return;
+    var map = SL.Terrain.map;
+    var mapIsTest = !!(map && map.test);
+    var wantsTest = family === 'training';
+    if (wantsTest !== mapIsTest) {
+      var pool = SL.MAPS.filter(function (m) {
+        if (wantsTest) return !!m.test;
+        return !m.test && !m.custom;
+      });
+      if (!pool.length) return;
+      battleFamily = family;
+      chooseMap(pool[0].id, true);
+      return;
+    }
+    battleFamily = family;
+    var next = modeForFamily(family, map);
+    if (next === gameMode) {
+      renderModeButtons();
+      if (UI.setMapButtons) UI.setMapButtons(map.id, gameMode, battleFamily);
+      return;
+    }
     gameMode = next;
     newGame(false);
     renderModeButtons();
-    if (UI.setMapButtons) UI.setMapButtons(SL.Terrain.map.id, gameMode);
+    if (UI.setMapButtons) UI.setMapButtons(map.id, gameMode, battleFamily);
     updateObjective();
     drawDeploymentPreview();
   }
@@ -284,14 +305,15 @@
   function chooseMap(id, force) {
     if (id === 'random') {
       var playable = SL.MAPS.filter(function (m) {
+        if (battleFamily === 'training') return !!m.test;
         return !m.test && !m.custom;
       });
       if (!playable.length) playable = SL.MAPS.filter(function (m) { return !m.test && !m.custom; });
       id = playable[Math.floor(Math.random() * playable.length)].id;
     }
     if (!SL.MAP_BY_ID[id] || (!force && SL.Terrain.map && id === SL.Terrain.map.id)) return;
-    var chosenFamily = deployFamily(gameMode);
-    gameMode = modeForFamily(chosenFamily, SL.MAP_BY_ID[id]);
+    if (SL.MAP_BY_ID[id].test) battleFamily = 'training';
+    gameMode = modeForFamily(battleFamily, SL.MAP_BY_ID[id]);
     SL.Terrain.setMap(id);
     SL.Terrain.build();
     game = SL.Game.create(gameOptions());
@@ -300,7 +322,7 @@
     paused = false;
     UI.showBriefing(true);
     centerOnArmy();
-    UI.setMapButtons(id, gameMode);
+    UI.setMapButtons(id, gameMode, battleFamily);
     renderModeButtons();
     updateObjective();
     drawDeploymentPreview();
@@ -310,7 +332,7 @@
   function newGame(autostart) {
     game = SL.Game.create(gameOptions());
     // 本地试玩入口：?trial=1 提供轰炸机测试积分，不影响正常对局
-    if (params.get('trial') === '1' && game.teams && game.teams.blue) game.teams.blue.score += 20000;
+    if (params.get('trial') === '1' && game.teams && game.teams.blue && !game.testMode) game.teams.blue.score += 20000;
     UI.bind(game);
     UI.hideGameMenu();
     paused = false;
@@ -415,6 +437,7 @@
       if (raw) data = JSON.parse(raw);
     } catch (e) {}
     if (!data) { UI.pushToast('没有可读取的存档', 'loss'); return; }
+    battleFamily = data.mode === 'lastStand' ? 'lastStand' : 'melee';
     gameMode = data.mode === 'naval' ? 'naval' : (data.mode === 'lastStand' ? 'lastStand' : 'melee');
     difficulty = 'endless';
     if (!SL.Terrain.map || SL.Terrain.map.id !== data.map) {
@@ -585,6 +608,7 @@
   function playCustomMap(id, mode) {
     var entry = SL.CustomMaps && SL.CustomMaps.get(id);
     if (!entry) { UI.pushToast('自定义地图不存在', 'loss'); return; }
+    battleFamily = (mode === 'navalLastStand' || mode === 'lastStand') ? 'lastStand' : 'melee';
     gameMode = (mode === 'naval' || mode === 'navalLastStand' || mode === 'lastStand') ? mode : 'melee';
     difficulty = difficulty || 'normal';
     var cm = customEl('custom-maps');
@@ -646,7 +670,7 @@
     try { R.buildMinimapCache(); } catch (e) {}
     R.drawMinimap(canvas.getContext('2d'), g, size);
     var label = document.getElementById('deploy-minimap-label');
-    if (label && SL.Terrain.map) label.textContent = SL.Terrain.map.name + ' · ' + (SL.Terrain.map.naval ? '海战战术图' : '陆战战术图');
+    if (label && SL.Terrain.map) label.textContent = SL.Terrain.map.name + ' · 战术简图';
   }
 
   function bindMainMenu() {

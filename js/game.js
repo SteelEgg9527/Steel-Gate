@@ -1052,8 +1052,8 @@
     }
     if (this.testMode) {
       this.yellow.active = false;
+      this.teams.blue.score = SL.TEST_SCORE || 100000;
       if (this.naval) {
-        this.teams.blue.score = 50000;
         for (var ti = 0; ti < this.towers.length; ti++) this.towers[ti].owner = 'blue';
         if (this.radar) this.radar.owner = 'blue';
         this.log('海岸试验场：通讯塔与雷达站已设为蓝方控制', 'info');

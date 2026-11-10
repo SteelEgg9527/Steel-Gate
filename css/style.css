@@ -3071,7 +3071,7 @@ html, body {
 .deploy-left::-webkit-scrollbar { width: 7px; }
 .deploy-left::-webkit-scrollbar-track { background: #11140f; }
 .deploy-left::-webkit-scrollbar-thumb { background: #4a503d; border-radius: 4px; }
-.deploy-section { padding: 10px 0 12px; border-bottom: 1px solid rgba(214,196,150,0.12); }
+.deploy-section { padding: 10px 0 12px; border-bottom: 1px solid rgba(214,196,150,0.12); }\n.deploy-section.hidden { display: none; }
 .deploy-section:last-child { border-bottom: 0; }
 .deploy-label { display: flex; align-items: center; gap: 7px; color: #d6c18a; font: 700 10px var(--mono); letter-spacing: 0.12em; margin-bottom: 8px; }
 .deploy-label span { color: #7f8a73; font-size: 8px; }

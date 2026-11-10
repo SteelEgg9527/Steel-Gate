@@ -583,15 +583,16 @@
     el.briefing.classList.toggle('hidden', !show);
   };
 
-  UI.setMapButtons = function (current, mode) {
+  UI.setMapButtons = function (current, mode, family) {
     var box = $('map-buttons');
     if (!box) return;
     box.innerHTML = '';
     var fleet = mode || (game ? game.mode : 'melee');
     var list = SL.MAPS.filter(function (m) {
+      if (family === 'training') return !!m.test;
       return !m.custom && !m.test;
     }).map(function (m) { return { id: m.id, name: m.name }; });
-    list.push({ id: 'random', name: '随机' });
+    if (family !== 'training') list.push({ id: 'random', name: '随机' });
     for (var i = 0; i < list.length; i++) {
       (function (item) {
         var b = document.createElement('button');
