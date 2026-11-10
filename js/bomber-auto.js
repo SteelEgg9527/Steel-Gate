@@ -532,18 +532,26 @@
         var tAt = 0.18 + ai * 0.16;
         var cx = sx + ux * ul * tAt + hx * rowOffset * row;
         var cy = sy + uy * ul * tAt + hy * rowOffset * row;
-        var aw = 15, al = 12;
+        var L = 16, headLen = 8, shaftW = 4.5, headW = 11;
+        // 空心图块箭头：尾部矩形杆 + 前端三角箭头，内部透空
+        function bx(px, py) { return cx + ux * px + hx * py; }
+        function by(px, py) { return cy + uy * px + hy * py; }
         ctx.beginPath();
-        ctx.moveTo(cx - ux * al + hx * aw, cy - uy * al + hy * aw);
-        ctx.lineTo(cx + ux * 4, cy + uy * 4);
-        ctx.lineTo(cx - ux * al - hx * aw, cy - uy * al - hy * aw);
-        ctx.strokeStyle = 'rgba(151,216,255,0.95)';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
+        ctx.moveTo(bx(-L, -shaftW), by(-L, -shaftW));
+        ctx.lineTo(bx(L - headLen, -shaftW), by(L - headLen, -shaftW));
+        ctx.lineTo(bx(L - headLen, -headW), by(L - headLen, -headW));
+        ctx.lineTo(bx(L, 0), by(L, 0));
+        ctx.lineTo(bx(L - headLen, headW), by(L - headLen, headW));
+        ctx.lineTo(bx(L - headLen, shaftW), by(L - headLen, shaftW));
+        ctx.lineTo(bx(-L, shaftW), by(-L, shaftW));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(96,176,255,0.12)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(151,216,255,0.96)';
+        ctx.lineWidth = 1.8;
         ctx.stroke();
       }
     }
-    ctx.lineCap = 'butt';
     // ①/② 是伸出轰炸区外的手柄，用短杆连接
     var off = 48;
     var h1x = sx - ux * off, h1y = sy - uy * off;
