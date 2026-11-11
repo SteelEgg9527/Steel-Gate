@@ -2859,6 +2859,9 @@
     }
     if (f > 0.6) { dr += u.type === 'infantry' ? 0.12 : 0.06; ev += 0.18; }
     else if (f > 0.36) { dr += 0.05; ev += 0.08; }
+    // 规划器自然区域同样吃灌木/树林隐蔽加成，但不是占领区
+    var ta = T.terrainAt ? T.terrainAt(u.x, u.y) : null;
+    if (ta && (ta.kind === 'bush' || ta.kind === 'forest')) ev += SL.ZONE_VEG_EVADE || 0.10;
     u.cover.zone = z;
     u.cover.forest = f;
     u.cover.dr = Math.min(CB.coverDRCap, dr);

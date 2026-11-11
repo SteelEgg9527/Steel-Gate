@@ -127,6 +127,9 @@
     T.road = T.roads[0];
     T.track = T.tracks[0];
     T.forests = m.forests;
+    T.terrainAreas = (m.terrainAreas || []).map(function (a) {
+      return { kind: a.kind, points: (a.points || []).map(function (p) { return { x: Number(p.x) || 0, y: Number(p.y) || 0 }; }) };
+    }).filter(function (a) { return a.points.length >= 3; });
     T.farms = m.farms || [];
     T.village = m.village;
     T.streamName = m.streamName;
@@ -240,6 +243,11 @@
       var dx = x - b.x, dy = y - b.y;
       var r = b.r * (0.86 + 0.28 * U.noise2(x * 0.012, y * 0.012, 77 + i * 13));
       f += b.w * Math.exp(-(dx * dx + dy * dy) / (r * r * 0.55));
+    }
+    var ta = T.terrainAt ? T.terrainAt(x, y) : null;
+    if (ta && (ta.kind === 'forest' || ta.kind === 'bush')) {
+      // 自然区域继续提供隐蔽/林地遮蔽，不进入占领区系统
+      f = Math.max(f, ta.kind === 'forest' ? 1.0 : 0.72);
     }
     return U.clamp(f, 0, 1.4);
   };
@@ -495,6 +503,23 @@
     zone.rubbleProgress = 0;
     T.zones.push(zone);
     return zone;
+  };
+
+  function pointInTerrainPolygon(x, y, pts) {
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var xi = pts[i].x, yi = pts[i].y, xj = pts[j].x, yj = pts[j].y;
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+  }
+
+  T.terrainAt = function (x, y) {
+    for (var i = (T.terrainAreas || []).length - 1; i >= 0; i--) {
+      var a = T.terrainAreas[i];
+      if (pointInTerrainPolygon(x, y, a.points)) return a;
+    }
+    return null;
   };
 
   T.zoneAt = function (x, y) {
