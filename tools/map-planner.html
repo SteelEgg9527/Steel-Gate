@@ -64,8 +64,9 @@
     <div class="row">
       <div class="field"><label>模式</label><select id="mapMode"><option value="land">陆战</option><option value="naval">海战</option></select></div>
       <div class="field"><label>尺寸</label><select id="mapSize"><option value="1000">1000m</option><option value="1500">1500m</option><option value="2000" selected>2000m</option><option value="2500">2500m</option><option value="3000">3000m</option><option value="4000">4000m</option><option value="5000">5000m</option></select></div>
-      <div class="field"><label>高度网格</label><select id="heightRes"><option value="64">64×64</option><option value="128" selected>128×128</option><option value="256">256×256</option></select></div>
+      <div class="field"><label>高度采样</label><select id="heightRes"><option value="64">64×64</option><option value="128" selected>128×128</option><option value="256">256×256</option></select></div>
     </div>
+    <div id="gridInfo" class="tip">地图网格：200m × 200m</div>
     <div class="field"><label>草图 / 参考图</label><div class="row"><button id="sketchBtn">上传草图图片</button><button id="sketchClear" class="danger">移除参考图</button></div><input id="file" type="file" accept="image/*"><div id="sketchName" class="tip">未上传</div></div>
 
     <div class="divider"></div>
@@ -86,12 +87,25 @@
       <button class="tool" data-tool="ai-lane">AI 路线</button>
     </div>
 
+    <div class="group-title">自然地形（不占领）</div>
+    <div class="row">
+      <div class="field"><label>区域类型</label><select id="terrainKind">
+        <option value="bush">灌木 · 减速步兵</option>
+        <option value="forest">森林 · 减速载具</option>
+        <option value="hill">山地 · 上坡减速</option>
+      </select></div>
+    </div>
+    <div class="tools">
+      <button class="tool" data-tool="terrain">绘制不规则自然区域</button>
+    </div>
+    <p class="tip">连续点击勾画边界，Enter 或“完成路线/区域”闭合。自然区域不是占领区，只提供通行影响。</p>
+
     <div class="group-title">玩法对象</div>
     <div class="field"><label>对象名称</label><input id="objectName" value="新据点"></div>
     <div class="row">
       <div class="field"><label>半径 m</label><input id="objectRadius" type="number" value="72" min="16" step="4"></div>
       <div class="field"><label>对象类型</label><select id="objectKind">
-        <option value="fort">工事</option><option value="village">村庄</option><option value="town">城镇</option><option value="bush">灌木</option><option value="forest">林地</option>
+        <option value="fort">工事</option><option value="village">村庄</option><option value="town">城镇</option>
       </select></div>
     </div>
     <div class="tools">
@@ -108,7 +122,7 @@
     </div>
 
     <div class="divider"></div>
-    <div class="row"><button id="finishRoad" class="primary">完成路线（Enter）</button><button id="undo">撤销 Ctrl+Z</button></div>
+    <div class="row"><button id="finishRoad" class="primary">完成路线/区域（Enter）</button><button id="undo">撤销 Ctrl+Z</button></div>
     <div class="row" style="margin-top:6px"><button id="deleteSelected" class="danger">删除选中（Delete）</button><button id="deselect">取消选择</button></div>
     <div class="row" style="margin-top:6px"><button id="gridBtn">网格开/关</button><button id="contourBtn">等高线开/关</button></div>
     <div class="row" style="margin-top:6px"><button id="export">导出 map.json</button><button id="importBtn">导入 JSON</button></div>
@@ -122,21 +136,22 @@
     <div id="legend">
       <div><span class="swatch" style="background:#bca77d"></span>高地</div>
       <div><span class="swatch" style="background:#4f86a4"></span>水域</div>
-      <div><span class="swatch" style="background:#68865b"></span>森林</div>
+      <div><span class="swatch" style="background:#68865b"></span>森林（自然区域）</div>
+      <div><span class="swatch" style="background:#a3ad69"></span>灌木 / 山地（自然区域）</div>
       <div><span class="swatch" style="background:#b4a06f"></span>道路 / 桥梁</div>
       <div><span class="swatch" style="background:#d9bb77"></span>黄圈 / 据点</div>
       <div><span class="swatch" style="background:#6d9bc4"></span>蓝方出生</div>
       <div><span class="swatch" style="background:#c36b5d"></span>红方出生</div>
     </div>
     <div id="stats"></div>
-    <p class="tip">操作：左键绘制/放置；道路和 AI 路线连续点击，按 Enter 或“完成路线”结束；滚轮缩放，中键/右键拖动画布。海战模式下水域笔刷直接涂蓝成为海面。</p>
+    <p class="tip">操作：左键绘制/放置；道路、AI 路线和自然区域连续点击，按 Enter 或“完成路线/区域”结束；滚轮缩放，中键/右键拖动画布。自然区域不产生占领，只作为通行影响区。</p>
   </aside>
   <main id="main">
     <div id="canvasWrap">
       <canvas id="map" width="900" height="900"></canvas>
       <canvas id="cursorLayer" width="900" height="900"></canvas>
     </div>
-    <div id="hint">滚轮缩放 · 中键/右键拖动画布 · 左键绘制 · Enter 完成路线</div>
+    <div id="hint">滚轮缩放 · 中键/右键拖动画布 · 左键绘制 · Enter 完成路线/区域</div>
     <div id="viewbar">
       <button id="zoomOut" type="button" title="缩小">−</button>
       <span id="zoomLabel">100%</span>
@@ -153,12 +168,13 @@
   const cursorCanvas = document.getElementById('cursorLayer');
   const cctx = cursorCanvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
+  const GRID_M = 200;
   const $ = id => document.getElementById(id);
 
   const state = {
     name: '新地图', mode: 'land', size: 2000, res: 128,
     height: new Float32Array(128 * 128),
-    water: [], forests: [], roads: [], bridges: [],
+    water: [], forests: [], terrainAreas: [], roads: [], bridges: [],
     seaRes: 256, seaMask: new Uint8Array(256 * 256),
     zones: [], sites: [], spawns: { blue: null, red: null, green: null },
     yellow: null, aiLanes: [], background: null, backgroundName: '', seq: 0,
@@ -389,11 +405,22 @@
       ctx.fillStyle='#cfc2a1'; ctx.fillRect(0,0,W,H);
     }
   }
+  function gridText(){
+    const cols = Math.ceil(state.size / GRID_M);
+    const rem = state.size % GRID_M;
+    return '地图网格：' + GRID_M + 'm × ' + GRID_M + 'm · ' + cols + '×' + cols + ' 格' + (rem ? '（末列/行 ' + rem + 'm）' : '');
+  }
+  function updateGridInfo(){ var el=$('gridInfo'); if(el) el.textContent=gridText(); }
+
   function drawGrid(){
     if (!state.grid) return;
-    const n=20;
-    ctx.save(); ctx.strokeStyle='rgba(53,58,43,0.18)'; ctx.lineWidth=1;
-    for(let i=0;i<=n;i++){ const p=i/n*W; ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,H);ctx.stroke();ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(W,p);ctx.stroke(); }
+    const step = GRID_M / state.size * W;
+    ctx.save(); ctx.strokeStyle='rgba(53,58,43,0.20)'; ctx.lineWidth=1;
+    for(let i=0; i*step <= W + 0.01; i++){
+      const p=i*step;
+      ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(W,p);ctx.stroke();
+    }
     ctx.restore();
   }
   function drawContours(){
@@ -443,6 +470,37 @@
     if(label){ ctx.fillStyle=color; ctx.font='9px sans-serif'; const p=route.points[0]; ctx.fillText(label,p.x*s+4,p.y*s-4); }
     ctx.restore();
   }
+  const TERRAIN_STYLE = {
+    bush: { fill: 'rgba(163,173,105,0.22)', stroke: '#8d9859', label: '灌木' },
+    forest: { fill: 'rgba(76,112,65,0.25)', stroke: '#4f7246', label: '森林' },
+    hill: { fill: 'rgba(160,135,80,0.18)', stroke: '#9a8652', label: '山地' }
+  };
+  function terrainCenter(points){
+    var x=0,y=0; for(var i=0;i<points.length;i++){x+=points[i].x;y+=points[i].y;}
+    return {x:x/points.length,y:y/points.length};
+  }
+  function drawTerrainAreas(){
+    (state.terrainAreas || []).forEach(function(a){
+      if(!a.points || a.points.length<3) return;
+      var st=TERRAIN_STYLE[a.kind] || TERRAIN_STYLE.forest;
+      var s=worldScale();
+      ctx.save(); ctx.beginPath();
+      a.points.forEach(function(p,i){ i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s); });
+      ctx.closePath(); ctx.fillStyle=st.fill; ctx.fill(); ctx.strokeStyle=st.stroke; ctx.lineWidth=1.6; ctx.stroke();
+      var c=terrainCenter(a.points); ctx.fillStyle='#37402f'; ctx.font='9px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(st.label + ' · 不占领', c.x*s, c.y*s);
+      ctx.restore();
+    });
+  }
+  function pointInPolygon(pt, points){
+    var inside=false;
+    for(var i=0,j=points.length-1;i<points.length;j=i++){
+      var xi=points[i].x, yi=points[i].y, xj=points[j].x, yj=points[j].y;
+      if(((yi>pt.y)!=(yj>pt.y)) && (pt.x < (xj-xi)*(pt.y-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+
   function draw(){
     drawBackground();
     ctx.globalAlpha=state.background?0.38:0.62;
@@ -461,6 +519,7 @@
 
     state.water.forEach(f=>drawCircleFeature(f,'rgba(65,126,164,0.42)','rgba(48,100,132,0.8)'));
     state.forests.forEach(f=>drawCircleFeature(f,'rgba(83,112,64,0.28)','rgba(62,91,51,0.7)','林'));
+    drawTerrainAreas();
     state.roads.forEach(r=>drawRoute(r, r.type==='highway'?'#c7b078':'#ad956c', [], ''));
     state.aiLanes.forEach(r=>drawRoute(r,'rgba(178,105,84,0.85)',[8,6],'AI'));
     state.bridges.forEach(f=>{
@@ -488,11 +547,21 @@
       ctx.save();ctx.fillStyle=col;ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='700 9px sans-serif';ctx.textAlign='center';ctx.fillText(k[0].toUpperCase(),x,y+3);ctx.restore();
     });
     if(draft){
-      drawRoute({points:draft.points,width:draft.type==='ai-lane'?10:16}, draft.type==='ai-lane'?'#b26954':'#9b7c4e', draft.type==='ai-lane'?[8,6]:[], '绘制中');
+      if(draft.type==='terrain'){
+        var st=TERRAIN_STYLE[draft.kind] || TERRAIN_STYLE.forest, s=worldScale();
+        ctx.save(); ctx.setLineDash([7,5]); ctx.beginPath();
+        draft.points.forEach(function(p,i){i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s);});
+        if(draft.points.length>2) ctx.closePath();
+        ctx.fillStyle=st.fill; ctx.fill(); ctx.strokeStyle=st.stroke; ctx.lineWidth=2; ctx.stroke();
+        draft.points.forEach(function(p){ctx.fillStyle='#ffe08a';ctx.fillRect(p.x*s-3,p.y*s-3,6,6);});
+        ctx.restore();
+      } else {
+        drawRoute({points:draft.points,width:draft.type==='ai-lane'?10:16}, draft.type==='ai-lane'?'#b26954':'#9b7c4e', draft.type==='ai-lane'?[8,6]:[], '绘制中');
+      }
     }
     drawSelection();
     // 罗盘与比例尺
-    ctx.save();ctx.fillStyle='rgba(38,44,33,.7)';ctx.fillRect(10,10,120,22);ctx.fillStyle='#ead9b5';ctx.font='10px monospace';ctx.fillText(state.name+' · '+state.size+'m',18,25);ctx.restore();
+    ctx.save();ctx.fillStyle='rgba(38,44,33,.7)';ctx.fillRect(10,10,120,22);ctx.fillStyle='#ead9b5';ctx.font='10px monospace';ctx.fillText(state.name+' · '+state.size+'m · 200m网格',18,25);ctx.restore();
   }
 
   function snapshot(){
@@ -528,6 +597,10 @@
     if((i=near(state.forests))>=0){state.forests.splice(i,1);return;}
     if((i=near(state.zones))>=0){state.zones.splice(i,1);return;}
     if((i=near(state.sites))>=0){state.sites.splice(i,1);return;}
+    for(var ti=(state.terrainAreas||[]).length-1;ti>=0;ti--){
+      var area=state.terrainAreas[ti];
+      if(area.points && area.points.length>=3 && pointInPolygon(pt,area.points)){state.terrainAreas.splice(ti,1);return;}
+    }
     if(state.yellow && dist(state.yellow,pt)<=radius){state.yellow=null;return;}
     if(state.spawns.blue && dist(state.spawns.blue,pt)<=radius){state.spawns.blue=null;return;}
     if(state.spawns.red && dist(state.spawns.red,pt)<=radius){state.spawns.red=null;return;}
@@ -561,6 +634,10 @@
     for(var k=state.water.length-1;k>=0;k--) if(nearObj(state.water[k])) return {kind:'water',obj:state.water[k]};
     for(var m=state.forests.length-1;m>=0;m--) if(nearObj(state.forests[m])) return {kind:'forest',obj:state.forests[m]};
     for(var b=state.bridges.length-1;b>=0;b--) if(nearObj(state.bridges[b])) return {kind:'bridge',obj:state.bridges[b]};
+    for(var ta=(state.terrainAreas||[]).length-1;ta>=0;ta--){
+      var area=state.terrainAreas[ta];
+      if(area.points && area.points.length>=3 && pointInPolygon(pt,area.points)) return {kind:'terrain',obj:area};
+    }
     var sk=['blue','red','green'];
     for(var si=0;si<sk.length;si++){var sp=state.spawns[sk[si]];if(sp&&dist(sp,pt)<=20)return{kind:'spawn',side:sk[si],obj:sp};}
     var lineHit=function(list,kind){
@@ -577,7 +654,7 @@
   }
   function selectedLabel(sel){
     if(!sel)return '';
-    var names={water:'水域',forest:'森林',zone:'占领区',site:'站点',yellow:'黄圈',spawn:'出生点',bridge:'桥梁',road:'道路',aiLane:'AI 路线'};
+    var names={water:'水域',forest:'森林',terrain:'自然区域',zone:'占领区',site:'站点',yellow:'黄圈',spawn:'出生点',bridge:'桥梁',road:'道路',aiLane:'AI 路线'};
     return names[sel.kind] || sel.kind;
   }
   function handlePoint(sel){
@@ -590,7 +667,7 @@
   function beginDrag(pt){
     if(!selected)return false;
     var o=selected.obj;
-    if(selected.kind==='road'||selected.kind==='aiLane'){
+    if(selected.kind==='road'||selected.kind==='aiLane'||selected.kind==='terrain'){
       var best=-1,bd=14;
       for(var i=0;i<o.points.length;i++){
         var d=dist(o.points[i],pt);
@@ -623,6 +700,7 @@
     var k=selected.kind,o=selected.obj;
     if(k==='water')state.water=state.water.filter(function(x){return x!==o;});
     else if(k==='forest')state.forests=state.forests.filter(function(x){return x!==o;});
+    else if(k==='terrain')state.terrainAreas=state.terrainAreas.filter(function(x){return x!==o;});
     else if(k==='zone')state.zones=state.zones.filter(function(x){return x!==o;});
     else if(k==='site')state.sites=state.sites.filter(function(x){return x!==o;});
     else if(k==='bridge')state.bridges=state.bridges.filter(function(x){return x!==o;});
@@ -637,7 +715,11 @@
     var o=selected.obj,s=worldScale();
     ctx.save();
     ctx.strokeStyle='#ffe08a';ctx.lineWidth=2;ctx.setLineDash([6,4]);
-    if(selected.kind==='road'||selected.kind==='aiLane'){
+    if(selected.kind==='terrain'){
+      ctx.beginPath();o.points.forEach(function(p,i){i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s);});ctx.closePath();ctx.stroke();
+      ctx.setLineDash([]);
+      o.points.forEach(function(p){ctx.fillStyle='#ffe08a';ctx.fillRect(p.x*s-4,p.y*s-4,8,8);ctx.strokeStyle='#3a2e18';ctx.strokeRect(p.x*s-4,p.y*s-4,8,8);});
+    } else if(selected.kind==='road'||selected.kind==='aiLane'){
       ctx.beginPath();o.points.forEach(function(p,i){i?ctx.lineTo(p.x*s,p.y*s):ctx.moveTo(p.x*s,p.y*s);});ctx.stroke();
       ctx.setLineDash([]);
       o.points.forEach(function(p){ctx.fillStyle='#ffe08a';ctx.fillRect(p.x*s-4,p.y*s-4,8,8);ctx.strokeStyle='#3a2e18';ctx.strokeRect(p.x*s-4,p.y*s-4,8,8);});
@@ -692,6 +774,13 @@
       requestDraw();
       return;
     }
+    if(tool==='terrain'){
+      if(!draft) draft={type:'terrain',kind:$('terrainKind').value||'forest',points:[]};
+      const last=draft.points[draft.points.length-1];
+      if(!last || dist(last,pt)>state.size*0.008) draft.points.push({x:pt.x,y:pt.y});
+      requestDraw();
+      return;
+    }
     if(tool==='road-highway'||tool==='road-dirt'||tool==='ai-lane'){
       if(!draft) draft={type:tool,points:[]};
       const last=draft.points[draft.points.length-1];
@@ -725,8 +814,16 @@
   canvas.addEventListener('dblclick', ()=>{ if(draft) finishRoad(); });
 
   function finishRoad(){
-    if(!draft){status('没有正在绘制的路线');return;}
-    if(draft.points.length>=2){
+    if(!draft){status('没有正在绘制的路线或区域');return;}
+    if(draft.type==='terrain'){
+      if(draft.points.length>=3){
+        snapshot();
+        state.terrainAreas.push({kind:draft.kind||'forest',points:draft.points.slice()});
+        status('自然区域已完成（'+draft.points.length+' 个顶点，不占领）');
+      } else {
+        status('自然区域至少需要 3 个顶点');
+      }
+    } else if(draft.points.length>=2){
       snapshot();
       if(draft.type==='ai-lane') state.aiLanes.push({type:'ai-lane',points:draft.points.slice()});
       else {
@@ -746,6 +843,7 @@
       height:{res:state.res, values:Array.from(state.height,(v)=>Math.round(v*1000)/1000)},
       water:state.water.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
       forests:state.forests.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:+f.r.toFixed(1)})),
+      terrainAreas:(state.terrainAreas||[]).map(a=>({kind:a.kind,points:a.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
       roads:state.roads.map(r=>({type:r.type,width:r.width,points:r.points.map(p=>({x:+p.x.toFixed(1),y:+p.y.toFixed(1)}))})),
       bridges:state.bridges.map(f=>({x:+f.x.toFixed(1),y:+f.y.toFixed(1),r:f.r||30})),
       zones:state.zones.map(z=>({id:z.id,name:z.name,kind:z.kind,x:+z.x.toFixed(1),y:+z.y.toFixed(1),r:z.r})),
@@ -771,7 +869,17 @@
     state.height=new Float32Array(state.res*state.res);
     if(data.height&&Array.isArray(data.height.values)) data.height.values.forEach((v,i)=>{if(i<state.height.length)state.height[i]=Number(v)||0;});
     state.water=data.water||[];state.forests=data.forests||[];state.roads=data.roads||[];state.bridges=data.bridges||[];
-    state.zones=data.zones||[];state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
+    state.terrainAreas=data.terrainAreas||[];
+    var importedZones=data.zones||[];
+    state.zones=[];
+    importedZones.forEach(function(z){
+      if(z.kind==='bush'||z.kind==='forest'){
+        var pts=[], n=12, r=Number(z.r)||72;
+        for(var pi=0;pi<n;pi++){var ang=Math.PI*2*pi/n;pts.push({x:(Number(z.x)||0)+Math.cos(ang)*r,y:(Number(z.y)||0)+Math.sin(ang)*r});}
+        state.terrainAreas.push({kind:z.kind,points:pts});
+      } else state.zones.push(z);
+    });
+    state.sites=data.sites||[];state.spawns=data.spawns||{blue:null,red:null,green:null};
     state.yellow=data.yellow||null;state.aiLanes=data.aiLanes||[];
     state.seaRes = data.waterRes || data.seaRes || 256;
     state.seaMask = new Uint8Array(state.seaRes * state.seaRes);
@@ -792,6 +900,7 @@
     $('mapName').value=state.name;$('mapMode').value=state.mode;$('mapSize').value=String(state.size);$('heightRes').value=String(state.res);
     buildHeightCanvas();
     buildSeaCanvas();
+    updateGridInfo();
     if(!silent) status('JSON 已导入');
     draw();
   }
@@ -811,7 +920,7 @@
   $('png').addEventListener('click',()=>{canvas.toBlob(b=>{if(b)download((state.name||'map')+'-preview.png',b);},'image/png');});
   $('localSave').addEventListener('click',()=>{try{localStorage.setItem('steel_map_planner_v1',JSON.stringify(exportData()));status('已保存到浏览器本地');}catch(e){status('保存失败：'+e.message);}});
   $('localLoad').addEventListener('click',()=>{try{const raw=localStorage.getItem('steel_map_planner_v1');if(!raw){status('本地没有地图');return;}snapshot();importData(JSON.parse(raw));}catch(e){status('读取失败：'+e.message);}});
-  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];state.seaMask=new Uint8Array(state.seaRes*state.seaRes);selected=null;drag=null;clearBackground(true);buildHeightCanvas();buildSeaCanvas();draw();status('已清空');});
+  $('clear').addEventListener('click',()=>{if(!confirm('清空地图？'))return;snapshot();resetHeight(state.res);state.water=[];state.forests=[];state.terrainAreas=[];state.roads=[];state.bridges=[];state.zones=[];state.sites=[];state.spawns={blue:null,red:null,green:null};state.yellow=null;state.aiLanes=[];state.seaMask=new Uint8Array(state.seaRes*state.seaRes);selected=null;drag=null;clearBackground(true);buildHeightCanvas();buildSeaCanvas();draw();status('已清空');});
   $('undo').addEventListener('click',undo);
   $('deleteSelected').addEventListener('click',removeSelected);
   $('deselect').addEventListener('click',()=>{selected=null;drag=null;requestDraw();status('已取消选择');});
@@ -827,6 +936,7 @@
   });
   $('mapSize').addEventListener('change',e=>{
     state.size=Number(e.target.value)||2000;
+    updateGridInfo();
     draw();
     status('地图尺寸：' + state.size + 'm');
   });
@@ -877,6 +987,7 @@
     if((e.key==='Delete'||e.key==='Backspace') && !/INPUT|TEXTAREA|SELECT/.test((e.target.tagName||''))){ if(removeSelected())e.preventDefault(); }
   });
   styleToolButtons();
+  updateGridInfo();
   $('gridBtn').textContent='网格：开'; $('contourBtn').textContent='等高线：开';
   requestAnimationFrame(fitCanvas);
   window.__MAP_EDITOR__ = { get state(){ return state; }, exportData: exportData, importData: importData, draw: draw, setTool: setTool };

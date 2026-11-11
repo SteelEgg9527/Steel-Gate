@@ -144,7 +144,7 @@ if (mode === 'naval') {
     shore, spawns, objective: { x: radar.x, y: radar.y }, yellow,
     layout: {
       island: false, hills: [], towers, radar, coastBases, ports,
-      villages, forests, forts, roads
+      villages, forests, forts, roads, terrainAreas: plan.terrainAreas || []
     }
   };
 } else {
@@ -153,7 +153,11 @@ if (mode === 'naval') {
     width: num(r.width, 14),
     points: pathPoints(r.points)
   })).filter(r => r.points.length >= 2);
-  const zones = (plan.zones || []).map((z, i) => ({
+  const planTerrainAreas = (plan.terrainAreas || []).map(a => ({
+    kind: a.kind === 'bush' || a.kind === 'hill' ? a.kind : 'forest',
+    points: (a.points || []).map(pt).filter(p => p.x >= 0 && p.y >= 0)
+  })).filter(a => a.points.length >= 3);
+  const zones = (plan.zones || []).filter(z => z.kind !== 'bush' && z.kind !== 'forest').map((z, i) => ({
     id: z.id || ('plan_zone_' + i),
     name: z.name || ('占领区 ' + (i + 1)),
     kind: z.kind || 'fort',
@@ -187,7 +191,10 @@ if (mode === 'naval') {
     village: firstVillage ? { x: firstVillage.x, y: firstVillage.y, name: firstVillage.name } : { x: size / 2, y: size / 2, name: '', houses: false }, streamName: '',
     forests: (plan.forests || []).map((f, i) => ({
       x: num(f.x, 0), y: num(f.y, 0), r: num(f.r, 80), w: 1, name: '林地 ' + (i + 1)
-    })),
+    })).concat((plan.zones || []).filter(z => z.kind === 'bush' || z.kind === 'forest').map(z => ({
+      x: num(z.x, 0), y: num(z.y, 0), r: num(z.r, 80), w: 1, name: '自然区域'
+    }))),
+    terrainAreas: planTerrainAreas,
     zones, sites, spawns,
     objective: { x: yellow.x, y: yellow.y }, yellow
   };

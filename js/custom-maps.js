@@ -41,14 +41,18 @@
     var aiLanes = (plan.aiLanes || []).map(function (r) {
       return { type: 'ai', points: points(r.points) };
     }).filter(function (r) { return r.points.length >= 2; });
-    var zones = (plan.zones || []).map(function (z, i) {
+    var zones = (plan.zones || []).filter(function (z) { return z.kind !== 'bush' && z.kind !== 'forest'; }).map(function (z, i) {
       var kind = z.kind || 'fort';
-      if (['fort', 'village', 'town', 'bush', 'forest'].indexOf(kind) < 0) kind = 'fort';
+      if (['fort', 'village', 'town'].indexOf(kind) < 0) kind = 'fort';
       return {
         id: z.id || ('custom_zone_' + i), name: z.name || ('占领区 ' + (i + 1)),
         kind: kind, x: num(z.x, size / 2), y: num(z.y, size / 2), r: num(z.r, 72)
       };
     });
+    var terrainAreas = (plan.terrainAreas || []).map(function (a) {
+      var kind = a.kind === 'bush' || a.kind === 'hill' ? a.kind : 'forest';
+      return { kind: kind, points: points(a.points) };
+    }).filter(function (a) { return a.points.length >= 3; });
     var firstVillage = null;
     for (var vzi = 0; vzi < zones.length; vzi++) {
       if (zones[vzi].kind === 'village' || zones[vzi].kind === 'town') { firstVillage = zones[vzi]; break; }
@@ -82,7 +86,10 @@
       streamName: '',
       forests: (plan.forests || []).map(function (f, i) {
         return { x: num(f.x, 0), y: num(f.y, 0), r: num(f.r, 80), w: 1, name: '林地 ' + (i + 1) };
-      }),
+      }).concat((plan.zones || []).filter(function (z) { return z.kind === 'bush' || z.kind === 'forest'; }).map(function (z) {
+        return { x: num(z.x, 0), y: num(z.y, 0), r: num(z.r, 80), w: 1, name: '自然区域' };
+      })),
+      terrainAreas: terrainAreas,
       zones: zones, sites: sites, spawns: spawns,
       objective: { x: yellow.x, y: yellow.y }, yellow: yellow
     };
